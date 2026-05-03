@@ -10,6 +10,37 @@
     <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
+    <!-- Приветственное модальное окно -->
+<div id="welcomeModal" class="welcome-modal">
+    <div class="welcome-container">
+        <div class="welcome-content">
+            <div class="welcome-icon">🎈</div>
+            <div class="welcome-title">Добро пожаловать в Aerostar!</div>
+            <div class="welcome-text">
+                <p>Здесь можно полетать на виртуальном воздушном шаре.</p>
+                <p>Выберите любую точку старта и ваш аэростат полетит в соответствии с <strong>реальным ветром</strong> в этой местности.</p>
+            </div>
+            <div class="welcome-features">
+                <h4>📋 Как это работает:</h4>
+                <ul>
+                    <li>🎯 Кликните на карту - выберите точку старта</li>
+                    <li>🚀 Нажмите "СТАРТ" - шар начнет полет</li>
+                    <li>🌬️ Шар движется по реальным данным ветра</li>
+                    <li>👥 Можно летать как гость (шар исчезнет при закрытии браузера)</li>
+                    <li>🔐 Чтобы лететь сутками  - <strong>зарегистрируйтесь</strong></li>
+                </ul>
+            </div>
+            <div class="welcome-buttons">
+                <button class="welcome-btn welcome-btn-primary" id="closeWelcomeBtn">Полетели! 🎈</button>
+            </div>
+            <div class="dont-show-again" id="dontShowAgain">
+                <input type="checkbox" id="dontShowCheckbox"> Не показывать снова
+            </div>
+        </div>
+    </div>
+</div>
+
+    
     <div id="map"></div>
     
    <!-- Рекламный баннер внизу -->
