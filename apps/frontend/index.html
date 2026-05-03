@@ -159,5 +159,40 @@
         // Логирование состояния (ждём загрузки всех модулей)
         setTimeout(() => {    }, 100);
     </script>
+    
+<script>
+    // Управление приветственным модальным окном
+    (function() {
+        const WELCOME_KEY = 'welcome_shown';
+        
+        // Проверяем, нужно ли показывать окно
+        if (!localStorage.getItem(WELCOME_KEY)) {
+            setTimeout(() => {
+                const modal = document.getElementById('welcomeModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                }
+            }, 500); // Небольшая задержка для загрузки остального контента
+        }
+        
+        // Закрытие окна
+        const closeBtn = document.getElementById('closeWelcomeBtn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                const modal = document.getElementById('welcomeModal');
+                const dontShowCheckbox = document.getElementById('dontShowCheckbox');
+                
+                if (dontShowCheckbox && dontShowCheckbox.checked) {
+                    localStorage.setItem(WELCOME_KEY, 'true');
+                }
+                
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+    })();
+</script>
+    
 </body>
 </html>
