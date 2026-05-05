@@ -134,11 +134,11 @@ function moveBalloon() {
 // Старт полета
 async function startFlight() {
     if (!window.App.balloonPosition) {
-        showError('Сначала выберите точку старта на карте');
+        showError('Select the starting point on the map');
         return;
     }
     
-    updateFlightStatus('waiting', '⏳ Создание шара...');
+    updateFlightStatus('waiting', '⏳ ');
     
     try {
         const response = await apiRequest('/api/balloons', {
@@ -200,7 +200,7 @@ async function startFlight() {
         
         window.App.isFlying = true;
         setStartButtonEnabled(false);
-        updateFlightStatus('flying', '🎈 В ПОЛЁТЕ');
+        updateFlightStatus('flying', '🎈 FLIGHT');
         hideHint();
         updateHaze(window.App.balloonPosition);
         showSuccess('Полет начался! Следите за шаром на карте');
@@ -208,7 +208,7 @@ async function startFlight() {
     } catch (error) {
         console.error('Ошибка старта:', error);
         showError('Не удалось создать шар: ' + error.message);
-        updateFlightStatus('ready', '⏸️ Ожидание старта');
+        updateFlightStatus('ready', '⏸️ ');
     }
 }
 
@@ -222,7 +222,7 @@ async function restoreBalloon() {
         
         const balloon = await response.json();
         if (balloon && balloon.is_flying) {
-            console.log('🔄 Восстанавливаем шар:', balloon.id);
+            console.log('🔄Restoring the ball:', balloon.id);
             
             window.App.balloonPosition = L.latLng(balloon.current_lat, balloon.current_lng);
             window.App.currentWind = { 
@@ -261,7 +261,7 @@ async function restoreBalloon() {
             
             window.App.isFlying = true;
             setStartButtonEnabled(false);
-            updateFlightStatus('flying', '🎈 В ПОЛЁТЕ');
+            updateFlightStatus('flying', '🎈 FLIGHT');
             hideHint();
             updateHaze(window.App.balloonPosition);
             
@@ -285,7 +285,7 @@ async function restoreBalloon() {
         return false;
         
     } catch (error) {
-        console.error('Ошибка восстановления:', error);
+        console.error('Restore Error', error);
         return false;
     }
 }
@@ -341,10 +341,10 @@ function resetFlight() {
     updateCoordDisplay(0, 0);
     updateWindDisplay(null);
     setStartButtonEnabled(false);
-    updateFlightStatus('ready', '⏸️ Ожидание старта');
-    updateHint('👆 Кликните на карту, чтобы выбрать место старта');
+    updateFlightStatus('ready', '⏸️');
+    updateHint('👆 Select your starting location');
     updateHaze(null);
     hidePlaceInfo();
     
-    showSuccess('Полет остановлен');
+    showSuccess('Stop');
 }
