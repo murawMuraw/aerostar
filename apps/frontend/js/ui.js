@@ -62,7 +62,7 @@ function updateWindDisplay(wind) {
     if (!windInfo) return;
     
     if (wind) {
-        const directions = ['С', 'СВ', 'В', 'ЮВ', 'Ю', 'ЮЗ', 'З', 'СЗ'];
+        const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
         const index = Math.round(wind.direction / 45) % 8;
         windInfo.innerHTML = `
             <div>🌬️  ${wind.speed.toFixed(1)} м/с</div>
@@ -71,7 +71,7 @@ function updateWindDisplay(wind) {
             <div>⏱️  ${new Date().toLocaleTimeString()}</div>
         `;
     } else {
-        windInfo.innerHTML = `<div>🌬️ Ветер: --</div><div>🧭 Направление: --</div><div>📏 Скорость: -- м/с</div>`;
+        windInfo.innerHTML = `<div>🌬️  --</div><div>🧭  --</div><div>📏  -- м/с</div>`;
     }
 }
 
