@@ -1,198 +1,154 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Воздушный шар - Симулятор полета</title>
+    <title>Hot Air Balloon - Flight Simulator</title>
     <meta charset="utf-8" />
-    
-    <!-- Подключаем Leaflet -->
+    <!-- Leaflet connection -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-    <!-- Приветственное модальное окно -->
+
+<!-- Welcome Modal -->
 <div id="welcomeModal" class="welcome-modal">
     <div class="welcome-container">
         <div class="welcome-content">
             <div class="welcome-icon">🎈</div>
-            <div class="welcome-title">Добро пожаловать в Aerostar!</div>
+            <div class="welcome-title">Welcome to Aerostar!</div>
             <div class="welcome-text">
-                <p>Здесь можно полетать на виртуальном воздушном шаре.</p>
-                <p>Выберите любую точку старта и ваш аэростат полетит в соответствии с <strong>реальным ветром</strong> в этой местности.</p>
+                <p>Enjoy a virtual hot air balloon flight.</p>
+                <p>Pick any starting point and your balloon will fly according to <strong>real wind data</strong> in that area.</p>
             </div>
             <div class="welcome-features">
-                <h4>📋 Как это работает:</h4>
+                <h4>📋 How it works:</h4>
                 <ul>
-                    <li>🎯 Кликните на карту - выберите точку старта</li>
-                    <li>🚀 Нажмите "СТАРТ" - шар начнет полет</li>
-                    <li>🌬️ Шар движется по реальным данным ветра</li>
-                    <li>👥 Можно летать как гость (шар исчезнет при закрытии браузера)</li>
-                    <li>🔐 Чтобы лететь сутками  - <strong>зарегистрируйтесь</strong></li>
+                    <li>🎯 Click on the map to choose a starting point</li>
+                    <li>🚀 Press "START" to begin the flight</li>
+                    <li>🌬️ The balloon moves based on real-time wind data</li>
+                    <li>👥 You can fly as a Guest (session ends when browser closes)</li>
+                    <li>🔐 <strong>Register</strong> to keep your flight going for days</li>
                 </ul>
             </div>
             <div class="welcome-buttons">
-                <button class="welcome-btn welcome-btn-primary" id="closeWelcomeBtn">Полетели! 🎈</button>
+                <button class="welcome-btn welcome-btn-primary" id="closeWelcomeBtn">Let's fly! 🎈</button>
             </div>
             <div class="dont-show-again" id="dontShowAgain">
-                <input type="checkbox" id="dontShowCheckbox"> Не показывать снова
+                <input type="checkbox" id="dontShowCheckbox"> Don't show again
             </div>
         </div>
     </div>
 </div>
 
-    
-    <div id="map"></div>
-    
-   <!-- Рекламный баннер внизу -->
-<div id="ad-container" style="
-    position: fixed;
-    bottom: 20px; /* Поднимаем чуть выше края, чтобы не сливался */
-    left: 50%;
-    transform: translateX(-50%); /* Центрируем по горизонтали */
-    width: auto;
-    max-width: 90%; /* Ограничиваем ширину, чтобы не закрывал углы */
-    background: rgba(255,255,255,0.95);
-    border: 1px solid #4285f4;
-    border-radius: 12px; /* Закругляем, чтобы выглядел как отдельный блок */
-    padding: 8px 15px;
-    text-align: center;
-    z-index: 1500;
-    font-family: Arial, sans-serif;
-    font-size: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    backdrop-filter: blur(10px);
-">
+<div id="map"></div>
+
+<!-- Ad Banner -->
+<div id="ad-container" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: auto; max-width: 90%; background: rgba(255,255,255,0.95); border: 1px solid #4285f4; border-radius: 12px; padding: 8px 15px; text-align: center; z-index: 1500; font-family: Arial, sans-serif; font-size: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); backdrop-filter: blur(10px);">
     <div style="display: flex; justify-content: center; align-items: center; gap: 15px;">
-        <span style="color: #666; white-space: nowrap;">Реклама</span>
+        <span style="color: #666; white-space: nowrap;">AD</span>
         <div id="ad-content" style="max-width: 728px;">
             <div style="background: #f0f0f0; border-radius: 8px; padding: 10px; border: 1px dashed #ccc;">
-                📢 <strong>Ваша реклама здесь</strong><br>
-                <span style="font-size: 11px; color: #999;"> admin@aerost.art</span>
+                📢 <strong>Your ad here</strong><br>
+                <span style="font-size: 11px; color: #999;">admin@aerost.art</span>
             </div>
         </div>
         <button id="close-ad" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #999; padding: 0 5px;">✕</button>
     </div>
 </div>
 
-    
-    <canvas id="haze-canvas"></canvas>
-    
-    <!-- Кнопка профиля -->
-    <div id="profileButton" class="profile-btn">
-        <span>👤</span> <span id="profileStatus">Гость</span>
-    </div>
-    
-    <!-- Модальное окно авторизации -->
-    <div id="authModal" class="auth-modal hidden">
-        <div class="auth-container">
-            <div class="auth-tabs">
-                <div class="auth-tab active" data-tab="login">Вход</div>
-                <div class="auth-tab" data-tab="register">Регистрация</div>
-            </div>
-            
-            <div id="loginForm" class="auth-form">
-                <input type="email" id="loginEmail" placeholder="Email">
-                <input type="password" id="loginPassword" placeholder="Пароль">
-                <button id="loginBtn">Войти</button>
-                <div id="loginError" class="auth-error"></div>
-            </div>
-            
-            <div id="registerForm" class="auth-form hidden">
-                <input type="email" id="regEmail" placeholder="Email">
-                <input type="password" id="regPassword" placeholder="Пароль (мин. 6 символов)">
-                <button id="registerBtn">Зарегистрироваться</button>
-                <div id="regError" class="auth-error"></div>
-            </div>
-            <div style="text-align: center; margin-top: 15px; font-size: 12px; color: #999;">
-                <button id="continueGuestBtn" style="background: none; border: none; color: #4285f4; cursor: pointer;">Продолжить как гость</button>
-            </div>
-        </div>
-    </div>
-    
-    <div class="left-controls">
-        <button class="custom-button" id="startBtn" disabled>▶ START</button>
-        <button class="custom-button" id="resetBtn">🗑️ Reset</button>
-    </div>
-    
-    <div class="info-panel">
-        <h3 style="margin: 0 0 10px 0;">🎈 </h3>
-        <div class="coord-display" id="coordinates"> --<br> --</div>
-        <div class="wind-info" id="windInfo">
-            <div>🌬️  --</div>
-            <div>🧭  --</div>
-            <div>📏  -- м/с</div>
-        </div>
-        <div class="flight-status status-ready" id="flightStatus">⏸️ </div>
-        <div id="placeInfo" style="margin-top: 15px; padding: 10px; background: #f9f9f9; border-radius: 8px; display: none; border-left: 3px solid #ff9800;">
-            <div id="placeName" style="font-weight: bold; color: #333; margin-bottom: 8px;"></div>
-            <div id="placeLink" style="margin-top: 5px;"></div>
-        </div>
-    </div>
+<canvas id="haze-canvas"></canvas>
 
-    <div class="hint" id="hint">👆 Кликните на карту, чтобы выбрать место старта</div>
-    <div class="loading" id="loading">Загрузка карты... 🗺️</div>
-    
-    <!-- Подключаем скрипты -->
-    <script src="js/config.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/balloon.js"></script>
-    <script src="js/main.js"></script>
-    
-    <!-- Дополнительная инициализация -->
-    <script>
-        // Закрытие рекламного баннера с сохранением в localStorage
-        const closeAdBtn = document.getElementById('close-ad');
-        if (closeAdBtn) {
-            closeAdBtn.addEventListener('click', () => {
-                document.getElementById('ad-container').style.display = 'none';
-                localStorage.setItem('ad_closed', 'true');
-            });
-            
-            // Если баннер уже закрывали, не показываем
-           // if (localStorage.getItem('ad_closed') === 'true') {
-          //      document.getElementById('ad-container').style.display = 'none';
-          //  }
-        }
-        
-        // Логирование состояния (ждём загрузки всех модулей)
-        setTimeout(() => {    }, 100);
-    </script>
-    
+<!-- Profile Button -->
+<div id="profileButton" class="profile-btn">
+    <span>👤</span>
+    <span id="profileStatus">Guest</span>
+</div>
+
+<!-- Auth Modal -->
+<div id="authModal" class="auth-modal hidden">
+    <div class="auth-container">
+        <div class="auth-tabs">
+            <div class="auth-tab active" data-tab="login">Login</div>
+            <div class="auth-tab" data-tab="register">Register</div>
+        </div>
+        <div id="loginForm" class="auth-form">
+            <input type="email" id="loginEmail" placeholder="Email">
+            <input type="password" id="loginPassword" placeholder="Password">
+            <button id="loginBtn">Login</button>
+            <div id="loginError" class="auth-error"></div>
+        </div>
+        <div id="registerForm" class="auth-form hidden">
+            <input type="email" id="regEmail" placeholder="Email">
+            <input type="password" id="regPassword" placeholder="Password (min. 6 chars)">
+            <button id="registerBtn">Create Account</button>
+            <div id="regError" class="auth-error"></div>
+        </div>
+        <div style="text-align: center; margin-top: 15px; font-size: 12px; color: #999;">
+            <button id="continueGuestBtn" style="background: none; border: none; color: #4285f4; cursor: pointer;">Continue as Guest</button>
+        </div>
+    </div>
+</div>
+
+<div class="left-controls">
+    <button class="custom-button" id="startBtn" disabled>▶ START</button>
+    <button class="custom-button" id="resetBtn">🗑️ Reset</button>
+</div>
+
+<div class="info-panel">
+    <h3 style="margin: 0 0 10px 0;">🎈 Balloon Info</h3>
+    <div class="coord-display" id="coordinates"> --<br> --</div>
+    <div class="wind-info" id="windInfo">
+        <div>🌬️ --</div>
+        <div>🧭 --</div>
+        <div>📏 -- m/s</div>
+    </div>
+    <div class="flight-status status-ready" id="flightStatus">⏸️ Ready</div>
+    <div id="placeInfo" style="margin-top: 15px; padding: 10px; background: #f9f9f9; border-radius: 8px; display: none; border-left: 3px solid #ff9800;">
+        <div id="placeName" style="font-weight: bold; color: #333; margin-bottom: 8px;"></div>
+        <div id="placeLink" style="margin-top: 5px;"></div>
+    </div>
+</div>
+
+<div class="hint" id="hint">👆 Click on the map to set a start location</div>
+<div class="loading" id="loading">Loading Map... 🗺️</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/balloon.js"></script>
+<script src="js/main.js"></script>
+
 <script>
-    // Управление приветственным модальным окном
+    const closeAdBtn = document.getElementById('close-ad');
+    if (closeAdBtn) {
+        closeAdBtn.addEventListener('click', () => {
+            document.getElementById('ad-container').style.display = 'none';
+            localStorage.setItem('ad_closed', 'true');
+        });
+    }
+
     (function() {
         const WELCOME_KEY = 'welcome_shown';
-        
-        // Проверяем, нужно ли показывать окно
         if (!localStorage.getItem(WELCOME_KEY)) {
             setTimeout(() => {
                 const modal = document.getElementById('welcomeModal');
-                if (modal) {
-                    modal.style.display = 'flex';
-                }
-            }, 500); // Небольшая задержка для загрузки остального контента
+                if (modal) { modal.style.display = 'flex'; }
+            }, 500);
         }
-        
-        // Закрытие окна
         const closeBtn = document.getElementById('closeWelcomeBtn');
         if (closeBtn) {
             closeBtn.addEventListener('click', function() {
                 const modal = document.getElementById('welcomeModal');
                 const dontShowCheckbox = document.getElementById('dontShowCheckbox');
-                
                 if (dontShowCheckbox && dontShowCheckbox.checked) {
                     localStorage.setItem(WELCOME_KEY, 'true');
                 }
-                
-                if (modal) {
-                    modal.style.display = 'none';
-                }
+                if (modal) { modal.style.display = 'none'; }
             });
         }
     })();
 </script>
-    
 </body>
 </html>
+
