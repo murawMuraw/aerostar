@@ -120,6 +120,7 @@
 <script src="js/main.js"></script>
 
 <script>
+    // 1. Логика рекламного баннера
     const closeAdBtn = document.getElementById('close-ad');
     if (closeAdBtn) {
         closeAdBtn.addEventListener('click', () => {
@@ -128,26 +129,65 @@
         });
     }
 
+    // 2. Логика приветственного окна с проверкой языка
     (function() {
         const WELCOME_KEY = 'welcome_shown';
+        
+        // Проверка: если язык браузера русский — меняем текст в модальном окне
+        const userLang = navigator.language || navigator.userLanguage;
+        if (userLang.startsWith('ru')) {
+            const title = document.querySelector('.welcome-title');
+            const text = document.querySelector('.welcome-text');
+            const features = document.querySelector('.welcome-features');
+            const btn = document.getElementById('closeWelcomeBtn');
+            const dontShow = document.getElementById('dontShowAgain');
+
+            if (title) title.textContent = "Добро пожаловать в Aerostar!";
+            if (text) text.innerHTML = `
+                <p>Здесь можно полетать на виртуальном воздушном шаре.</p>
+                <p>Выберите любую точку старта и ваш аэростат полетит в соответствии с <strong>реальным ветром</strong> в этой местности.</p>
+            `;
+            if (features) features.innerHTML = `
+                <h4>📋 Как это работает:</h4>
+                <ul>
+                    <li>🎯 Кликните на карту - выберите точку старта</li>
+                    <li>🚀 Нажмите "СТАРТ" - шар начнет полет</li>
+                    <li>🌬️ Шар движется по реальным данным ветра</li>
+                    <li>👥 Можно летать как гость (шар исчезнет при закрытии браузера)</li>
+                    <li>🔐 Чтобы лететь сутками - <strong>зарегистрируйтесь</strong></li>
+                </ul>
+            `;
+            if (btn) btn.textContent = "Полетели! 🎈";
+            if (dontShow) dontShow.innerHTML = '<input type="checkbox" id="dontShowCheckbox"> Не показывать снова';
+        }
+
+        // Показ окна, если не было отмечено "Не показывать снова"
         if (!localStorage.getItem(WELCOME_KEY)) {
             setTimeout(() => {
                 const modal = document.getElementById('welcomeModal');
-                if (modal) { modal.style.display = 'flex'; }
+                if (modal) {
+                    modal.style.display = 'flex';
+                }
             }, 500);
         }
-        const closeBtn = document.getElementById('closeWelcomeBtn');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', function() {
+
+        // Обработка закрытия (используем делегирование, чтобы кнопка точно работала)
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'closeWelcomeBtn') {
                 const modal = document.getElementById('welcomeModal');
                 const dontShowCheckbox = document.getElementById('dontShowCheckbox');
+                
                 if (dontShowCheckbox && dontShowCheckbox.checked) {
                     localStorage.setItem(WELCOME_KEY, 'true');
                 }
-                if (modal) { modal.style.display = 'none'; }
-            });
-        }
+                
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+            }
+        });
     })();
 </script>
+
 </body>
 </html>
