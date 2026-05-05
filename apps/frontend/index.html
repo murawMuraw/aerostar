@@ -3,39 +3,17 @@
 <head>
     <title>Hot Air Balloon - Flight Simulator</title>
     <meta charset="utf-8" />
-    <!-- Leaflet connection -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com" />
+    <script src="https://unpkg.com"></script>
     <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
 
-<!-- Welcome Modal -->
+<!-- Welcome Modal (Content will be injected via JS based on language) -->
 <div id="welcomeModal" class="welcome-modal">
     <div class="welcome-container">
-        <div class="welcome-content">
-            <div class="welcome-icon">🎈</div>
-            <div class="welcome-title">Welcome to Aerostar!</div>
-            <div class="welcome-text">
-                <p>Enjoy a virtual hot air balloon flight.</p>
-                <p>Pick any starting point and your balloon will fly according to <strong>real wind data</strong> in that area.</p>
-            </div>
-            <div class="welcome-features">
-                <h4>📋 How it works:</h4>
-                <ul>
-                    <li>🎯 Click on the map to choose a starting point</li>
-                    <li>🚀 Press "START" to begin the flight</li>
-                    <li>🌬️ The balloon moves based on real-time wind data</li>
-                    <li>👥 You can fly as a Guest (session ends when browser closes)</li>
-                    <li>🔐 <strong>Register</strong> to keep your flight going for days</li>
-                </ul>
-            </div>
-            <div class="welcome-buttons">
-                <button class="welcome-btn welcome-btn-primary" id="closeWelcomeBtn">Let's fly! 🎈</button>
-            </div>
-            <div class="dont-show-again" id="dontShowAgain">
-                <input type="checkbox" id="dontShowCheckbox"> Don't show again
-            </div>
+        <div class="welcome-content" id="welcomeContent">
+            <!-- Текст вставится скриптом ниже -->
         </div>
     </div>
 </div>
@@ -58,7 +36,7 @@
 
 <canvas id="haze-canvas"></canvas>
 
-<!-- Profile Button -->
+<!-- Profile -->
 <div id="profileButton" class="profile-btn">
     <span>👤</span>
     <span id="profileStatus">Guest</span>
@@ -120,34 +98,99 @@
 <script src="js/main.js"></script>
 
 <script>
-    const closeAdBtn = document.getElementById('close-ad');
-    if (closeAdBtn) {
-        closeAdBtn.addEventListener('click', () => {
-            document.getElementById('ad-container').style.display = 'none';
-            localStorage.setItem('ad_closed', 'true');
-        });
+// Скрипт управления приветственным окном с поддержкой языков
+(function() {
+    const WELCOME_KEY = 'welcome_shown';
+    const userLang = navigator.language || navigator.userLanguage;
+    const isRussian = userLang.startsWith('ru');
+
+    const translations = {
+        ru: {
+            title: "Добро пожаловать в Aerostar!",
+            p1: "Здесь можно полетать на виртуальном воздушном шаре.",
+            p2: "Выберите любую точку старта и ваш аэростат полетит в соответствии с <strong>реальным ветром</strong> в этой местности.",
+            h4: "📋 Как это работает:",
+            li1: "🎯 Кликните на карту - выберите точку старта",
+            li2: "🚀 Нажмите \"СТАРТ\" - шар начнет полет",
+            li3: "🌬️ Шар движется по реальным данным ветра",
+            li4: "👥 Можно летать как гость (шар исчезнет при закрытии браузера)",
+            li5: "🔐 Чтобы лететь сутками - <strong>зарегистрируйтесь</strong>",
+            btn: "Полетели! 🎈",
+            dontShow: "Не показывать снова"
+        },
+        en: {
+            title: "Welcome to Aerostar!",
+            p1: "Enjoy a virtual hot air balloon flight.",
+            p2: "Pick any starting point and your balloon will fly according to <strong>real wind data</strong> in that area.",
+            h4: "📋 How it works:",
+            li1: "🎯 Click on the map to choose a starting point",
+            li2: "🚀 Press \"START\" to begin the flight",
+            li3: "🌬️ The balloon moves based on real-time wind data",
+            li4: "👥 You can fly as a Guest (session ends when browser closes)",
+            li5: "🔐 <strong>Register</strong> to keep your flight going for days",
+            btn: "Let's fly! 🎈",
+            dontShow: "Don't show again"
+        }
+    };
+
+    const t = isRussian ? translations.ru : translations.en;
+
+    // Генерируем HTML модального окна
+    const contentHtml = `
+        <div class="welcome-icon">🎈</div>
+        <div class="welcome-title">${t.title}</div>
+        <div class="welcome-text">
+            <p>${t.p1}</p>
+            <p>${t.p2}</p>
+        </div>
+        <div class="welcome-features">
+            <h4>${t.h4}</h4>
+            <ul>
+                <li>${t.li1}</li>
+                <li>${t.li2}</li>
+                <li>${t.li3}</li>
+                <li>${t.li4}</li>
+                <li>${t.li5}</li>
+            </ul>
+        </div>
+        <div class="welcome-buttons">
+            <button class="welcome-btn welcome-btn-primary" id="closeWelcomeBtn">${t.btn}</button>
+        </div>
+        <div class="dont-show-again" id="dontShowAgain">
+            <input type="checkbox" id="dontShowCheckbox"> ${t.dontShow}
+        </div>
+    `;
+
+    document.getElementById('welcomeContent').innerHTML = contentHtml;
+
+    // Показываем окно, если оно не было закрыто ранее
+    if (!localStorage.getItem(WELCOME_KEY)) {
+        setTimeout(() => {
+            const modal = document.getElementById('welcomeModal');
+            if (modal) modal.style.display = 'flex';
+        }, 500);
     }
 
-    (function() {
-        const WELCOME_KEY = 'welcome_shown';
-        if (!localStorage.getItem(WELCOME_KEY)) {
-            setTimeout(() => {
-                const modal = document.getElementById('welcomeModal');
-                if (modal) { modal.style.display = 'flex'; }
-            }, 500);
+    // Обработчик закрытия
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'closeWelcomeBtn') {
+            const modal = document.getElementById('welcomeModal');
+            const checkbox = document.getElementById('dontShowCheckbox');
+            if (checkbox && checkbox.checked) {
+                localStorage.setItem(WELCOME_KEY, 'true');
+            }
+            if (modal) modal.style.display = 'none';
         }
-        const closeBtn = document.getElementById('closeWelcomeBtn');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', function() {
-                const modal = document.getElementById('welcomeModal');
-                const dontShowCheckbox = document.getElementById('dontShowCheckbox');
-                if (dontShowCheckbox && dontShowCheckbox.checked) {
-                    localStorage.setItem(WELCOME_KEY, 'true');
-                }
-                if (modal) { modal.style.display = 'none'; }
-            });
-        }
-    })();
+    });
+})();
+
+// Закрытие рекламы
+const closeAdBtn = document.getElementById('close-ad');
+if (closeAdBtn) {
+    closeAdBtn.addEventListener('click', () => {
+        document.getElementById('ad-container').style.display = 'none';
+    });
+}
 </script>
 </body>
 </html>
