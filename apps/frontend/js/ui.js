@@ -2,7 +2,7 @@
 // ========== UI КОМПОНЕНТЫ И ОТОБРАЖЕНИЕ ==========
 
 // Управление индикатором загрузки
-function showLoading(message = 'Загрузка... 🗺️') {
+function showLoading(message = 'Load... 🗺️') {
     const loading = document.getElementById('loading');
     if (loading) {
         loading.innerHTML = message;
@@ -34,7 +34,7 @@ function updateProfileUI() {
         profileBtn.style.background = 'rgba(255,255,255,0.95)';
         profileBtn.style.borderColor = '#4caf50';
     } else if (window.App.isGuest) {
-        profileStatus.textContent = 'Гость';
+        profileStatus.textContent = 'Guest';
         profileBtn.style.background = 'rgba(255,255,255,0.95)';
         profileBtn.style.borderColor = '#ff9800';
     }
@@ -52,7 +52,7 @@ function showAuthModal(show = true) {
 function updateCoordDisplay(lat, lng) {
     const coordDisplay = document.getElementById('coordinates');
     if (coordDisplay) {
-        coordDisplay.innerHTML = `Широта: ${lat.toFixed(6)}<br>Долгота: ${lng.toFixed(6)}`;
+        coordDisplay.innerHTML = `${lat.toFixed(6)}<br> ${lng.toFixed(6)}`;
     }
 }
 
@@ -65,10 +65,10 @@ function updateWindDisplay(wind) {
         const directions = ['С', 'СВ', 'В', 'ЮВ', 'Ю', 'ЮЗ', 'З', 'СЗ'];
         const index = Math.round(wind.direction / 45) % 8;
         windInfo.innerHTML = `
-            <div>🌬️ Ветер: ${wind.speed.toFixed(1)} м/с</div>
-            <div>🧭 Направление: ${wind.direction}° (${directions[index]})</div>
-            ${wind.gust ? `<div>💨 Порывы: ${wind.gust.toFixed(1)} м/с</div>` : ''}
-            <div>⏱️ Обновлено: ${new Date().toLocaleTimeString()}</div>
+            <div>🌬️  ${wind.speed.toFixed(1)} м/с</div>
+            <div>🧭  ${wind.direction}° (${directions[index]})</div>
+            ${wind.gust ? `<div>💨  ${wind.gust.toFixed(1)} м/с</div>` : ''}
+            <div>⏱️  ${new Date().toLocaleTimeString()}</div>
         `;
     } else {
         windInfo.innerHTML = `<div>🌬️ Ветер: --</div><div>🧭 Направление: --</div><div>📏 Скорость: -- м/с</div>`;
@@ -89,12 +89,12 @@ function updateFlightStatus(status, message) {
     flightStatus.className = `flight-status ${statusClasses[status] || statusClasses.ready}`;
     
     const messages = {
-        'ready': '⏸️ Ожидание старта',
-        'flying': '🎈 В ПОЛЁТЕ',
-        'waiting': '⏳ Ожидание...'
+        'ready': '⏸️ ',
+        'flying': '🎈 ',
+        'waiting': '⏳'
     };
     
-    flightStatus.innerHTML = message || messages[status] || '⏸️ Ожидание старта';
+    flightStatus.innerHTML = message || messages[status] || '⏸️ ';
 }
 
 // Обновление подсказки
