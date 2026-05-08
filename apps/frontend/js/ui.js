@@ -182,16 +182,30 @@ function closeWelcomeModal() {
 }
 
 // Управление рекламным баннером
-function hideAdBanner() {
-    const adContainer = document.getElementById('ad-container');
-    if (adContainer) {
-        adContainer.style.display = 'none';
-    }
-}
+//function hideAdBanner() {
+  //  const adContainer = document.getElementById('ad-container');
+  //  if (adContainer) {
+  //      adContainer.style.display = 'none';
+ //   }
+//}
 
+//function showAdBanner() {
+  //  const adContainer = document.getElementById('ad-container');
+  //  if (adContainer) {
+ //       adContainer.style.display = 'block';
+ //   }
+//}
 function showAdBanner() {
     const adContainer = document.getElementById('ad-container');
     if (adContainer) {
+        adContainer.innerHTML = `
+            <div style="padding: 10px; text-align: center;">
+                <p style="font-size: 12px; margin-bottom: 5px;">Enjoying the flight? 🎈</p>
+                <a href="https://patreon.com" target="_blank" style="text-decoration: none; color: #f96854; font-weight: bold;">
+                    Support on Patreon
+                </a>
+            </div>
+        `;
         adContainer.style.display = 'block';
     }
 }
