@@ -11,7 +11,7 @@
 <body>
 
 <!-- Welcome Modal -->
-<div id="welcomeModal" class="welcome-modal">
+<div id="welcomeModal" class="welcome-modal" style="display: none;">
     <div class="welcome-container">
         <div class="welcome-content">
             <div class="welcome-icon">🎈</div>
@@ -33,9 +33,6 @@
             <div class="welcome-buttons">
                 <button class="welcome-btn welcome-btn-primary" id="closeWelcomeBtn">Let's fly! 🎈</button>
             </div>
-            <a href="https://patreon.com" target="_blank" class="patreon-button">
-           <img src="https://patreon.com" alt="Patreon">
-            </a>
             <div class="dont-show-again" id="dontShowAgain">
                 <input type="checkbox" id="dontShowCheckbox"> Don't show again
             </div>
@@ -45,17 +42,18 @@
 
 <div id="map"></div>
 
-<!-- Ad Banner -->
-<div id="ad-container" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: auto; max-width: 90%; background: rgba(255,255,255,0.95); border: 1px solid #4285f4; border-radius: 12px; padding: 8px 15px; text-align: center; z-index: 1500; font-family: Arial, sans-serif; font-size: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); backdrop-filter: blur(10px);">
-    <div style="display: flex; justify-content: center; align-items: center; gap: 15px;">
-        <span style="color: #666; white-space: nowrap;">AD</span>
-        <div id="ad-content" style="max-width: 728px;">
-            <div style="background: #f0f0f0; border-radius: 8px; padding: 10px; border: 1px dashed #ccc;">
-                📢 <strong>Your ad here</strong><br>
-                <span style="font-size: 11px; color: #999;">admin@aerost.art</span>
-            </div>
+<!-- Patreon Banner (вместо рекламного) -->
+<div id="ad-container" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: auto; max-width: 90%; z-index: 1500; font-family: Arial, sans-serif;">
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 12px 20px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <span style="font-size: 20px;">🎈</span>
+            <span style="font-weight: bold;">Enjoying the flight?</span>
+            <a href="https://www.patreon.com" target="_blank" style="background: #f96854; color: white; text-decoration: none; padding: 6px 16px; border-radius: 25px; font-weight: bold; font-size: 14px; transition: transform 0.2s;">
+                ❤️ Support on Patreon
+            </a>
+            <button id="close-ad" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 18px; cursor: pointer; padding: 0 8px; border-radius: 50%;">✕</button>
         </div>
-        <button id="close-ad" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #999; padding: 0 5px;">✕</button>
+        <p style="font-size: 10px; margin-top: 8px; margin-bottom: 0; opacity: 0.8;">Thank you for your support! 🙏</p>
     </div>
 </div>
 
@@ -101,7 +99,7 @@
     <h3 style="margin: 0 0 10px 0;">🎈 Balloon Info</h3>
     <div class="coord-display" id="coordinates"> --<br> --</div>
     <div class="wind-info" id="windInfo">
-        <div>🌬️Wind --</div>
+        <div>🌬️ Wind --</div>
         <div>🧭 Direction --</div>
         <div>📏 Speed -- m/s</div>
     </div>
@@ -123,12 +121,11 @@
 <script src="js/main.js"></script>
 
 <script>
-    // 1. Логика рекламного баннера
+    // 1. Логика Patreon баннера (закрытие)
     const closeAdBtn = document.getElementById('close-ad');
     if (closeAdBtn) {
         closeAdBtn.addEventListener('click', () => {
             document.getElementById('ad-container').style.display = 'none';
-            localStorage.setItem('ad_closed', 'true');
         });
     }
 
