@@ -52,7 +52,7 @@ function showAuthModal(show = true) {
 function updateCoordDisplay(lat, lng) {
     const coordDisplay = document.getElementById('coordinates');
     if (coordDisplay) {
-        coordDisplay.innerHTML = `Lat:${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`;
+        coordDisplay.innerHTML = `Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`;
     }
 }
 
@@ -65,13 +65,13 @@ function updateWindDisplay(wind) {
         const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
         const index = Math.round(wind.direction / 45) % 8;
         windInfo.innerHTML = `
-            <div>🌬️ Wind ${wind.speed.toFixed(1)} м/с</div>
+            <div>🌬️ Wind ${wind.speed.toFixed(1)} m/s</div>
             <div>🧭 Direction ${wind.direction}° (${directions[index]})</div>
-            ${wind.gust ? `<div>💨 Wind gusts ${wind.gust.toFixed(1)} м/с</div>` : ''}
-            <div>⏱️  ${new Date().toLocaleTimeString()}</div>
+            ${wind.gust ? `<div>💨 Wind gusts ${wind.gust.toFixed(1)} m/s</div>` : ''}
+            <div>⏱️ ${new Date().toLocaleTimeString()}</div>
         `;
     } else {
-        windInfo.innerHTML = `<div>🌬️  --</div><div>🧭  --</div><div>📏  -- м/с</div>`;
+        windInfo.innerHTML = `<div>🌬️ Wind --</div><div>🧭 Direction --</div><div>📏 Speed -- m/s</div>`;
     }
 }
 
@@ -89,12 +89,12 @@ function updateFlightStatus(status, message) {
     flightStatus.className = `flight-status ${statusClasses[status] || statusClasses.ready}`;
     
     const messages = {
-        'ready': '⏸️ ',
-        'flying': '🎈 ',
-        'waiting': '⏳'
+        'ready': '⏸️ Waiting for start',
+        'flying': '🎈 Flying',
+        'waiting': '⏳ Loading'
     };
     
-    flightStatus.innerHTML = message || messages[status] || '⏸️ ';
+    flightStatus.innerHTML = message || messages[status] || '⏸️ Waiting for start';
 }
 
 // Обновление подсказки
@@ -131,7 +131,7 @@ function showPlaceInfo(placeData) {
         document.getElementById('placeName').innerHTML = `🏙️ ${placeData.name}${placeData.country ? `, ${placeData.country}` : ''}`;
         
         if (placeData.wikipedia_url) {
-            document.getElementById('placeLink').innerHTML = `<a href="${placeData.wikipedia_url}" target="_blank" style="font-size: 13px; color: #4285f4; text-decoration: none;">📖 Посмотреть в Википедии →</a>`;
+            document.getElementById('placeLink').innerHTML = `<a href="${placeData.wikipedia_url}" target="_blank" style="font-size: 13px; color: #4285f4; text-decoration: none;">📖 View on Wikipedia →</a>`;
         } else {
             document.getElementById('placeLink').innerHTML = '<span style="font-size: 12px; color: #999;"></span>';
         }
@@ -181,29 +181,17 @@ function closeWelcomeModal() {
     }
 }
 
-// Управление рекламным баннером
-//function hideAdBanner() {
-  //  const adContainer = document.getElementById('ad-container');
-  //  if (adContainer) {
-  //      adContainer.style.display = 'none';
- //   }
-//}
-
-//function showAdBanner() {
-  //  const adContainer = document.getElementById('ad-container');
-  //  if (adContainer) {
- //       adContainer.style.display = 'block';
- //   }
-//}
+// Patreon приглашение (вместо рекламного баннера)
 function showAdBanner() {
     const adContainer = document.getElementById('ad-container');
     if (adContainer) {
         adContainer.innerHTML = `
-            <div style="padding: 10px; text-align: center;">
-                <p style="font-size: 12px; margin-bottom: 5px;">Enjoying the flight? 🎈</p>
-                <a href="https://patreon.com" target="_blank" style="text-decoration: none; color: #f96854; font-weight: bold;">
-                    Support on Patreon
+            <div style="padding: 15px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                <p style="font-size: 14px; margin-bottom: 8px;">🎈 Enjoying the flight? Support the project!</p>
+                <a href="https://patreon.com/your-page" target="_blank" style="display: inline-block; background: #f96854; color: white; text-decoration: none; padding: 8px 20px; border-radius: 25px; font-weight: bold; font-size: 14px; transition: transform 0.2s;">
+                    ❤️ Support on Patreon
                 </a>
+                <p style="font-size: 10px; margin-top: 10px; opacity: 0.7;">Thank you for your support! 🙏</p>
             </div>
         `;
         adContainer.style.display = 'block';
@@ -305,7 +293,6 @@ if (typeof module !== 'undefined' && module.exports) {
         hidePlaceInfo,
         showWelcomeModal,
         closeWelcomeModal,
-        hideAdBanner,
         showAdBanner,
         showError,
         showSuccess,
