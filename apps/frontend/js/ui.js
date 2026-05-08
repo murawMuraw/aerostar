@@ -197,7 +197,12 @@ function showAdBanner() {
         adContainer.style.display = 'block';
     }
 }
-
+// Эта функция нужна для совместимости с main.js
+function hideAdBanner() {
+    // Функция оставлена пустой, так как Patreon блок не нужно скрывать
+    // Но она нужна, чтобы не было ошибки ReferenceError
+    console.log('hideAdBanner called - Patreon banner is permanent');
+}
 // Отображение ошибок
 function showError(message, duration = 3000) {
     // Создаём временное уведомление об ошибке
