@@ -65,9 +65,9 @@ function updateWindDisplay(wind) {
         const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
         const index = Math.round(wind.direction / 45) % 8;
         windInfo.innerHTML = `
-            <div>🌬️  ${wind.speed.toFixed(1)} м/с</div>
-            <div>🧭  ${wind.direction}° (${directions[index]})</div>
-            ${wind.gust ? `<div>💨  ${wind.gust.toFixed(1)} м/с</div>` : ''}
+            <div>🌬️ Wind ${wind.speed.toFixed(1)} м/с</div>
+            <div>🧭 Direction ${wind.direction}° (${directions[index]})</div>
+            ${wind.gust ? `<div>💨 Wind gusts ${wind.gust.toFixed(1)} м/с</div>` : ''}
             <div>⏱️  ${new Date().toLocaleTimeString()}</div>
         `;
     } else {
