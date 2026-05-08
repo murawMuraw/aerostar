@@ -52,7 +52,7 @@ function showAuthModal(show = true) {
 function updateCoordDisplay(lat, lng) {
     const coordDisplay = document.getElementById('coordinates');
     if (coordDisplay) {
-        coordDisplay.innerHTML = `${lat.toFixed(6)}<br> ${lng.toFixed(6)}`;
+        coordDisplay.innerHTML = `Lat:${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`;
     }
 }
 
