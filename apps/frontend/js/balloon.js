@@ -203,11 +203,11 @@ async function startFlight() {
         updateFlightStatus('flying', '🎈 FLIGHT');
         hideHint();
         updateHaze(window.App.balloonPosition);
-        showSuccess('Полет начался! Следите за шаром на карте');
+        showSuccess('The flight has begun! Follow the ball on the map');
         
     } catch (error) {
         console.error('Ошибка старта:', error);
-        showError('Не удалось создать шар: ' + error.message);
+        showError('Failed to create balloon: ' + error.message);
         updateFlightStatus('ready', '⏸️ ');
     }
 }
