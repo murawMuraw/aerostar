@@ -42,19 +42,142 @@
 
 <div id="map"></div>
 
-<!-- Patreon Banner (вместо рекламного) -->
-<div id="ad-container" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: auto; max-width: 90%; z-index: 1500; font-family: Arial, sans-serif;">
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 12px 20px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-        <div style="display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap;">
-            <span style="font-size: 20px;">🎈</span>
-            <span style="font-weight: bold;">Enjoying the flight?</span>
-            <!-- ИСПРАВЛЕННАЯ ССЫЛКА НИЖЕ -->
-            <a href="https://patreon.com/aerostart" target="_blank" style="background: #f96854; color: white; text-decoration: none; padding: 8px 18px; border-radius: 25px; font-weight: bold; font-size: 14px; transition: transform 0.2s; display: inline-block;"> ❤️ Support on Patreon </a>
-            <button id="close-ad" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 18px; cursor: pointer; padding: 0 8px; border-radius: 50%;">✕</button>
+<!-- Patreon Support HUD -->
+    
+<div id="support-banner">
+    <div class="support-content">
+        <span class="support-icon">🎈</span>
+
+        <div class="support-text">
+            <div class="support-title">Enjoying the flight?</div>
+            <div class="support-subtitle">
+                Support real-time balloon exploration
+            </div>
         </div>
-        <p style="font-size: 10px; margin-top: 8px; margin-bottom: 0; opacity: 0.8;">Thank you for your support! 🙏</p>
+
+        <a href="https://patreon.com/aerostart"
+           target="_blank"
+           class="support-button">
+            ❤️ Patreon
+        </a>
+
+        <button id="close-ad" class="close-button">✕</button>
     </div>
 </div>
+
+<style>
+#support-banner {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1500;
+
+    backdrop-filter: blur(14px);
+    background: rgba(18, 24, 38, 0.78);
+
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+
+    box-shadow:
+        0 8px 32px rgba(0,0,0,0.35),
+        inset 0 0 0 1px rgba(255,255,255,0.04);
+
+    padding: 14px 18px;
+    max-width: 90%;
+    color: white;
+
+    font-family: Inter, Arial, sans-serif;
+}
+
+.support-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.support-icon {
+    font-size: 24px;
+}
+
+.support-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.support-title {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+.support-subtitle {
+    font-size: 12px;
+    opacity: 0.65;
+    margin-top: 2px;
+}
+
+.support-button {
+    text-decoration: none;
+
+    background: linear-gradient(
+        135deg,
+        #ff5f5f,
+        #ff8a65
+    );
+
+    color: white;
+    font-weight: 600;
+
+    padding: 10px 18px;
+    border-radius: 999px;
+
+    transition: all 0.2s ease;
+    white-space: nowrap;
+
+    box-shadow:
+        0 4px 14px rgba(255,90,90,0.35);
+}
+
+.support-button:hover {
+    transform: translateY(-1px);
+    box-shadow:
+        0 6px 18px rgba(255,90,90,0.5);
+}
+
+.close-button {
+    background: transparent;
+    border: none;
+
+    color: rgba(255,255,255,0.7);
+
+    font-size: 18px;
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.close-button:hover {
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+    .support-content {
+        gap: 10px;
+    }
+
+    .support-subtitle {
+        display: none;
+    }
+
+    .support-button {
+        padding: 8px 14px;
+        font-size: 13px;
+    }
+}
+</style>
 
 
 <canvas id="haze-canvas"></canvas>
