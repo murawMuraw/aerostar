@@ -181,27 +181,7 @@ function closeWelcomeModal() {
     }
 }
 
-// Patreon приглашение (вместо рекламного баннера)
-function showAdBanner() {
-    const adContainer = document.getElementById('support-banner');
-    if (adContainer) {
-        adContainer.innerHTML = `
-            <div style="padding: 15px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                <p style="font-size: 14px; margin-bottom: 8px;">🎈 Enjoying the flight? Support the project!</p>
-                <a href="https://patreon.com" target="_blank" style="display: inline-block; background: #f96854; color: white; text-decoration: none; padding: 8px 20px; border-radius: 25px; font-weight: bold; font-size: 14px; transition: transform 0.2s; font-family: sans-serif;"> ❤️ Support on Patreon </a>
 
-               <p style="font-size: 10px; margin-top: 10px; opacity: 0.7;">Thank you for your support! 🙏</p>
-            </div>
-        `;
-        adContainer.style.display = 'block';
-    }
-}
-// Эта функция нужна для совместимости с main.js
-function hideAdBanner() {
-    // Функция оставлена пустой, так как Patreon блок не нужно скрывать
-    // Но она нужна, чтобы не было ошибки ReferenceError
-    console.log('hideAdBanner called - Patreon banner is permanent');
-}
 // Отображение ошибок
 function showError(message, duration = 3000) {
     // Создаём временное уведомление об ошибке
