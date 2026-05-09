@@ -154,9 +154,7 @@ function initUIHandlers() {
             if (welcomeModal && !welcomeModal.classList.contains('hidden')) {
                 closeWelcomeModal();
             }
-             // Показать Patreon приглашение
-            if (typeof showAdBanner === 'function') {
-                showAdBanner();
+             
             }
         }
     });
