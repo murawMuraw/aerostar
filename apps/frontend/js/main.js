@@ -156,8 +156,7 @@ function initUIHandlers() {
             }
              
             }
-        }
-    });
+      });
 }
 
 // Global Error Handling
