@@ -183,7 +183,7 @@ function closeWelcomeModal() {
 
 // Patreon приглашение (вместо рекламного баннера)
 function showAdBanner() {
-    const adContainer = document.getElementById('ad-container');
+    const adContainer = document.getElementById('support-banner');
     if (adContainer) {
         adContainer.innerHTML = `
             <div style="padding: 15px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
