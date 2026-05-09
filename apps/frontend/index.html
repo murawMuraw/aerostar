@@ -58,7 +58,7 @@
         <a href="https://patreon.com/aerostart"
            target="_blank"
            class="support-button">
-            ❤️ Patreon
+            Patreon
         </a>
 
         <button id="close-ad" class="close-button">✕</button>
@@ -116,15 +116,11 @@
     opacity: 0.65;
     margin-top: 2px;
 }
-
 .support-button {
     text-decoration: none;
 
-    background: linear-gradient(
-        135deg,
-        #ff5f5f,
-        #ff8a65
-    );
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
 
     color: white;
     font-weight: 600;
@@ -135,8 +131,7 @@
     transition: all 0.2s ease;
     white-space: nowrap;
 
-    box-shadow:
-        0 4px 14px rgba(255,90,90,0.35);
+    backdrop-filter: blur(8px);
 }
 
 .support-button:hover {
