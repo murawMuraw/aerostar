@@ -28,7 +28,7 @@ async function getWindData(lat, lng) {
         }
         return null;
     } catch (error) {
-        console.error('Ошибка получения ветра:', error);
+        console.error('Error getting wind:', error);
         return null;
     }
 }
@@ -68,7 +68,7 @@ async function checkNearbyPlace(lat, lng) {
             placeInfo.style.display = 'none';
         }
     } catch (error) {
-        console.error('Ошибка получения места:', error);
+        console.error('Error getting seat', error);
     }
 }
 
