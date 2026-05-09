@@ -22,22 +22,22 @@ async function login(email, password) {
             updateProfileUI();
             clearAuthForms();
             await restoreBalloon();
-            showSuccess('Добро пожаловать, ' + data.user.email + '!');
+            showSuccess('Welcome, ' + data.user.email + '!');
             return true;
         } else {
-            showError(data.error || 'Ошибка входа');
+            showError(data.error || 'Login error');
             return false;
         }
     } catch (error) {
-        console.error('Ошибка входа:', error);
-        showError('Ошибка соединения с сервером');
+        console.error('Login error:', error);
+        showError('Error connecting to server');
         return false;
     }
 }
 
 async function register(email, password) {
     if (password.length < 6) {
-        showError('Пароль должен быть не менее 6 символов');
+        showError('The password must be at least 6 characters');
         return false;
     }
     
@@ -59,15 +59,15 @@ async function register(email, password) {
             showAuthModal(false);
             updateProfileUI();
             clearAuthForms();
-            showSuccess('Регистрация успешна! Добро пожаловать!');
+            showSuccess('Registration successful! Welcome!');
             return true;
         } else {
-            showError(data.error || 'Ошибка регистрации');
+            showError(data.error || 'Registration error');
             return false;
         }
     } catch (error) {
-        console.error('Ошибка регистрации:', error);
-        showError('Ошибка соединения с сервером');
+        console.error('Registration error:', error);
+        showError('Error connecting to server');
         return false;
     }
 }
@@ -81,7 +81,7 @@ function logout() {
     updateProfileUI();
     resetFlight();
     showAuthModal(false);
-    showSuccess('Вы вышли из аккаунта');
+    showSuccess('You are logged out of your account');
 }
 
 function continueAsGuest() {
@@ -91,7 +91,7 @@ function continueAsGuest() {
     
     showAuthModal(false);
     updateProfileUI();
-    showSuccess('Вы вошли как гость');
+    showSuccess('You are logged in as a guest');
 }
 
 // Восстановление сессии
@@ -112,7 +112,7 @@ async function restoreSession() {
                 logout();
             }
         } catch (error) {
-            console.error('Ошибка восстановления сессии:', error);
+            console.error('Session recovery error:', error);
             logout();
         }
     } else {
