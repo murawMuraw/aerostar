@@ -119,18 +119,19 @@ body {
 
     border-radius: 999px;
 
-    background: var(--hud-bg);
+    background: rgba(15,25,45,0.82);
 
-    backdrop-filter: var(--hud-blur);
+    backdrop-filter: blur(18px);
 
-    border: 1px solid var(--hud-border);
+    border: 1px solid rgba(255,255,255,0.08);
 
-    color: white;
+    color: rgba(255,255,255,0.92);
 
     font-size: 14px;
     font-weight: 600;
 
-    box-shadow: var(--hud-shadow);
+    box-shadow:
+        0 8px 24px rgba(0,0,0,0.35);
 
     cursor: pointer;
 
