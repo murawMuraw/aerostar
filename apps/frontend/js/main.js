@@ -121,10 +121,10 @@ function initUIHandlers() {
     }
 
     // Close Ad Banner
-    const closeAdBtn = document.getElementById('close-ad');
-    if (closeAdBtn) {
-        closeAdBtn.addEventListener('click', hideAdBanner);
-    }
+    //const closeAdBtn = document.getElementById('close-ad');
+    //if (closeAdBtn) {
+    //    closeAdBtn.addEventListener('click', hideAdBanner);
+    //}
 
     // Welcome Modal
     const closeWelcomeBtn = document.getElementById('closeWelcomeBtn');
