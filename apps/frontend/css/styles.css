@@ -514,7 +514,7 @@ body {
 
     border-radius: 16px;
 
-    background: rgba(143,211,255,0.16);
+    background: rgba(255,255,255,0.08);
 
     color: white;
 
@@ -528,7 +528,7 @@ body {
 
 .auth-form button:hover {
 
-    background: rgba(143,211,255,0.24);
+    background: rgba(255,255,255,0.1);
 }
 
 .auth-error {
