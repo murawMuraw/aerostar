@@ -5,7 +5,7 @@
 // Для локальной разработки используем localhost
 const API_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:3000'  // Локальная разработка
-    : 'http://aerost.art';  // 
+    : '';  // 
 
 window.App = {
     // API конфигурация
