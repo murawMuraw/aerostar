@@ -259,17 +259,19 @@ router.post('/balloons/:id/stop', async (req, res) => {
 });
 
 // ========== ИСПРАВЛЕННЫЙ ЭНДПОИНТ /api/balloons ==========
-router.get('/balloons', async (req, res) => {
+router.get('/balloons', authenticateToken, async (req, res) => {
   try {
-    // Добавили start_time в SQL запрос
     const dbResult = await pool.query(
-      'SELECT id, user_id, current_lat, current_lng, wind_speed, last_update, start_time FROM balloons WHERE is_flying = true'
+      `SELECT b.id, b.user_id, b.current_lat, b.current_lng, b.wind_speed, b.last_update, b.start_time, u.email 
+       FROM balloons b
+       LEFT JOIN users u ON b.user_id = u.id
+       WHERE b.is_flying = true`
     );
     
-    // Добавили start_time для гостевых шаров
     const guestBalloonsList = guestStore.getActive().map(balloon => ({
       id: balloon.id,
       user_id: balloon.user_id,
+      email: null,
       current_lat: balloon.current_lat,
       current_lng: balloon.current_lng,
       wind_speed: balloon.wind_speed,
@@ -278,7 +280,6 @@ router.get('/balloons', async (req, res) => {
     }));
     
     const allBalloons = [...dbResult.rows, ...guestBalloonsList];
-    console.log(`📊 Отправлено шаров: ${allBalloons.length} (БД: ${dbResult.rows.length}, гости: ${guestBalloonsList.length})`);
     res.json(allBalloons);
     
   } catch (error) {
