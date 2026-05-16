@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About Aerostar | Real Wind Balloon Flight Simulator</title>
-    <meta name="description" content="Aerostar is a free virtual hot air balloon that drifts with real-time wind data anywhere on Earth. No ads, no signup — just pure exploration.">
-    <meta name="keywords" content="hot air balloon, wind simulator, live wind, virtual balloon, real-time wind">
-    <meta property="og:title" content="About Aerostar — Live Wind Balloon">
-    <meta property="og:description" content="Fly with real wind data. Free. No ads.">
+    <title>About Aerostar | Real Wind Balloon Flight Simulator for Relaxation</title>
+    <meta name="description" content="Aerostar is a free virtual hot air balloon that drifts with real-time wind data. A zen, ad-free exploration experience. Support independent web projects.">
+    <meta name="keywords" content="hot air balloon, wind simulator, live wind, virtual balloon, real-time wind, relaxation, slow web, meditation">
+    <meta property="og:title" content="About Aerostar — Zen Balloon Flight Simulator">
+    <meta property="og:description" content="Fly with real wind data. No ads. No stress. Just pure exploration.">
     <meta property="og:url" content="https://aerost.art/about.html">
     <meta property="og:type" content="website">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="canonical" href="https://aerost.art/about.html">
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 2rem; background: #1a1a2e; color: #eee; }
         a { color: #ff9800; text-decoration: none; }
@@ -21,40 +21,62 @@
         .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
         .feature-card { background: #16213e; padding: 1.5rem; border-radius: 12px; }
         .feature-card h3 { margin-top: 0; color: #ff9800; }
+        .support-box { background: #0f3460; border-radius: 12px; padding: 1.5rem; margin: 2rem 0; text-align: center; }
+        .support-button { display: inline-block; background: #ff9800; color: #1a1a2e; padding: 0.75rem 1.5rem; border-radius: 40px; font-weight: bold; margin-top: 1rem; }
         .footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #333; font-size: 0.9rem; text-align: center; }
+        .future-features { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
+        .future-features li { background: #16213e; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
     <a href="/" class="back-link">← Back to Balloon</a>
+    
     <h1>About Aerostar</h1>
-    <p><strong>Aerostar</strong> is a virtual hot air balloon flight simulator powered by <strong>real-time wind data</strong>. Click anywhere on the map, press START, and watch your balloon drift according to actual meteorological conditions — wind speed, direction, and gusts — at that exact location.</p>
+    
+    <p><strong>Aerostar</strong> is a web-based, real-time hot air balloon flight simulator designed for <strong>relaxation and slow exploration</strong>. The concept is simple: you launch a virtual balloon from any point on Earth, and it drifts across the globe using live, real-time meteorological wind data. It's a completely ad-free, zen browser experience created for anyone who loves geography, maps, and peaceful journeys.</p>
     
     <div class="feature-grid">
         <div class="feature-card">
-            <h3>🌬️ Live Wind Data</h3>
-            <p>No simulated or random wind. The balloon responds to real weather conditions from global meteorological sources.</p>
+            <h3>🌬️ Real-Time Wind Data</h3>
+            <p>Your flight path is determined entirely by current global weather conditions. No simulated or random wind.</p>
         </div>
         <div class="feature-card">
-            <h3>🌍 Global Coverage</h3>
-            <p>Launch from any coordinates — Alps, Pacific Ocean, Sahara, Arctic Circle. Wind patterns vary by location.</p>
+            <h3>🗺️ Global Map Exploration</h3>
+            <p>Launch your balloon anywhere in the world — Alps, Pacific Ocean, Sahara, Arctic Circle — and watch where the wind takes you.</p>
+        </div>
+        <div class="feature-card">
+            <h3>🧘 Zen & Meditative Experience</h3>
+            <p>No points, no stress, no timers. Just pure, slow-living exploration from the safety of your screen.</p>
         </div>
         <div class="feature-card">
             <h3>🎈 Free & No Ads</h3>
             <p>Zero pop-ups, zero trackers, zero paywalls. Just a balloon and the wind. Supported by voluntary donations.</p>
         </div>
-        <div class="feature-card">
-            <h3>🔐 Optional Registration</h3>
-            <p>Fly as a guest (balloon resets when browser closes) or register to keep your flight going for days.</p>
-        </div>
     </div>
     
     <h2>How the Wind Simulation Works</h2>
-    <p>The balloon's movement is calculated using live wind speed (m/s) and direction (degrees). Wind data updates regularly from real-time meteorological sources. The balloon's altitude is simulated at approximately 500 meters above ground level — where wind patterns differ from surface conditions.</p>
-    <p>Each time you choose a new starting point, the system fetches current wind conditions for that latitude and longitude. As the balloon drifts, wind data continuously updates, creating an authentic, unpredictable journey.</p>
+    <p>The balloon's movement is calculated using live wind speed (m/s) and direction (degrees). Wind data updates regularly from real-time meteorological sources. The balloon's altitude is simulated at approximately 500 meters above ground level — where wind patterns differ from surface conditions. Each time you choose a new starting point, the system fetches current wind conditions for that exact location, creating an authentic, unpredictable journey.</p>
     
     <h2>Why I Built This</h2>
     <p>Aerostar started as a personal experiment in <strong>"slow web"</strong> — a calm, meditative space away from notifications and algorithms. There's something peaceful about watching a balloon drift over mountains or oceans, guided only by the wind. No goals. No scores. Just flight.</p>
-    <p>The project runs entirely on server donations. No corporate funding, no ads, no data selling. Just people who enjoy virtual drifting.</p>
+    
+    <!-- Support section (improved, from your new text) -->
+    <div class="support-box">
+        <h3 style="margin-top: 0; color: #ff9800;">🎈 Why Support This Project?</h3>
+        <p>Aerostar is an independent, non-commercial project. Running a live tracking simulator with real-time map APIs and continuous weather data streams requires server resources. To keep the sky clear of annoying ads and banners, I rely entirely on the community.</p>
+        <p>If you enjoy this meditative flight experience, please consider supporting development.</p>
+        <a href="https://patreon.com/aerostart" target="_blank" rel="noopener noreferrer" class="support-button">Support on Patreon →</a>
+    </div>
+    
+    <h2>What's Coming Next</h2>
+    <p>Your contributions directly cover server costs and help bring exciting future features to life:</p>
+    <ul class="future-features">
+        <li>🌅 Day/Night Cycle</li>
+        <li>🏔️ 3D Terrains</li>
+        <li>👥 Social Flights</li>
+        <li>🌧️ Weather Effects</li>
+        <li>📸 Shareable Flight Links</li>
+    </ul>
     
     <h2>Technical Notes</h2>
     <ul>
@@ -65,9 +87,12 @@
         <li><strong>Registered flights:</strong> Persistent across sessions</li>
     </ul>
     
+    <p style="text-align: center; font-size: 1.2rem; margin: 2rem 0;">🎈 Let's see where the wind takes us! 🎈</p>
+    
     <div class="footer">
-        <p>🎈 <a href="/">Fly the balloon now</a> | <a href="/support.html">Support the project</a> | <a href="/privacy.html">Privacy</a></p>
-        <p>&copy; 2025 Aerostar — Real wind. Real flight. No ads.</p>
+        <p><a href="/">Fly the balloon now</a> | <a href="/support.html">Support the project</a> | <a href="/privacy.html">Privacy</a></p>
+        <p>&copy; 2025 Aerostar — Real wind. Real flight. No ads. No trackers.</p>
     </div>
 </body>
 </html>
+
