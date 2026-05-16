@@ -259,8 +259,9 @@ router.post('/balloons/:id/stop', async (req, res) => {
 });
 
 // ========== ИСПРАВЛЕННЫЙ ЭНДПОИНТ /api/balloons ==========
-router.get('/balloons', authenticateToken, async (req, res) => {
+router.get('/balloons', async (req, res) => {
   try {
+    // Добавляем JOIN с таблицей users, чтобы получить email
     const dbResult = await pool.query(
       `SELECT b.id, b.user_id, b.current_lat, b.current_lng, b.wind_speed, b.last_update, b.start_time, u.email 
        FROM balloons b
@@ -268,10 +269,11 @@ router.get('/balloons', authenticateToken, async (req, res) => {
        WHERE b.is_flying = true`
     );
     
+    // Для гостевых шаров email не будет (или можно использовать user_id как идентификатор)
     const guestBalloonsList = guestStore.getActive().map(balloon => ({
       id: balloon.id,
       user_id: balloon.user_id,
-      email: null,
+      email: null, // или `guest_${balloon.user_id}`
       current_lat: balloon.current_lat,
       current_lng: balloon.current_lng,
       wind_speed: balloon.wind_speed,
@@ -280,6 +282,7 @@ router.get('/balloons', authenticateToken, async (req, res) => {
     }));
     
     const allBalloons = [...dbResult.rows, ...guestBalloonsList];
+    console.log(`📊 Отправлено шаров: ${allBalloons.length} (БД: ${dbResult.rows.length}, гости: ${guestBalloonsList.length})`);
     res.json(allBalloons);
     
   } catch (error) {
