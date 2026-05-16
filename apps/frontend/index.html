@@ -156,8 +156,16 @@
         <h3>Technical Details</h3>
         <p>Wind data updates regularly from real-time meteorological APIs. The balloon's altitude is simulated at approximately 500 meters above ground level — where wind patterns differ significantly from surface conditions. Coordinates update every few seconds as the balloon drifts. The simulation is purely for relaxation and exploration — no competitive elements, no scores, no timers.</p>
         
-        <h3>Support Independent Web Projects</h3>
-        <p>Aerostar is entirely funded by <a href="https://patreon.com/aerostart" target="_blank" rel="noopener noreferrer">voluntary donations</a>. Server costs for live wind data APIs and cloud hosting are the only expenses. If you enjoy watching the balloon drift over Patagonia, the Norwegian fjords, or the Sahara Desert, please consider a small contribution to keep the wind blowing.</p>
+        <h2 style="text-align: center; margin-top: 2rem;">🎈 Let's see where the wind takes us! 🎈</h2>
+        
+        <div class="support-footer-box">
+            <h3>Support Independent Web Projects</h3>
+            <p>Aerostar is entirely funded by voluntary donations. Server costs for live wind data APIs and cloud hosting are the only expenses. If you enjoy watching the balloon drift over Patagonia, the Norwegian fjords, or the Sahara Desert, please consider a small contribution to keep the wind blowing.</p>
+            <div style="text-align: center; margin: 1.5rem 0;">
+                <a href="/support.html" class="support-footer-button">🎈 Support Aerostar →</a>
+                <a href="https://patreon.com/aerostart" target="_blank" rel="noopener noreferrer" class="patreon-footer-button">Become a Patreon</a>
+            </div>
+        </div>
         
         <div class="seo-footer-links">
             <a href="/about.html">About</a> |
@@ -177,7 +185,6 @@
 <script src="js/main.js"></script>
 
 <style>
-       
     /* SEO hidden H1 */
     .seo-h1 {
         position: absolute;
@@ -233,6 +240,37 @@
         color: #888;
         margin-top: 1rem;
     }
+    .support-footer-box {
+        background: #0f3460;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+        text-align: center;
+    }
+    .support-footer-button, .patreon-footer-button {
+        display: inline-block;
+        background: #ff9800;
+        color: #1a1a2e;
+        padding: 0.75rem 1.5rem;
+        border-radius: 40px;
+        font-weight: bold;
+        margin: 0.5rem;
+        transition: transform 0.2s, background 0.2s;
+    }
+    .patreon-footer-button {
+        background: #f96854;
+        color: white;
+    }
+    .support-footer-button:hover, .patreon-footer-button:hover {
+        transform: scale(1.05);
+        text-decoration: none;
+    }
+    .support-footer-button:hover {
+        background: #ffb74d;
+    }
+    .patreon-footer-button:hover {
+        background: #ff7a66;
+    }
     @media (max-width: 768px) {
         .seo-footer {
             padding: 1rem;
@@ -243,6 +281,11 @@
         }
         .seo-footer h3 {
             font-size: 1.1rem;
+        }
+        .support-footer-button, .patreon-footer-button {
+            display: block;
+            margin: 0.5rem auto;
+            text-align: center;
         }
     }
 </style>
@@ -330,3 +373,4 @@
 
 </body>
 </html>
+
