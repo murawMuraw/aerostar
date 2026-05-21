@@ -1,3 +1,4 @@
+
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -258,30 +259,36 @@ router.post('/balloons/:id/stop', async (req, res) => {
   }
 });
 
-// ========== ЭНДПОИНТ /api/balloons (ОБНОВЛЕННЫЙ) ==========
+// ========== ЭНДПОИНТ /api/balloons (ВРЕМЕННО С ДИАГНОСТИКОЙ) ==========
 router.get('/balloons', async (req, res) => {
   try {
-    // SQL запрос возвращает и user_id, и email для авторизованных пользователей
+    console.log('🔍 Запрос к /api/balloons получен');
     
+    // Проверяем подключение к БД
+    console.log('🔍 Выполняем SQL запрос...');
     const dbResult = await pool.query(
-  `SELECT 
-    b.id, 
-    b.user_id,
-    COALESCE(u.email, 'unknown@aerost.art') as email,  -- если нет пользователя, подставляем unknown
-    b.current_lat, 
-    b.current_lng, 
-    b.wind_speed, 
-    b.last_update, 
-    b.start_time
-  FROM balloons b
-  LEFT JOIN users u ON b.user_id = u.id  -- LEFT JOIN вместо JOIN
-  WHERE b.is_flying = true`
-);
-    // Для гостевых шаров - фиксированный email
+      `SELECT 
+        b.id, 
+        b.user_id,
+        u.email,
+        b.current_lat, 
+        b.current_lng, 
+        b.wind_speed, 
+        b.last_update, 
+        b.start_time
+      FROM balloons b
+      JOIN users u ON b.user_id = u.id
+      WHERE b.is_flying = true`
+    );
+    
+    console.log(`🔍 Найдено шаров в БД: ${dbResult.rows.length}`);
+    
+    // Проверяем guestStore
+    console.log('🔍 Получаем гостевые шары...');
     const guestBalloonsList = guestStore.getActive().map(balloon => ({
       id: balloon.id,
-      user_id: balloon.user_id,                    // ID гостя
-      email: 'guest@aerost.art',                   // одинаковый email для всех гостей
+      user_id: balloon.user_id,
+      email: 'guest@aerost.art',
       current_lat: balloon.current_lat,
       current_lng: balloon.current_lng,
       wind_speed: balloon.wind_speed,
@@ -289,13 +296,23 @@ router.get('/balloons', async (req, res) => {
       start_time: balloon.start_time
     }));
     
+    console.log(`🔍 Найдено гостевых шаров: ${guestBalloonsList.length}`);
+    
     const allBalloons = [...dbResult.rows, ...guestBalloonsList];
-    console.log(`📊 Отправлено шаров: ${allBalloons.length} (БД: ${dbResult.rows.length}, гости: ${guestBalloonsList.length})`);
+    console.log(`✅ Успешно! Отправлено шаров: ${allBalloons.length}`);
     res.json(allBalloons);
     
   } catch (error) {
-    console.error('Ошибка получения шаров:', error.message);
-    res.status(500).json({ error: 'Ошибка сервера' });
+    console.error('❌ КРИТИЧЕСКАЯ ОШИБКА в /api/balloons:');
+    console.error('Сообщение:', error.message);
+    console.error('Стек ошибки:', error.stack);
+    
+    // Отправляем детали ошибки (только для отладки!)
+    res.status(500).json({ 
+      error: 'Ошибка сервера', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
