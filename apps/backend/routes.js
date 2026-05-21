@@ -258,18 +258,30 @@ router.post('/balloons/:id/stop', async (req, res) => {
   }
 });
 
-// ========== ИСПРАВЛЕННЫЙ ЭНДПОИНТ /api/balloons ==========
+// ========== ЭНДПОИНТ /api/balloons (ОБНОВЛЕННЫЙ) ==========
 router.get('/balloons', async (req, res) => {
   try {
-    // Добавили start_time в SQL запрос
+    // SQL запрос возвращает и user_id, и email для авторизованных пользователей
     const dbResult = await pool.query(
-      'SELECT id, user_id, current_lat, current_lng, wind_speed, last_update, start_time FROM balloons WHERE is_flying = true'
+      `SELECT 
+        b.id, 
+        b.user_id,      -- ID пользователя
+        u.email,        -- email из таблицы users
+        b.current_lat, 
+        b.current_lng, 
+        b.wind_speed, 
+        b.last_update, 
+        b.start_time
+      FROM balloons b
+      JOIN users u ON b.user_id = u.id
+      WHERE b.is_flying = true`
     );
     
-    // Добавили start_time для гостевых шаров
+    // Для гостевых шаров - фиксированный email
     const guestBalloonsList = guestStore.getActive().map(balloon => ({
       id: balloon.id,
-      user_id: balloon.user_id,
+      user_id: balloon.user_id,                    // ID гостя
+      email: 'guest@aerost.art',                   // одинаковый email для всех гостей
       current_lat: balloon.current_lat,
       current_lng: balloon.current_lng,
       wind_speed: balloon.wind_speed,
@@ -286,6 +298,7 @@ router.get('/balloons', async (req, res) => {
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
+
 // ========== СТАТИСТИКА ==========
 router.get('/stats', async (req, res) => {
   try {
