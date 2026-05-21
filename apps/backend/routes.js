@@ -262,21 +262,21 @@ router.post('/balloons/:id/stop', async (req, res) => {
 router.get('/balloons', async (req, res) => {
   try {
     // SQL запрос возвращает и user_id, и email для авторизованных пользователей
-    const dbResult = await pool.query(
-      `SELECT 
-        b.id, 
-        b.user_id,      -- ID пользователя
-        u.email,        -- email из таблицы users
-        b.current_lat, 
-        b.current_lng, 
-        b.wind_speed, 
-        b.last_update, 
-        b.start_time
-      FROM balloons b
-      JOIN users u ON b.user_id = u.id
-      WHERE b.is_flying = true`
-    );
     
+    const dbResult = await pool.query(
+  `SELECT 
+    b.id, 
+    b.user_id,
+    COALESCE(u.email, 'unknown@aerost.art') as email,  -- если нет пользователя, подставляем unknown
+    b.current_lat, 
+    b.current_lng, 
+    b.wind_speed, 
+    b.last_update, 
+    b.start_time
+  FROM balloons b
+  LEFT JOIN users u ON b.user_id = u.id  -- LEFT JOIN вместо JOIN
+  WHERE b.is_flying = true`
+);
     // Для гостевых шаров - фиксированный email
     const guestBalloonsList = guestStore.getActive().map(balloon => ({
       id: balloon.id,
