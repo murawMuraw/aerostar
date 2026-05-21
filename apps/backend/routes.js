@@ -260,12 +260,13 @@ router.post('/balloons/:id/stop', async (req, res) => {
 });
 
 // ========== ЭНДПОИНТ /api/balloons (ВРЕМЕННО С ДИАГНОСТИКОЙ) ==========
+
+// ========== ЭНДПОИНТ /api/balloons (ИСПРАВЛЕННЫЙ) ==========
 router.get('/balloons', async (req, res) => {
   try {
     console.log('🔍 Запрос к /api/balloons получен');
     
-    // Проверяем подключение к БД
-    console.log('🔍 Выполняем SQL запрос...');
+    // Исправляем JOIN - явно приводим типы или используем правильное сравнение
     const dbResult = await pool.query(
       `SELECT 
         b.id, 
@@ -277,14 +278,13 @@ router.get('/balloons', async (req, res) => {
         b.last_update, 
         b.start_time
       FROM balloons b
-      JOIN users u ON b.user_id = u.id
+      JOIN users u ON b.user_id::text = u.id::text
       WHERE b.is_flying = true`
     );
     
     console.log(`🔍 Найдено шаров в БД: ${dbResult.rows.length}`);
     
-    // Проверяем guestStore
-    console.log('🔍 Получаем гостевые шары...');
+    // Для гостевых шаров - фиксированный email
     const guestBalloonsList = guestStore.getActive().map(balloon => ({
       id: balloon.id,
       user_id: balloon.user_id,
@@ -303,16 +303,8 @@ router.get('/balloons', async (req, res) => {
     res.json(allBalloons);
     
   } catch (error) {
-    console.error('❌ КРИТИЧЕСКАЯ ОШИБКА в /api/balloons:');
-    console.error('Сообщение:', error.message);
-    console.error('Стек ошибки:', error.stack);
-    
-    // Отправляем детали ошибки (только для отладки!)
-    res.status(500).json({ 
-      error: 'Ошибка сервера', 
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    console.error('❌ Ошибка в /api/balloons:', error.message);
+    res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 
