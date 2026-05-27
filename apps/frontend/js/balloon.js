@@ -88,8 +88,8 @@ function updateHaze(center) {
     
     gradient.addColorStop(0, 'rgba(0,0,0,0)');
     gradient.addColorStop(pos1, 'rgba(0,0,0,0)');
-    gradient.addColorStop(pos2, 'rgba(100,100,100,0.2)');
-    gradient.addColorStop(pos3, 'rgba(50,50,50,0.2)');
+    gradient.addColorStop(pos2, 'rgba(100,100,100,0.5)');
+    gradient.addColorStop(pos3, 'rgba(50,50,50,0.9)');
     gradient.addColorStop(1, 'rgba(25,25,25,0.15)');
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
