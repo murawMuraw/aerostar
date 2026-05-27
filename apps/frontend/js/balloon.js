@@ -90,6 +90,7 @@ function updateHaze(center) {
     gradient.addColorStop(pos1, 'rgba(0,0,0,0)');
     gradient.addColorStop(pos2, 'rgba(100,100,100,0.9)');
     gradient.addColorStop(pos3, 'rgba(50,50,50,0.9)');
+    gradient.addColorStop(pos3 + 0.01, 'rgba(0,0,0,0)');  // Сразу после полосы - прозрачный
     gradient.addColorStop(1, 'rgba(0,0,0,0)');
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
