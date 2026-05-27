@@ -63,13 +63,10 @@ function updateHaze(center) {
     canvas.width = window.map.getSize().x;
     canvas.height = window.map.getSize().y;
     
-    // Полностью очищаем canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Если нет полёта или центра - выходим
     if (!center || !window.App.isFlying) return;
     
-    // Рисуем только окружность
     const centerPoint = window.map.latLngToContainerPoint(center);
     
     const metersPerPixel = window.map.distance(
@@ -79,11 +76,34 @@ function updateHaze(center) {
     
     const radius = (window.App.ZONES.HAZE || 500) / metersPerPixel;
     
+    // Рисуем окружность
     ctx.beginPath();
     ctx.arc(centerPoint.x, centerPoint.y, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = '#00aaff';  // Сине-голубой
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0, 150, 255, 0.6)';
+    ctx.lineWidth = 2;
     ctx.stroke();
+    
+    // Добавляем маленькие метки на окружности (как на радаре)
+    const numMarks = 8;  // 8 меток
+    for (let i = 0; i < numMarks; i++) {
+        const angle = (i / numMarks) * Math.PI * 2;
+        const x = centerPoint.x + Math.cos(angle) * radius;
+        const y = centerPoint.y + Math.sin(angle) * radius;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 150, 255, 0.8)';
+        ctx.fill();
+    }
+    
+    // Добавляем текст "ГРАНИЦА ВИДИМОСТИ"
+    ctx.font = '12px Arial';
+    ctx.fillStyle = 'rgba(0, 150, 255, 0.7)';
+    ctx.shadowBlur = 0;
+    ctx.fillText('⟡', centerPoint.x + radius - 10, centerPoint.y);
+    ctx.fillText('⟡', centerPoint.x - radius + 10, centerPoint.y);
+    ctx.fillText('⟡', centerPoint.x, centerPoint.y + radius - 10);
+    ctx.fillText('⟡', centerPoint.x, centerPoint.y - radius + 10);
 }
 
 // Движение шара
