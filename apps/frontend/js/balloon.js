@@ -54,7 +54,7 @@ async function updateForecast(startPoint) {
     }).addTo(window.map);
 }
 
-// Обновление эффекта тумана
+// Оуружность на грани видимости
 function updateHaze(center) {
     const canvas = document.getElementById('haze-canvas');
     if (!canvas) return;
@@ -63,39 +63,27 @@ function updateHaze(center) {
     canvas.width = window.map.getSize().x;
     canvas.height = window.map.getSize().y;
     
-    if (!center || !window.App.isFlying) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        return;
-    }
+    // Полностью очищаем canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
+    // Если нет полёта или центра - выходим
+    if (!center || !window.App.isFlying) return;
+    
+    // Рисуем только окружность
     const centerPoint = window.map.latLngToContainerPoint(center);
-    const maxRadius = Math.max(canvas.width, canvas.height) * 1.5;
-    const gradient = ctx.createRadialGradient(centerPoint.x, centerPoint.y, 0, 
-                                               centerPoint.x, centerPoint.y, maxRadius);
     
     const metersPerPixel = window.map.distance(
         window.map.containerPointToLatLng([0, 0]), 
         window.map.containerPointToLatLng([1, 0])
     );
     
-    const brightRadius = window.App.ZONES.BRIGHT / metersPerPixel;
-    const mediumRadius = window.App.ZONES.MEDIUM / metersPerPixel;
-    const hazeRadius = window.App.ZONES.HAZE / metersPerPixel;
+    const radius = (window.App.ZONES.HAZE || 500) / metersPerPixel;
     
-    const pos1 = Math.min(1, brightRadius / maxRadius);
-    const pos2 = Math.min(1, mediumRadius / maxRadius);
-    const pos3 = Math.min(1, hazeRadius / maxRadius);
-    
-    gradient.addColorStop(0, 'rgba(0,0,0,0)');
-    gradient.addColorStop(pos1, 'rgba(0,0,0,0)');
-    gradient.addColorStop(pos2, 'rgba(100,100,100,0.9)');
-    gradient.addColorStop(pos3, 'rgba(50,50,50,0.9)');
-    gradient.addColorStop(pos3 + 0.01, 'rgba(0,0,0,0)');  // Сразу после полосы - прозрачный
-    gradient.addColorStop(1, 'rgba(0,0,0,0.1)');
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.arc(centerPoint.x, centerPoint.y, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = '#00aaff';  // Сине-голубой
+    ctx.lineWidth = 3;
+    ctx.stroke();
 }
 
 // Движение шара
