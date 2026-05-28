@@ -9,6 +9,10 @@ async function updateAllBalloons(io) {
     // 1. Обновляем шары авторизованных пользователей (из БД)
     const balloons = await pool.query('SELECT * FROM balloons WHERE is_flying = true');
     
+    // Получаем текущую минуту для проверки интервала прореживания
+    const currentMinutes = new Date().getMinutes();
+    const shouldSaveToHistory = currentMinutes % 10 === 0;
+    
     for (const balloon of balloons.rows) {
       const wind = await getWindData(balloon.current_lat, balloon.current_lng);
       
@@ -18,14 +22,19 @@ async function updateAllBalloons(io) {
           wind.speed, wind.direction, 60
         );
         
-        const path = balloon.path || [];
-        path.push({ 
-          lat: balloon.current_lat, 
-          lng: balloon.current_lng, 
-          time: new Date() 
-        });
+        let trimmedPath = balloon.path || [];
         
-        const trimmedPath = path.slice(-10000);
+        // Добавляем точку в историю только раз в 10 минут
+        if (shouldSaveToHistory) {
+          trimmedPath.push({ 
+            lat: balloon.current_lat, 
+            lng: balloon.current_lng, 
+            time: new Date() 
+          });
+          
+          // Ограничиваем историю до 5 040 точек (ровно 5 недель пути)
+          trimmedPath = trimmedPath.slice(-5040);
+        }
         
         await pool.query(
           `UPDATE balloons SET 
@@ -47,12 +56,12 @@ async function updateAllBalloons(io) {
           path: trimmedPath
         });
         
-        console.log(`✅ Авторизованный шар ${balloon.id.substring(0, 8)} обновлен`);
+        console.log(`✅ Авторизованный шар ${balloon.id.substring(0, 8)} обновлен ${shouldSaveToHistory ? '(точка добавлена в историю)' : ''}`);
       }
     }
     
-    // 2. Обновляем гостевые шары (из памяти)
-    console.log(`🔄 Обновление гостевых шаров: ${guestStore.size} активных`);
+    // 2. Обновляем гостевые шары (из памяти) - ОСТАВЛЕНО БЕЗ ИЗМЕНЕНИЙ
+    console.log(`🔄 Обновление гостевых шаров: ${guestStore.size} active`);
     
     const activeGuests = guestStore.getActive();
     for (const balloon of activeGuests) {
@@ -73,7 +82,6 @@ async function updateAllBalloons(io) {
         
         const trimmedPath = path.slice(-10000);
         
-        // Обновляем данные в памяти
         const updatedBalloon = {
           ...balloon,
           current_lat: newPos.lat,
@@ -104,3 +112,4 @@ async function updateAllBalloons(io) {
 }
 
 module.exports = { updateAllBalloons };
+
