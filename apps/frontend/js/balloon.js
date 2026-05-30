@@ -84,7 +84,7 @@ function updateHaze(center) {
     ctx.stroke();
     
     // Добавляем маленькие метки на окружности (как на радаре)
-    const numMarks = 8;  // 8 меток
+    const numMarks = 8;
     for (let i = 0; i < numMarks; i++) {
         const angle = (i / numMarks) * Math.PI * 2;
         const x = centerPoint.x + Math.cos(angle) * radius;
@@ -96,7 +96,6 @@ function updateHaze(center) {
         ctx.fill();
     }
     
-    // Добавляем текст "ГРАНИЦА ВИДИМОСТИ"
     ctx.font = '12px Arial';
     ctx.fillStyle = 'rgba(0, 150, 255, 0.7)';
     ctx.shadowBlur = 0;
@@ -120,10 +119,8 @@ function moveBalloon() {
     updateCoordDisplay(window.App.balloonPosition.lat, window.App.balloonPosition.lng);
     updateHaze(window.App.balloonPosition);
     
-    // Проверка ближайшего места
     checkNearbyPlace(window.App.balloonPosition.lat, window.App.balloonPosition.lng);
     
-    // Сохраняем путь
     if (window.App.actualPathPoints.length === 0 || 
         window.map.distance(window.App.balloonPosition, window.App.actualPathPoints[window.App.actualPathPoints.length - 1]) > 10) {
         window.App.actualPathPoints.push(window.App.balloonPosition);
@@ -138,7 +135,6 @@ function moveBalloon() {
             opacity: 0.8 
         }).addTo(window.map);
         
-        // 🔥 ОТПРАВЛЯЕМ ПУБЛИЧНЫЙ ШАР
         shareToPublicBalloon(window.App.balloonPosition, window.App.actualPathPoints);
     }
 }
@@ -173,13 +169,11 @@ async function startFlight() {
         };
         updateWindDisplay(window.App.currentWind);
         
-        // Удаляем стартовый маркер
         if (window.App.startMarker) {
             window.map.removeLayer(window.App.startMarker);
             window.App.startMarker = null;
         }
         
-        // Создаем маркер шара
         const balloonIcon = L.icon({
             iconUrl: '/images/balloon.png',
             iconSize: [32, 32],
@@ -194,10 +188,8 @@ async function startFlight() {
         
         window.App.actualPathPoints = [window.App.balloonPosition];
         
-        // 🔥 ОТПРАВЛЯЕМ НАЧАЛЬНУЮ ПОЗИЦИЮ ПУБЛИЧНОГО ШАРА
         shareToPublicBalloon(window.App.balloonPosition, window.App.actualPathPoints);
         
-        // Запускаем интервалы
         if (window.App.movementInterval) clearInterval(window.App.movementInterval);
         window.App.movementInterval = setInterval(moveBalloon, 1000);
         
@@ -246,7 +238,6 @@ async function restoreBalloon() {
             };
             window.App.balloonId = balloon.id;
             
-            // Восстанавливаем путь
             if (balloon.path && balloon.path.length > 0) {
                 window.App.actualPathPoints = balloon.path.map(p => L.latLng(p.lat, p.lng));
                 if (window.App.pathLine) window.map.removeLayer(window.App.pathLine);
@@ -257,7 +248,6 @@ async function restoreBalloon() {
                 }).addTo(window.map);
             }
             
-            // Создаем маркер шара
             const balloonIcon = L.icon({
                 iconUrl: '/images/balloon.png',
                 iconSize: [32, 32],
@@ -280,7 +270,6 @@ async function restoreBalloon() {
             hideHint();
             updateHaze(window.App.balloonPosition);
             
-            // Запускаем интервалы
             if (window.App.movementInterval) clearInterval(window.App.movementInterval);
             window.App.movementInterval = setInterval(moveBalloon, 1000);
             
@@ -295,7 +284,6 @@ async function restoreBalloon() {
                 }
             }, 60000);
             
-            // 🔥 ОТПРАВЛЯЕМ ВОССТАНОВЛЕННУЮ ПОЗИЦИЮ
             shareToPublicBalloon(window.App.balloonPosition, window.App.actualPathPoints);
             
             return true;
@@ -310,7 +298,6 @@ async function restoreBalloon() {
 
 // Сброс полета
 function resetFlight() {
-    // Останавливаем интервалы
     if (window.App.movementInterval) {
         clearInterval(window.App.movementInterval);
         window.App.movementInterval = null;
@@ -321,12 +308,10 @@ function resetFlight() {
         window.App.windUpdateInterval = null;
     }
     
-    // Останавливаем шар на сервере
     if (window.App.balloonId) {
         apiRequest(`/api/balloons/${window.App.balloonId}/stop`, { method: 'POST' }).catch(console.error);
     }
     
-    // Удаляем слои с карты
     if (window.App.balloonMarker) {
         window.map.removeLayer(window.App.balloonMarker);
         window.App.balloonMarker = null;
@@ -347,7 +332,6 @@ function resetFlight() {
         window.App.pathLine = null;
     }
     
-    // Сбрасываем состояние
     window.App.forecastPoints = [];
     window.App.actualPathPoints = [];
     window.App.isFlying = false;
@@ -355,7 +339,6 @@ function resetFlight() {
     window.App.currentWind = null;
     window.App.balloonId = null;
     
-    // Обновляем UI
     updateCoordDisplay(0, 0);
     updateWindDisplay(null);
     setStartButtonEnabled(false);
@@ -369,7 +352,6 @@ function resetFlight() {
 
 // ========== ПУБЛИЧНАЯ ТРАНСЛЯЦИЯ ДЛЯ AEROSTAR ==========
 async function shareToPublicBalloon(position, path) {
-    // Только для aerostar@aerost.art
     if (!window.App.currentUser || window.App.currentUser.email !== 'aerostar@aerost.art') {
         return;
     }
