@@ -36,7 +36,7 @@ function initMap() {
     esriSatellite.addTo(map);
     
     L.control.layers(
-        { "🛰️ Спутник": esriSatellite, "🗺️ Карта": osmStandard },
+        { "🛰️ ESRI Satellite": esriSatellite, "🗺️ OSM Standard": osmStandard },
         null,
         { position: 'topleft', collapsed: false }
     ).addTo(map);
@@ -48,11 +48,8 @@ function initMap() {
 
 // Начинаем следить за публичным шаром
 function startWatching() {
-    // Обновляем каждые 2 секунды
     updateInterval = setInterval(fetchPublicBalloon, 2000);
     console.log('👀 Начали следить за публичным шаром (обновление каждые 2 сек)');
-    
-    // Первый запрос сразу
     fetchPublicBalloon();
 }
 
@@ -66,7 +63,6 @@ async function fetchPublicBalloon() {
             renderBalloon(data);
             updateStatus(`🟢 LIVE: ${new Date().toLocaleTimeString()}`);
             
-            // Скрываем загрузку
             const loadingEl = document.getElementById('loading');
             if (loadingEl) {
                 loadingEl.style.display = 'none';
@@ -80,53 +76,54 @@ async function fetchPublicBalloon() {
     }
 }
 
-// Отрисовка шара на карте
+// Отрисовка шара на карте (как в index.html)
 function renderBalloon(data) {
     if (!data || !data.position) return;
     
-    // Обновляем маркер
+    // Удаляем старый маркер
     if (publicBalloonMarker) {
         map.removeLayer(publicBalloonMarker);
     }
     
-    const balloonIcon = L.divIcon({
-        className: 'watch-balloon-marker',
-        html: '🎈',
-        iconSize: [48, 48],
-        popupAnchor: [0, -24]
+    // Такая же иконка как в index.html
+    const balloonIcon = L.icon({
+        iconUrl: '/images/balloon.png',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -16]
     });
     
     publicBalloonMarker = L.marker([data.position.lat, data.position.lng], {
-        icon: balloonIcon
+        icon: balloonIcon,
+        zIndexOffset: 1000
     }).addTo(map);
     
+    // Попап с информацией
     publicBalloonMarker.bindPopup(`
-        <div style="text-align: center; padding: 5px;">
+        <div style="text-align: center;">
             <strong>🎈 Aerostar Balloon</strong><br>
-            📍 ${data.position.lat.toFixed(4)}°, ${data.position.lng.toFixed(4)}°<br>
-            🕐 ${data.lastUpdate ? new Date(data.lastUpdate).toLocaleTimeString() : 'только что'}
+            📍 ${data.position.lat.toFixed(4)}°, ${data.position.lng.toFixed(4)}°
         </div>
     `);
     
-    // Центрируем карту (но не принудительно, только если шар далеко)
+    // Центрируем карту если шар далеко
     const center = map.getCenter();
     const distance = map.distance(center, [data.position.lat, data.position.lng]);
-    if (distance > 5000) { // если шар дальше 5км, центрируем
+    if (distance > 5000) {
         map.setView([data.position.lat, data.position.lng], map.getZoom());
     }
     
-    // Отрисовываем путь
+    // Отрисовываем путь (такая же красная линия как в index.html)
     if (data.path && data.path.length > 0) {
         if (publicPathLine) {
             map.removeLayer(publicPathLine);
         }
         
         const latlngs = data.path.map(point => [point.lat, point.lng]);
-        publicPathLine = L.polyline(latlngs, {
-            color: '#FF6B35',
-            weight: 4,
-            opacity: 0.8,
-            smoothFactor: 1
+        publicPathLine = L.polyline(latlngs, { 
+            color: '#ff4444', 
+            weight: 4, 
+            opacity: 0.8 
         }).addTo(map);
         
         console.log(`📏 Отрисован путь из ${data.path.length} точек`);
@@ -148,4 +145,4 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
-console.log('🎈 Watch script loaded (no WebSocket version)');
+console.log('🎈 Watch script loaded');
