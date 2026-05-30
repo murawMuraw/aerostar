@@ -137,6 +137,9 @@ function moveBalloon() {
             weight: 4, 
             opacity: 0.8 
         }).addTo(window.map);
+        
+        // 🔥 ОТПРАВКА ПОЗИЦИИ ДЛЯ ПУБЛИЧНОГО ШАРА
+        sharePublicPosition(window.App.balloonPosition, window.App.actualPathPoints);
     }
 }
 
@@ -190,6 +193,9 @@ async function startFlight() {
         }).addTo(window.map);
         
         window.App.actualPathPoints = [window.App.balloonPosition];
+        
+        // 🔥 ОТПРАВКА НАЧАЛЬНОЙ ПОЗИЦИИ
+        sharePublicPosition(window.App.balloonPosition, window.App.actualPathPoints);
         
         // Запускаем интервалы
         if (window.App.movementInterval) clearInterval(window.App.movementInterval);
@@ -289,6 +295,9 @@ async function restoreBalloon() {
                 }
             }, 60000);
             
+            // 🔥 ОТПРАВКА ВОССТАНОВЛЕННОЙ ПОЗИЦИИ
+            sharePublicPosition(window.App.balloonPosition, window.App.actualPathPoints);
+            
             return true;
         }
         return false;
@@ -357,13 +366,42 @@ function resetFlight() {
     
     showSuccess('Stop');
 }
-// Отправка позиции (только для aerostar@aerost.art)
-function sharePublicPosition(position, path) {
-    if (window.socket && window.App.currentUser?.email === 'aerostar@aerost.art') {
-        window.socket.emit('update-public-balloon', {
-            position: { lat: position.lat, lng: position.lng },
-            path: path.map(p => ({ lat: p.lat, lng: p.lng }))
-        });
-    }
-}
 
+// 🔥 ОТПРАВКА ПОЗИЦИИ ДЛЯ ПУБЛИЧНОГО ШАРА
+function sharePublicPosition(position, path) {
+    // Проверяем наличие socket
+    if (!window.socket) {
+        console.warn('⚠️ Socket not initialized');
+        return;
+    }
+    
+    // Проверяем, что пользователь авторизован
+    if (!window.App.currentUser) {
+        console.warn('⚠️ User not logged in');
+        return;
+    }
+    
+    // Проверяем, что это публичный вещатель
+    if (window.App.currentUser.email !== 'aerostar@aerost.art') {
+        // Не публичный пользователь - выходим
+        return;
+    }
+    
+    // Проверяем, что позиция существует
+    if (!position) {
+        console.warn('⚠️ No position to share');
+        return;
+    }
+    
+    console.log('📤 Sending public balloon position:', {
+        lat: position.lat,
+        lng: position.lng,
+        pathLength: path?.length || 0
+    });
+    
+    // Отправляем позицию на сервер
+    window.socket.emit('update-public-balloon', {
+        position: { lat: position.lat, lng: position.lng },
+        path: path ? path.map(p => ({ lat: p.lat, lng: p.lng })) : []
+    });
+}
