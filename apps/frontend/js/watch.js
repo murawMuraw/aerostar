@@ -6,7 +6,9 @@ const API_URL = ''; // Пустая строка для продакшена
 let map;
 let publicBalloonMarker = null;
 let publicPathLine = null;
-let socket = null; // 🔥 Глобальная переменная
+
+// 🔥 Глобальный socket - ВАЖНО!
+window.watchSocket = null;
 
 // Инициализация страницы
 document.addEventListener('DOMContentLoaded', () => {
@@ -53,18 +55,15 @@ function connectSocket() {
     try {
         console.log('🔌 Connecting to WebSocket...');
         
-        // 🔥 Сохраняем socket в глобальную переменную
-        socket = io(window.location.origin, {
+        // 🔥 СОЗДАЕМ ГЛОБАЛЬНЫЙ SOCKET
+        window.watchSocket = io(window.location.origin, {
             transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionAttempts: 5
         });
         
-        // 🔥 Сохраняем в window для доступа из консоли
-        window.socket = socket;
-        
-        socket.on('connect', () => {
-            console.log('✅ WebSocket connected, id:', socket.id);
+        window.watchSocket.on('connect', () => {
+            console.log('✅ WebSocket connected, id:', window.watchSocket.id);
             
             // Скрываем загрузку
             const loadingEl = document.getElementById('loading');
@@ -72,46 +71,47 @@ function connectSocket() {
                 loadingEl.style.display = 'none';
             }
             
-            // Запрашиваем публичный шар
+            // 🔥 ЗАПРАШИВАЕМ ПУБЛИЧНЫЙ ШАР
             console.log('📡 Requesting public balloon...');
-            socket.emit('watch-public-balloon');
-            
-            // Добавляем таймаут для повторного запроса
-            setTimeout(() => {
-                if (publicBalloonMarker === null) {
-                    console.log('🔄 No balloon yet, requesting again...');
-                    socket.emit('watch-public-balloon');
-                }
-            }, 5000);
+            window.watchSocket.emit('watch-public-balloon');
         });
         
         // Получаем текущее состояние
-        socket.on('public-balloon-state', (data) => {
+        window.watchSocket.on('public-balloon-state', (data) => {
             console.log('📥 Received public-balloon-state:', data);
             if (data && data.position) {
                 renderPublicBalloon(data);
             } else {
                 console.log('⚠️ No balloon state available yet');
-                updateStatus('Ожидание начала трансляции...');
+                const statusEl = document.getElementById('connectionStatus');
+                if (statusEl) {
+                    statusEl.textContent = '⏳ Ожидание начала трансляции...';
+                }
             }
         });
         
         // Получаем обновления
-        socket.on('public-balloon-update', (data) => {
+        window.watchSocket.on('public-balloon-update', (data) => {
             console.log('🔄 Received public-balloon-update:', data);
             if (data && data.position) {
                 renderPublicBalloon(data);
             }
         });
         
-        socket.on('connect_error', (error) => {
+        window.watchSocket.on('connect_error', (error) => {
             console.error('Socket connection error:', error);
-            updateStatus('Ошибка подключения: ' + error.message);
+            const statusEl = document.getElementById('connectionStatus');
+            if (statusEl) {
+                statusEl.textContent = '❌ Ошибка подключения';
+            }
         });
         
-        socket.on('disconnect', () => {
+        window.watchSocket.on('disconnect', () => {
             console.log('❌ WebSocket disconnected');
-            updateStatus('Потеря соединения. Переподключение...');
+            const statusEl = document.getElementById('connectionStatus');
+            if (statusEl) {
+                statusEl.textContent = '⚠️ Потеря соединения';
+            }
             const loadingEl = document.getElementById('loading');
             if (loadingEl) {
                 loadingEl.style.display = 'block';
@@ -120,7 +120,6 @@ function connectSocket() {
         
     } catch (error) {
         console.error('Socket connection error:', error);
-        updateStatus('Ошибка: ' + error.message);
     }
 }
 
@@ -183,7 +182,10 @@ function renderPublicBalloon(state) {
     }
     
     // Обновляем статус
-    updateStatus(`🟢 LIVE: Трансляция идет`);
+    const statusEl = document.getElementById('connectionStatus');
+    if (statusEl) {
+        statusEl.textContent = '🟢 LIVE: Трансляция идет';
+    }
     
     // Скрываем загрузку
     const loadingEl = document.getElementById('loading');
@@ -192,27 +194,26 @@ function renderPublicBalloon(state) {
     }
 }
 
-// Обновление статуса
-function updateStatus(message) {
-    const statusEl = document.getElementById('connectionStatus');
-    if (statusEl) {
-        statusEl.textContent = message;
-    }
-    console.log('Status:', message);
-}
-
-// 🔥 Экспортируем для отладки в консоли
-window.watchDebug = {
-    socket: () => socket,
-    emit: (event, data) => socket?.emit(event, data),
-    status: () => console.log('Connected:', socket?.connected, 'Marker:', !!publicBalloonMarker),
-    requestBalloon: () => {
-        if (socket) {
-            console.log('Manually requesting balloon...');
-            socket.emit('watch-public-balloon');
+// 🔥 Для отладки в консоли
+window.debugWatch = {
+    emit: (event, data) => {
+        if (window.watchSocket) {
+            window.watchSocket.emit(event, data);
+            console.log(`Emitted ${event}:`, data);
         } else {
-            console.log('Socket not connected!');
+            console.log('Socket not initialized');
         }
+    },
+    requestBalloon: () => {
+        if (window.watchSocket) {
+            window.watchSocket.emit('watch-public-balloon');
+        } else {
+            console.log('Socket not initialized');
+        }
+    },
+    status: () => {
+        console.log('Socket connected:', window.watchSocket?.connected);
+        console.log('Balloon marker:', !!publicBalloonMarker);
     }
 };
 
