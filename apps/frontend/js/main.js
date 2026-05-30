@@ -1,45 +1,5 @@
 // ========== MAIN MODULE (ENTRY POINT) ==========
 
-// Функция инициализации socket
-function initSocket() {
-    const wsUrl = window.App.API_URL || window.location.origin;
-    
-    // 🔥 СОЗДАЕМ ГЛОБАЛЬНЫЙ SOCKET
-    window.socket = io(wsUrl, {
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionAttempts: 5
-    });
-    
-    window.socket.on('connect', () => {
-        console.log('🔌 Socket connected, id:', window.socket.id);
-        
-        // Если есть токен, отправляем для аутентификации
-        if (window.App.token) {
-            window.socket.emit('authenticate', window.App.token);
-            console.log('🔐 Token sent to socket on connect');
-        } else {
-            window.socket.emit('guest-mode', { isGuest: true });
-            console.log('👤 Guest mode activated for socket');
-        }
-    });
-    
-    window.socket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
-    });
-    
-    window.socket.on('disconnect', (reason) => {
-        console.log('🔌 Socket disconnected:', reason);
-    });
-    
-    // 🔥 НОВОЕ: Слушаем подтверждение публичного вещателя
-    window.socket.on('public-broadcaster-confirmed', (data) => {
-        if (data.status) {
-            console.log('🎉 Вы подтверждены как публичный вещатель!');
-        }
-    });
-}
-
 // App Initialization
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Aerostar App Starting');
@@ -50,16 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // 0. Socket Initialization (ДО восстановления сессии)
-    initSocket();
-    
     // 1. Map Initialization
     initMap();
     // 2. UI Handlers Initialization
     initUIHandlers();
     // 3. Auth Handlers Initialization
     initAuthHandlers();
-    // 4. User Session Recovery (теперь socket уже есть)
+    // 4. User Session Recovery
     restoreSession();
     // 5. Server Ping Setup
     startServerPing();
@@ -163,6 +120,12 @@ function initUIHandlers() {
         resetBtn.addEventListener('click', resetFlight);
     }
 
+    // Close Ad Banner
+    //const closeAdBtn = document.getElementById('close-ad');
+    //if (closeAdBtn) {
+    //    closeAdBtn.addEventListener('click', hideAdBanner);
+    //}
+
     // Welcome Modal
     const closeWelcomeBtn = document.getElementById('closeWelcomeBtn');
     if (closeWelcomeBtn) {
@@ -191,8 +154,9 @@ function initUIHandlers() {
             if (welcomeModal && !welcomeModal.classList.contains('hidden')) {
                 closeWelcomeModal();
             }
-        }
-    });
+             
+            }
+      });
 }
 
 // Global Error Handling
