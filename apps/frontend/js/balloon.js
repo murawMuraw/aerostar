@@ -357,3 +357,13 @@ function resetFlight() {
     
     showSuccess('Stop');
 }
+// Отправка позиции (только для aerostar@aerost.art)
+function sharePublicPosition(position, path) {
+    if (window.socket && window.App.currentUser?.email === 'aerostar@aerost.art') {
+        window.socket.emit('update-public-balloon', {
+            position: { lat: position.lat, lng: position.lng },
+            path: path.map(p => ({ lat: p.lat, lng: p.lng }))
+        });
+    }
+}
+
