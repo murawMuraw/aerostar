@@ -998,3 +998,36 @@ body {
         gap: 10px;
     }
 }
+
+/* LIVE AEROSTAR кнопка */
+.live-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #ff0000, #cc0000);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 40px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+    z-index: 1000;
+    box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.live-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(255, 0, 0, 0.4);
+}
+
+/* На мобильных устройствах чуть меньше */
+@media (max-width: 768px) {
+    .live-button {
+        padding: 8px 16px;
+        font-size: 12px;
+        bottom: 15px;
+        right: 15px;
+    }
+}
