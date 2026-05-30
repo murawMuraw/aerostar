@@ -2,232 +2,157 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Aerostat Aerostar — Live /title>
-    
-    <!-- Переключено на сверхнадежный CDN jsDelivr для полной гарантии загрузки библиотек -->
-    <link rel="stylesheet" href="https://jsdelivr.net" />
-    <script src="https://jsdelivr.net"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Aerostar - LIVE Public Balloon</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/styles.css">
     <style>
-        html, body, #watch-map { 
-            margin: 0; 
-            padding: 0; 
-            width: 100%; 
-            height: 100%; 
-            background: #0b1d33; 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
         
-        #telemetry {
-            position: absolute; 
-            top: 20px; 
-            right: 20px; 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        
+        /* Кнопка назад */
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
             z-index: 1000;
-            background: rgba(0, 0, 0, 0.85); 
-            color: white; 
-            padding: 15px;
-            border-radius: 8px; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            min-width: 220px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            backdrop-filter: blur(5px);
-        }
-        #telemetry h3 { 
-            margin: 0 0 10px 0; 
-            color: #ff4747; 
-            font-size: 16px;
-            letter-spacing: 0.5px;
-        }
-        .telemetry-row {
-            margin: 6px 0;
-            font-size: 14px;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 500;
             display: flex;
-            justify-content: space-between;
-        }
-        .telemetry-row span {
-            font-weight: bold;
-            color: #00ffcc;
-        }
-
-        #follow-toggle {
-            padding: 10px 16px; 
-            background: #fff; 
-            border: none; 
-            cursor: pointer; 
-            font-weight: bold; 
-            border-radius: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3); 
+            align-items: center;
+            gap: 8px;
             font-size: 14px;
-            transition: all 0.2s ease;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s;
         }
         
-        @media (max-width: 767px) {
-            #telemetry {
+        .back-button:hover {
+            background: rgba(0,0,0,0.9);
+            transform: translateX(-3px);
+        }
+        
+        /* Информационная панель */
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 15px;
+            z-index: 1000;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+            font-size: 14px;
+        }
+        
+        .info-panel h3 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+        }
+        
+        .info-panel p {
+            margin: 0;
+            opacity: 0.8;
+            font-size: 12px;
+        }
+        
+        .live-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: #ff0000;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            animation: pulse 1.5s infinite;
+            box-shadow: 0 0 10px rgba(255,0,0,0.5);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        /* Индикатор загрузки */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 2000;
+            text-align: center;
+        }
+        
+        /* Адаптивность */
+        @media (min-width: 768px) {
+            .info-panel {
+                left: auto;
+                right: 20px;
+                bottom: 20px;
                 top: auto;
-                right: 10px;
-                bottom: 20px; 
-                left: 10px;
-                min-width: 0;
-                padding: 12px;
-                display: flex;
-                flex-direction: column;
-                gap: 5px;
+                min-width: 250px;
+                text-align: left;
             }
-            #telemetry h3 {
-                font-size: 14px;
-                margin-bottom: 2px;
-                text-align: center;
-            }
-            .telemetry-container {
-                display: flex;
-                justify-content: space-around;
-                align-items: center;
-                border-top: 1px solid rgba(255,255,255,0.1);
-                padding-top: 5px;
-            }
-            .telemetry-row {
-                margin: 0;
-                font-size: 13px;
-                flex-direction: column;
-                align-items: center;
-            }
-            #status {
-                text-align: center;
-                font-size: 10px;
-            }
-            .leaflet-top .leaflet-control {
-                margin-top: 10px !important;
+            
+            .back-button {
+                top: 20px;
+                left: 20px;
             }
         }
     </style>
 </head>
 <body>
-
-    <div id="telemetry">
-        <h3>🎈 AEROSTAR LIVE</h3>
-        
-    <div id="watch-map"></div>
-
-    <!-- Подключаем Socket.io -->
-    <script src="/socket.io/socket.io.js"></script>
+    <div id="map"></div>
     
-    <script>
-        // Использование DOMContentLoaded гарантирует, что код запустится ТОЛЬКО 
-        // после того, как все внешние JS-скрипты (Leaflet) полностью загружены браузером
-        document.addEventListener("DOMContentLoaded", function() {
-            
-            // Инициализация карты мира
-            const map = L.map('watch-map', { 
-                center: [20, 0], 
-                zoom: 2,
-                minZoom: 2, 
-                worldCopyJump: true,
-                zoomControl: false 
-            });
+    <a href="/" class="back-button">
+        ← HOME
+    </a>
+    
+    <div class="live-badge">
+        🔴 LIVE
+    </div>
+    
+    <div class="info-panel">
+        <h3>🎈 Aerostar Public Balloon</h3>
+        
+    </div>
+    
+    <div id="loading" class="loading">
+        Loading...
+    </div>
 
-            L.control.zoom({ position: 'topleft' }).addTo(map);
-
-            L.tileLayer('https://arcgisonline.com{z}/{y}/{x}', {
-                attribution: 'Tiles © Esri'
-            }).addTo(map);
-
-            const balloonIcon = L.icon({
-                iconUrl: 'images/balloon.png',
-                iconSize: [40, 50],      
-                iconAnchor: [20, 50],    
-                popupAnchor: [0, -45]
-            });
-
-            let mainMarker = null;
-            let mainPolyline = null;
-            let isFollowing = false; 
-
-            const setAdminStyle = (marker) => {
-                if (marker._icon) marker._icon.style.filter = "hue-rotate(145deg) saturate(2.5) brightness(0.9)";
-            };
-
-            const followBtn = L.control({ position: 'topleft' });
-            followBtn.onAdd = function () {
-                const div = L.DomUtil.create('div', 'leaflet-custom-control');
-                div.innerHTML = `<button id="follow-toggle">🎯 Найти шар</button>`;
-                return div;
-            };
-            followBtn.addTo(map);
-
-            document.getElementById('follow-toggle').addEventListener('click', (e) => {
-                if (mainMarker) {
-                    isFollowing = true;
-                    e.target.style.background = "#ff4747";
-                    e.target.style.color = "#fff";
-                    e.target.innerText = "🎯 Следить";
-                    
-                    const targetZoom = window.innerWidth < 768 ? 10 : 12;
-                    map.setView(mainMarker.getLatLng(), targetZoom, { animate: true });
-                } else {
-                    alert("Аэростат сейчас не в полёте.");
-                }
-            });
-
-            map.on('movestart', () => {
-                if (map.mixin_fired_by_script) return;
-                isFollowing = false;
-                const btn = document.getElementById('follow-toggle');
-                btn.style.background = "#fff";
-                btn.style.color = "#000";
-                btn.innerText = "🎯 Найти шар";
-            });
-
-            const socket = io();
-
-            socket.on('connect', () => {
-                document.getElementById('status').innerText = "📡 Подключено к серверу";
-            });
-
-            socket.on('main-balloon-moved', (data) => updateLiveMap(data));
-            socket.on('main-balloon-state', (data) => updateLiveMap(data));
-
-            socket.on('main-balloon-removed', () => {
-                document.getElementById('status').innerText = "⏱️ Трансляция завершена";
-                if (mainMarker) map.removeLayer(mainMarker);
-                if (mainPolyline) map.removeLayer(mainPolyline);
-                mainMarker = null;
-                mainPolyline = null;
-            });
-
-            function updateLiveMap(data) {
-                if (!data || !data.lat || !data.lng) return;
-                const coords = [data.lat, data.lng];
-
-                document.getElementById('status').innerText = "🔴 В ПОЛЁТЕ LIVE";
-                document.getElementById('alt-val').innerText = data.altitude || 0;
-                document.getElementById('speed-val').innerText = data.speed ? Math.round(data.speed) : 0;
-
-                if (!mainMarker) {
-                    mainMarker = L.marker(coords, { icon: balloonIcon }).addTo(map);
-                    setAdminStyle(mainMarker);
-                } else {
-                    mainMarker.setLatLng(coords);
-                }
-                mainMarker.bindPopup(`<b>🎈 АЭРОСТАР</b><br>Высота: ${data.altitude || 0} м`);
-
-                if (isFollowing) {
-                    map.mixin_fired_by_script = true;
-                    map.panTo(coords, { animate: true, duration: 0.8 });
-                    setTimeout(() => { map.mixin_fired_by_script = false; }, 800);
-                }
-
-                if (data.path && data.path.length > 0) {
-                    const formattedPath = data.path.map(p => Array.isArray(p) ? p : [p.lat, p.lng]);
-                    if (!mainPolyline) {
-                        mainPolyline = L.polyline(formattedPath, { color: '#ff2a2a', weight: 5, opacity: 0.85 }).addTo(map);
-                    } else {
-                        mainPolyline.setLatLngs(formattedPath);
-                    }
-                }
-            }
-        });
-    </script>
+    <!-- Скрипты -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="js/watch.js"></script>
 </body>
 </html>
-
-
