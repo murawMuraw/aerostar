@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <!-- Важно для мобильных устройств: правильное масштабирование -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Аэростат Аэростар — Live Трансляция</title>
+    
+    <!-- Подключаем стили Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com" />
+    
+    <style>
+        html, body, #watch-map { 
+            margin: 0; 
+            padding: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: #0b1d33; 
+        }
+        
+        /* Панель приборов по умолчанию (для ПК) */
+        #telemetry {
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.85); 
+            color: white; 
+            padding: 15px;
+            border-radius: 8px; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            min-width: 220px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px); /* Эффект размытия заднего плана */
+        }
+        #telemetry h3 { 
+            margin: 0 0 10px 0; 
+            color: #ff4747; 
+            font-size: 16px;
+            letter-spacing: 0.5px;
+        }
+        .telemetry-row {
+            margin: 6px 0;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .telemetry-row span {
+            font-weight: bold;
+            color: #00ffcc;
+        }
+
+        /* Кнопка "Найти шар" */
+        #follow-toggle {
+            padding: 10px 16px; 
+            background: #fff; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: bold; 
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3); 
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        /* 📱 МОБИЛЬНЫЕ СТИЛИ (для экранов меньше 768px) */
+        @media (max-width: 767px) {
+            #telemetry {
+                top: auto;
+                right: 10px;
+                bottom: 20px; /* Переносим панель вниз */
+                left: 10px;
+                min-width: 0;
+                padding: 12px;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+            #telemetry h3 {
+                font-size: 14px;
+                margin-bottom: 2px;
+                text-align: center;
+            }
+            .telemetry-container {
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                border-top: 1px solid rgba(255,255,255,0.1);
+                padding-top: 5px;
+            }
+            .telemetry-row {
+                margin: 0;
+                font-size: 13px;
+                flex-direction: column;
+                align-items: center;
+            }
+            #status {
+                text-align: center;
+                font-size: 10px;
+            }
+            /* Корректируем отступ для стандартных кнопок Leaflet на мобильных */
+            .leaflet-top .leaflet-control {
+                margin-top: 10px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="telemetry">
+        <h3>🎈 АЭРОСТАР LIVE</h3>
+        <div class="telemetry-container">
+            <div class="telemetry-row">Высота: &nbsp;<span id="alt-val">0</span>&nbsp;м</div>
+            <div class="telemetry-row">Скорость: &nbsp;<span id="speed-val">0</span>&nbsp;км/ч</div>
+        </div>
+        <div style="font-size: 11px; margin-top: 5px; color: #aaa;" id="status">Ожидание взлета...</div>
+    </div>
+
+    <div id="watch-map"></div>
+
+    <!-- Подключаем Socket.io и Leaflet -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com"></script>
+    
+    <script>
+        // 1. Инициализация карты с видом на оба полушария
+        const map = L.map('watch-map', { 
+            center: [20, 0], 
+            zoom: 2,
+            minZoom: 2, 
+            worldCopyJump: true,
+            zoomControl: false // Отключаем дефолтный зум, чтобы переставить его в удобное место
+        });
+
+        // Переносим кнопки зума (+/-) в левый верхний угол, но с отступом
+        L.control.zoom({ position: 'topleft' }).addTo(map);
+
+        // Спутниковый слой ESRI
+        L.tileLayer('https://arcgisonline.com{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri'
+        }).addTo(map);
+
+        // 2. Настройка кастомной иконки аэростата
+        const balloonIcon = L.icon({
+            iconUrl: 'images/balloon.png',
+            iconSize: [40, 52],      // Адаптивный усредненный размер
+            iconAnchor: [20, 52],    // Точка привязки — середина низа
+            popupAnchor: [0, -45]
+        });
+
+        let mainMarker = null;
+        let mainPolyline = null;
+        let isFollowing = false; // Пользователь изначально сам управляет масштабом
+
+        // Превращаем синий шар в красный через CSS-фильтр
+        const setAdminStyle = (marker) => {
+            if (marker._icon) marker._icon.style.filter = "hue-rotate(145deg) saturate(2.5) brightness(0.9)";
+        };
+
+        // 3. Создание кнопки "Найти шар" на карте
+        const followBtn = L.control({ position: 'topleft' });
+        followBtn.onAdd = function () {
+            const div = L.DomUtil.create('div', 'leaflet-custom-control');
+            div.innerHTML = `<button id="follow-toggle">🎯 Найти шар</button>`;
+            return div;
+        };
+        followBtn.addTo(map);
+
+        // Логика нажатия кнопки "Найти шар"
+        document.getElementById('follow-toggle').addEventListener('click', (e) => {
+            if (mainMarker) {
+                isFollowing = true;
+                e.target.style.background = "#ff4747";
+                e.target.style.color = "#fff";
+                e.target.innerText = "🎯 Следить";
+                
+                // На мобильных приближаем чуть меньше (zoom 10), на ПК чуть больше (12)
+                const targetZoom = window.innerWidth < 768 ? 10 : 12;
+                map.setView(mainMarker.getLatLng(), targetZoom, { animate: true });
+            } else {
+                alert("Аэростат сейчас не в полёте.");
+            }
+        });
+
+        // Отключение слежения при ручном перемещении карты
+        map.on('movestart', () => {
+            if (map.mixin_fired_by_script) return;
+            isFollowing = false;
+            const btn = document.getElementById('follow-toggle');
+            btn.style.background = "#fff";
+            btn.style.color = "#000";
+            btn.innerText = "🎯 Найти шар";
+        });
+
+        // 4. Подключение к WebSockets
+        const socket = io();
+
+        socket.on('connect', () => {
+            document.getElementById('status').innerText = "📡 Подключено к серверу";
+        });
+
+        socket.on('main-balloon-moved', (data) => updateLiveMap(data));
+        socket.on('main-balloon-state', (data) => updateLiveMap(data));
+
+        socket.on('main-balloon-removed', () => {
+            document.getElementById('status').innerText = "⏱️ Трансляция завершена";
+            if (mainMarker) map.removeLayer(mainMarker);
+            if (mainPolyline) map.removeLayer(mainPolyline);
+            mainMarker = null;
+            mainPolyline = null;
+        });
+
+        function updateLiveMap(data) {
+            if (!data || !data.lat || !data.lng) return;
+            const coords = [data.lat, data.lng];
+
+            // Обновление интерфейса приборов
+            document.getElementById('status').innerText = "🔴 В ПОЛЁТЕ LIVE";
+            document.getElementById('alt-val').innerText = data.altitude || 0;
+            document.getElementById('speed-val').innerText = data.speed ? Math.round(data.speed) : 0;
+
+            // Логика маркера
+            if (!mainMarker) {
+                mainMarker = L.marker(coords, { icon: balloonIcon }).addTo(map);
+                setAdminStyle(mainMarker);
+            } else {
+                mainMarker.setLatLng(coords);
+            }
+            mainMarker.bindPopup(`<b>🎈 АЭРОСТАР</b><br>Высота: ${data.altitude || 0} м`);
+
+            // Автоматическое следование камеры
+            if (isFollowing) {
+                map.mixin_fired_by_script = true;
+                map.panTo(coords, { animate: true, duration: 0.8 });
+                setTimeout(() => { map.mixin_fired_by_script = false; }, 800);
+            }
+
+            // Логика трека
+            if (data.path && data.path.length > 0) {
+                const formattedPath = data.path.map(p => Array.isArray(p) ? p : [p.lat, p.lng]);
+                if (!mainPolyline) {
+                    mainPolyline = L.polyline(formattedPath, { color: '#ff2a2a', weight: 5, opacity: 0.85 }).addTo(map);
+                } else {
+                    mainPolyline.setLatLngs(formattedPath);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
