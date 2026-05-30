@@ -148,4 +148,4 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
-console.log('🎈 Watch script loaded');
+console.log('🎈 Watch script loaded (no WebSocket version)');
