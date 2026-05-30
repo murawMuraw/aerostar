@@ -143,30 +143,29 @@
     
     <div class="info-panel">
         <h3>🎈 Aerostar Public Balloon</h3>
-        
     </div>
     
     <div id="loading" class="loading">
         Loading...
     </div>
+    
     <div id="connectionStatus" style="
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    background: rgba(0,0,0,0.7);
-    color: white;
-    padding: 8px 15px;
-    border-radius: 20px;
-    font-size: 12px;
-    z-index: 1000;
-    font-family: monospace;
-">
-    Подключение...
-</div>
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 12px;
+        z-index: 1000;
+        font-family: monospace;
+    ">
+        Подключение...
+    </div>
 
-    <!-- Скрипты -->
+    <!-- Скрипты - только leaflet и наш watch.js (без socket.io) -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="js/watch.js"></script>
 </body>
 </html>
