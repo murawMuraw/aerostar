@@ -1,4 +1,5 @@
-// ========== МОДУЛЬ АВТОРИЗАЦИИ ==========
+//Авторизация, логин/регистрация
+        // ========== МОДУЛЬ АВТОРИЗАЦИИ ==========
 
 // Функции авторизации
 async function login(email, password) {
@@ -16,12 +17,6 @@ async function login(email, password) {
             window.App.currentUser = data.user;
             window.App.isGuest = false;
             localStorage.setItem('token', data.token);
-            
-            // 🔥 НОВОЕ: Отправляем токен в socket для аутентификации
-            if (window.socket && window.socket.connected) {
-                window.socket.emit('authenticate', data.token);
-                console.log('🔐 Token sent to socket for authentication');
-            }
             
             showAuthModal(false);
             updateProfileUI();
@@ -61,12 +56,6 @@ async function register(email, password) {
             window.App.isGuest = false;
             localStorage.setItem('token', data.token);
             
-            // 🔥 НОВОЕ: Отправляем токен в socket для аутентификации
-            if (window.socket && window.socket.connected) {
-                window.socket.emit('authenticate', data.token);
-                console.log('🔐 Token sent to socket for authentication');
-            }
-            
             showAuthModal(false);
             updateProfileUI();
             clearAuthForms();
@@ -89,12 +78,6 @@ function logout() {
     window.App.currentUser = null;
     window.App.isGuest = true;
     
-    // 🔥 НОВОЕ: Сообщаем socket о выходе
-    if (window.socket && window.socket.connected) {
-        window.socket.emit('logout');
-        console.log('🔓 Socket logged out');
-    }
-    
     updateProfileUI();
     resetFlight();
     showAuthModal(false);
@@ -105,12 +88,6 @@ function continueAsGuest() {
     window.App.isGuest = true;
     window.App.currentUser = null;
     window.App.token = null;
-    
-    // 🔥 НОВОЕ: Для гостей отправляем guest-статус
-    if (window.socket && window.socket.connected) {
-        window.socket.emit('guest-mode', { isGuest: true });
-        console.log('👤 Guest mode activated for socket');
-    }
     
     showAuthModal(false);
     updateProfileUI();
@@ -130,13 +107,6 @@ async function restoreSession() {
                 window.App.currentUser = user;
                 window.App.isGuest = false;
                 updateProfileUI();
-                
-                // 🔥 НОВОЕ: Отправляем токен в socket после восстановления сессии
-                if (window.socket && window.socket.connected) {
-                    window.socket.emit('authenticate', window.App.token);
-                    console.log('🔐 Session restored, token sent to socket');
-                }
-                
                 await restoreBalloon();
             } else {
                 logout();
@@ -147,10 +117,6 @@ async function restoreSession() {
         }
     } else {
         updateProfileUI();
-        // 🔥 НОВОЕ: Гостевой режим при отсутствии токена
-        if (window.socket && window.socket.connected) {
-            window.socket.emit('guest-mode', { isGuest: true });
-        }
     }
 }
 
@@ -198,33 +164,4 @@ function initAuthHandlers() {
     if (profileButton) {
         profileButton.addEventListener('click', () => showAuthModal(true));
     }
-    
-    // 🔥 НОВОЕ: Обработчик закрытия модального окна для очистки форм
-    const closeModalBtn = document.getElementById('closeAuthModal');
-    if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', () => {
-            clearAuthForms();
-        });
-    }
-}
-
-// 🔥 НОВАЯ ФУНКЦИЯ: Очистка форм авторизации
-function clearAuthForms() {
-    document.getElementById('loginEmail').value = '';
-    document.getElementById('loginPassword').value = '';
-    document.getElementById('regEmail').value = '';
-    document.getElementById('regPassword').value = '';
-}
-
-// 🔥 НОВАЯ ФУНКЦИЯ: Проверка, является ли пользователь публичным вещателем
-function isPublicBroadcaster() {
-    return window.App.currentUser && window.App.currentUser.email === 'aerostar@aerost.art';
-}
-
-// 🔥 НОВАЯ ФУНКЦИЯ: Получение текущего email пользователя
-function getUserEmail() {
-    if (window.App.currentUser && window.App.currentUser.email) {
-        return window.App.currentUser.email;
-    }
-    return null;
 }
