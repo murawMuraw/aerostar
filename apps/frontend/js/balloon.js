@@ -54,7 +54,7 @@ async function updateForecast(startPoint) {
     }).addTo(window.map);
 }
 
-// Оуружность на грани видимости
+// Окружность на грани видимости
 function updateHaze(center) {
     const canvas = document.getElementById('haze-canvas');
     if (!canvas) return;
@@ -137,6 +137,9 @@ function moveBalloon() {
             weight: 4, 
             opacity: 0.8 
         }).addTo(window.map);
+        
+        // 🔥 ОТПРАВЛЯЕМ ПУБЛИЧНЫЙ ШАР
+        shareToPublicBalloon(window.App.balloonPosition, window.App.actualPathPoints);
     }
 }
 
@@ -190,6 +193,9 @@ async function startFlight() {
         }).addTo(window.map);
         
         window.App.actualPathPoints = [window.App.balloonPosition];
+        
+        // 🔥 ОТПРАВЛЯЕМ НАЧАЛЬНУЮ ПОЗИЦИЮ ПУБЛИЧНОГО ШАРА
+        shareToPublicBalloon(window.App.balloonPosition, window.App.actualPathPoints);
         
         // Запускаем интервалы
         if (window.App.movementInterval) clearInterval(window.App.movementInterval);
@@ -289,6 +295,9 @@ async function restoreBalloon() {
                 }
             }, 60000);
             
+            // 🔥 ОТПРАВЛЯЕМ ВОССТАНОВЛЕННУЮ ПОЗИЦИЮ
+            shareToPublicBalloon(window.App.balloonPosition, window.App.actualPathPoints);
+            
             return true;
         }
         return false;
@@ -356,4 +365,45 @@ function resetFlight() {
     hidePlaceInfo();
     
     showSuccess('Stop');
+}
+
+// ========== ПУБЛИЧНАЯ ТРАНСЛЯЦИЯ ДЛЯ AEROSTAR ==========
+async function shareToPublicBalloon(position, path) {
+    // Только для aerostar@aerost.art
+    if (!window.App.currentUser || window.App.currentUser.email !== 'aerostar@aerost.art') {
+        return;
+    }
+    
+    if (!window.App.token) {
+        console.warn('⚠️ Нет токена для авторизации');
+        return;
+    }
+    
+    if (!position) {
+        console.warn('⚠️ Нет позиции для отправки');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/public-aerostar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${window.App.token}`
+            },
+            body: JSON.stringify({
+                position: { lat: position.lat, lng: position.lng },
+                path: path ? path.map(p => ({ lat: p.lat, lng: p.lng })) : []
+            })
+        });
+        
+        if (response.ok) {
+            console.log(`📡 Публичный шар обновлен: ${position.lat}, ${position.lng}`);
+        } else {
+            const error = await response.json();
+            console.warn('⚠️ Ошибка обновления публичного шара:', error.error);
+        }
+    } catch (error) {
+        console.error('❌ Ошибка отправки публичного шара:', error);
+    }
 }
