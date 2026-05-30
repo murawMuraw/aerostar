@@ -3,13 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Аэростат Аэростар — Live Трасляция</title>
+    <title>Аэростат Аэростар — Live Трансляция</title>
     
-    <!-- 1. СНАЧАЛА ПОДКЛЮЧАЕМ СТИЛИ LEAFLET -->
-    <link rel="stylesheet" href="https://unpkg.com" />
-    
-    <!-- 2. ЗАТЕМ ОБЯЗАТЕЛЬНО ПОДКЛЮЧАЕМ СКРИПТ LEAFLET ДО НАЧАЛА НАШЕГО КОДА -->
-    <script src="https://unpkg.com"></script>
+    <!-- Переключено на сверхнадежный CDN jsDelivr для полной гарантии загрузки библиотек -->
+    <link rel="stylesheet" href="https://jsdelivr.net" />
+    <script src="https://jsdelivr.net"></script>
 
     <style>
         html, body, #watch-map { 
@@ -119,118 +117,123 @@
     <!-- Подключаем Socket.io -->
     <script src="/socket.io/socket.io.js"></script>
     
-    <!-- Наш основной логический скрипт -->
     <script>
-        // Теперь Leaflet гарантированно загружен, и L.map отработает без ошибок
-        const map = L.map('watch-map', { 
-            center: [20, 0], 
-            zoom: 2,
-            minZoom: 2, 
-            worldCopyJump: true,
-            zoomControl: false 
-        });
+        // Использование DOMContentLoaded гарантирует, что код запустится ТОЛЬКО 
+        // после того, как все внешние JS-скрипты (Leaflet) полностью загружены браузером
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            // Инициализация карты мира
+            const map = L.map('watch-map', { 
+                center: [20, 0], 
+                zoom: 2,
+                minZoom: 2, 
+                worldCopyJump: true,
+                zoomControl: false 
+            });
 
-        L.control.zoom({ position: 'topleft' }).addTo(map);
+            L.control.zoom({ position: 'topleft' }).addTo(map);
 
-        L.tileLayer('https://arcgisonline.com{z}/{y}/{x}', {
-            attribution: 'Tiles © Esri'
-        }).addTo(map);
+            L.tileLayer('https://arcgisonline.com{z}/{y}/{x}', {
+                attribution: 'Tiles © Esri'
+            }).addTo(map);
 
-        const balloonIcon = L.icon({
-            iconUrl: 'images/balloon.png',
-            iconSize: [40, 50],      
-            iconAnchor: [20, 50],    
-            popupAnchor: [0, -45]
-        });
+            const balloonIcon = L.icon({
+                iconUrl: 'images/balloon.png',
+                iconSize: [40, 50],      
+                iconAnchor: [20, 50],    
+                popupAnchor: [0, -45]
+            });
 
-        let mainMarker = null;
-        let mainPolyline = null;
-        let isFollowing = false; 
+            let mainMarker = null;
+            let mainPolyline = null;
+            let isFollowing = false; 
 
-        const setAdminStyle = (marker) => {
-            if (marker._icon) marker._icon.style.filter = "hue-rotate(145deg) saturate(2.5) brightness(0.9)";
-        };
+            const setAdminStyle = (marker) => {
+                if (marker._icon) marker._icon.style.filter = "hue-rotate(145deg) saturate(2.5) brightness(0.9)";
+            };
 
-        const followBtn = L.control({ position: 'topleft' });
-        followBtn.onAdd = function () {
-            const div = L.DomUtil.create('div', 'leaflet-custom-control');
-            div.innerHTML = `<button id="follow-toggle">🎯 Найти шар</button>`;
-            return div;
-        };
-        followBtn.addTo(map);
+            const followBtn = L.control({ position: 'topleft' });
+            followBtn.onAdd = function () {
+                const div = L.DomUtil.create('div', 'leaflet-custom-control');
+                div.innerHTML = `<button id="follow-toggle">🎯 Найти шар</button>`;
+                return div;
+            };
+            followBtn.addTo(map);
 
-        document.getElementById('follow-toggle').addEventListener('click', (e) => {
-            if (mainMarker) {
-                isFollowing = true;
-                e.target.style.background = "#ff4747";
-                e.target.style.color = "#fff";
-                e.target.innerText = "🎯 Следить";
-                
-                const targetZoom = window.innerWidth < 768 ? 10 : 12;
-                map.setView(mainMarker.getLatLng(), targetZoom, { animate: true });
-            } else {
-                alert("Аэростат сейчас не в полёте.");
-            }
-        });
-
-        map.on('movestart', () => {
-            if (map.mixin_fired_by_script) return;
-            isFollowing = false;
-            const btn = document.getElementById('follow-toggle');
-            btn.style.background = "#fff";
-            btn.style.color = "#000";
-            btn.innerText = "🎯 Найти шар";
-        });
-
-        const socket = io();
-
-        socket.on('connect', () => {
-            document.getElementById('status').innerText = "📡 Подключено к серверу";
-        });
-
-        socket.on('main-balloon-moved', (data) => updateLiveMap(data));
-        socket.on('main-balloon-state', (data) => updateLiveMap(data));
-
-        socket.on('main-balloon-removed', () => {
-            document.getElementById('status').innerText = "⏱️ Трансляция завершена";
-            if (mainMarker) map.removeLayer(mainMarker);
-            if (mainPolyline) map.removeLayer(mainPolyline);
-            mainMarker = null;
-            mainPolyline = null;
-        });
-
-        function updateLiveMap(data) {
-            if (!data || !data.lat || !data.lng) return;
-            const coords = [data.lat, data.lng];
-
-            document.getElementById('status').innerText = "🔴 В ПОЛЁТЕ LIVE";
-            document.getElementById('alt-val').innerText = data.altitude || 0;
-            document.getElementById('speed-val').innerText = data.speed ? Math.round(data.speed) : 0;
-
-            if (!mainMarker) {
-                mainMarker = L.marker(coords, { icon: balloonIcon }).addTo(map);
-                setAdminStyle(mainMarker);
-            } else {
-                mainMarker.setLatLng(coords);
-            }
-            mainMarker.bindPopup(`<b>🎈 АЭРОСТАР</b><br>Высота: ${data.altitude || 0} м`);
-
-            if (isFollowing) {
-                map.mixin_fired_by_script = true;
-                map.panTo(coords, { animate: true, duration: 0.8 });
-                setTimeout(() => { map.mixin_fired_by_script = false; }, 800);
-            }
-
-            if (data.path && data.path.length > 0) {
-                const formattedPath = data.path.map(p => Array.isArray(p) ? p : [p.lat, p.lng]);
-                if (!mainPolyline) {
-                    mainPolyline = L.polyline(formattedPath, { color: '#ff2a2a', weight: 5, opacity: 0.85 }).addTo(map);
+            document.getElementById('follow-toggle').addEventListener('click', (e) => {
+                if (mainMarker) {
+                    isFollowing = true;
+                    e.target.style.background = "#ff4747";
+                    e.target.style.color = "#fff";
+                    e.target.innerText = "🎯 Следить";
+                    
+                    const targetZoom = window.innerWidth < 768 ? 10 : 12;
+                    map.setView(mainMarker.getLatLng(), targetZoom, { animate: true });
                 } else {
-                    mainPolyline.setLatLngs(formattedPath);
+                    alert("Аэростат сейчас не в полёте.");
+                }
+            });
+
+            map.on('movestart', () => {
+                if (map.mixin_fired_by_script) return;
+                isFollowing = false;
+                const btn = document.getElementById('follow-toggle');
+                btn.style.background = "#fff";
+                btn.style.color = "#000";
+                btn.innerText = "🎯 Найти шар";
+            });
+
+            const socket = io();
+
+            socket.on('connect', () => {
+                document.getElementById('status').innerText = "📡 Подключено к серверу";
+            });
+
+            socket.on('main-balloon-moved', (data) => updateLiveMap(data));
+            socket.on('main-balloon-state', (data) => updateLiveMap(data));
+
+            socket.on('main-balloon-removed', () => {
+                document.getElementById('status').innerText = "⏱️ Трансляция завершена";
+                if (mainMarker) map.removeLayer(mainMarker);
+                if (mainPolyline) map.removeLayer(mainPolyline);
+                mainMarker = null;
+                mainPolyline = null;
+            });
+
+            function updateLiveMap(data) {
+                if (!data || !data.lat || !data.lng) return;
+                const coords = [data.lat, data.lng];
+
+                document.getElementById('status').innerText = "🔴 В ПОЛЁТЕ LIVE";
+                document.getElementById('alt-val').innerText = data.altitude || 0;
+                document.getElementById('speed-val').innerText = data.speed ? Math.round(data.speed) : 0;
+
+                if (!mainMarker) {
+                    mainMarker = L.marker(coords, { icon: balloonIcon }).addTo(map);
+                    setAdminStyle(mainMarker);
+                } else {
+                    mainMarker.setLatLng(coords);
+                }
+                mainMarker.bindPopup(`<b>🎈 АЭРОСТАР</b><br>Высота: ${data.altitude || 0} м`);
+
+                if (isFollowing) {
+                    map.mixin_fired_by_script = true;
+                    map.panTo(coords, { animate: true, duration: 0.8 });
+                    setTimeout(() => { map.mixin_fired_by_script = false; }, 800);
+                }
+
+                if (data.path && data.path.length > 0) {
+                    const formattedPath = data.path.map(p => Array.isArray(p) ? p : [p.lat, p.lng]);
+                    if (!mainPolyline) {
+                        mainPolyline = L.polyline(formattedPath, { color: '#ff2a2a', weight: 5, opacity: 0.85 }).addTo(map);
+                    } else {
+                        mainPolyline.setLatLngs(formattedPath);
+                    }
                 }
             }
-        }
+        });
     </script>
 </body>
 </html>
+
 
