@@ -6,7 +6,7 @@ const API_URL = ''; // Пустая строка для продакшена
 let map;
 let publicBalloonMarker = null;
 let publicPathLine = null;
-let socket = null;
+let socket = null; // 🔥 Глобальная переменная
 
 // Инициализация страницы
 document.addEventListener('DOMContentLoaded', () => {
@@ -53,12 +53,15 @@ function connectSocket() {
     try {
         console.log('🔌 Connecting to WebSocket...');
         
-        // Используем текущий origin (https://aerost.art)
+        // 🔥 Сохраняем socket в глобальную переменную
         socket = io(window.location.origin, {
             transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionAttempts: 5
         });
+        
+        // 🔥 Сохраняем в window для доступа из консоли
+        window.socket = socket;
         
         socket.on('connect', () => {
             console.log('✅ WebSocket connected, id:', socket.id);
@@ -69,11 +72,11 @@ function connectSocket() {
                 loadingEl.style.display = 'none';
             }
             
-            // 🔥 КЛЮЧЕВОЙ МОМЕНТ: Запрашиваем публичный шар
+            // Запрашиваем публичный шар
             console.log('📡 Requesting public balloon...');
             socket.emit('watch-public-balloon');
             
-            // Добавляем таймаут для повторного запроса через 5 секунд
+            // Добавляем таймаут для повторного запроса
             setTimeout(() => {
                 if (publicBalloonMarker === null) {
                     console.log('🔄 No balloon yet, requesting again...');
@@ -198,11 +201,19 @@ function updateStatus(message) {
     console.log('Status:', message);
 }
 
-// Экспортируем функции для отладки в консоли
+// 🔥 Экспортируем для отладки в консоли
 window.watchDebug = {
     socket: () => socket,
     emit: (event, data) => socket?.emit(event, data),
-    status: () => console.log('Connected:', socket?.connected, 'Marker:', !!publicBalloonMarker)
+    status: () => console.log('Connected:', socket?.connected, 'Marker:', !!publicBalloonMarker),
+    requestBalloon: () => {
+        if (socket) {
+            console.log('Manually requesting balloon...');
+            socket.emit('watch-public-balloon');
+        } else {
+            console.log('Socket not connected!');
+        }
+    }
 };
 
 console.log('🎈 Watch page script loaded');
