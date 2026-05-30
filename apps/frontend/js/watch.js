@@ -1,7 +1,7 @@
+// ========== WATCH PAGE - LIVE PUBLIC BALLOON ==========
+
 // Конфигурация
-const API_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:3000' 
-    : '';
+const API_URL = ''; // Пустая строка для продакшена
 
 let map;
 let publicBalloonMarker = null;
@@ -17,19 +17,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Инициализация карты
 function initMap() {
+    console.log('🗺️ Initializing map...');
+    
     map = L.map('map', {
         center: [52.12, 23.72],
         zoom: 8,
         zoomControl: true
     });
     
-    // Спутниковый слой
     const esriSatellite = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles © Esri',
         maxZoom: 19
     });
     
-    // Обычная карта
     const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap',
         maxZoom: 19
@@ -37,106 +37,140 @@ function initMap() {
     
     esriSatellite.addTo(map);
     
-    // Переключатель слоёв
     L.control.layers(
-        {
-            "🛰️ Спутник": esriSatellite,
-            "🗺️ Карта": osmStandard
-        },
+        { "🛰️ Спутник": esriSatellite, "🗺️ Карта": osmStandard },
         null,
         { position: 'topleft', collapsed: false }
     ).addTo(map);
     
-    // Масштаб
     L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
+    
+    console.log('✅ Map initialized');
 }
 
 // Подключение WebSocket
 function connectSocket() {
     try {
-        const wsUrl = API_URL || window.location.origin;
-        socket = io(wsUrl);
+        console.log('🔌 Connecting to WebSocket...');
+        
+        // Используем текущий origin (https://aerost.art)
+        socket = io(window.location.origin, {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 5
+        });
         
         socket.on('connect', () => {
-            console.log('✅ WebSocket connected');
-            document.getElementById('loading').style.display = 'none';
+            console.log('✅ WebSocket connected, id:', socket.id);
             
-            // Запрашиваем публичный шар
+            // Скрываем загрузку
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl) {
+                loadingEl.style.display = 'none';
+            }
+            
+            // 🔥 КЛЮЧЕВОЙ МОМЕНТ: Запрашиваем публичный шар
+            console.log('📡 Requesting public balloon...');
             socket.emit('watch-public-balloon');
+            
+            // Добавляем таймаут для повторного запроса через 5 секунд
+            setTimeout(() => {
+                if (publicBalloonMarker === null) {
+                    console.log('🔄 No balloon yet, requesting again...');
+                    socket.emit('watch-public-balloon');
+                }
+            }, 5000);
         });
         
-        // Получаем текущее состояние (новое название события)
+        // Получаем текущее состояние
         socket.on('public-balloon-state', (data) => {
-            console.log('Received initial state:', data);
-            renderPublicBalloon(data);
+            console.log('📥 Received public-balloon-state:', data);
+            if (data && data.position) {
+                renderPublicBalloon(data);
+            } else {
+                console.log('⚠️ No balloon state available yet');
+                updateStatus('Ожидание начала трансляции...');
+            }
         });
         
-        // Получаем обновления (новое название события)
+        // Получаем обновления
         socket.on('public-balloon-update', (data) => {
-            console.log('Received update:', data);
-            renderPublicBalloon(data);
+            console.log('🔄 Received public-balloon-update:', data);
+            if (data && data.position) {
+                renderPublicBalloon(data);
+            }
+        });
+        
+        socket.on('connect_error', (error) => {
+            console.error('Socket connection error:', error);
+            updateStatus('Ошибка подключения: ' + error.message);
         });
         
         socket.on('disconnect', () => {
             console.log('❌ WebSocket disconnected');
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('loading').innerHTML = 'Потеря соединения. Переподключение...';
-            setTimeout(() => connectSocket(), 3000);
+            updateStatus('Потеря соединения. Переподключение...');
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl) {
+                loadingEl.style.display = 'block';
+            }
         });
         
     } catch (error) {
         console.error('Socket connection error:', error);
-        document.getElementById('loading').innerHTML = 'Ошибка подключения. Обновить страницу?';
+        updateStatus('Ошибка: ' + error.message);
     }
 }
 
-// Отрисовка публичного шара и пути
+// Отрисовка публичного шара
 function renderPublicBalloon(state) {
-    if (!state || !state.position) return;
+    if (!state || !state.position) {
+        console.warn('⚠️ No position data to render');
+        return;
+    }
     
-    // Обновляем маркер шара
+    console.log('🎨 Rendering balloon at:', state.position);
+    
+    // Удаляем старый маркер
     if (publicBalloonMarker) {
         map.removeLayer(publicBalloonMarker);
     }
     
-    // Кастомная иконка для просмотра
+    // Создаем иконку шара
     const balloonIcon = L.divIcon({
         className: 'watch-balloon-marker',
         html: '🎈',
-        iconSize: [40, 40],
-        popupAnchor: [0, -20]
+        iconSize: [48, 48],
+        popupAnchor: [0, -24]
     });
     
+    // Добавляем маркер
     publicBalloonMarker = L.marker([state.position.lat, state.position.lng], {
         icon: balloonIcon
     }).addTo(map);
     
-    // Добавляем попап с информацией
+    // Добавляем попап
     publicBalloonMarker.bindPopup(`
-        <div style="text-align: center;">
+        <div style="text-align: center; padding: 5px;">
             <strong>🎈 Aerostar Balloon</strong><br>
-            Текущая позиция
+            📍 ${state.position.lat.toFixed(4)}°, ${state.position.lng.toFixed(4)}°
         </div>
     `);
     
-    // Центрируем карту на шаре каждые 3 секунды (опционально)
-    if (!window.isFollowing) {
-        window.isFollowing = true;
-        setInterval(() => {
-            if (publicBalloonMarker && map) {
-                map.setView([state.position.lat, state.position.lng], map.getZoom());
-            }
-        }, 3000);
-    }
+    // Открываем попап
+    publicBalloonMarker.openPopup();
+    
+    // Центрируем карту на шаре
+    map.setView([state.position.lat, state.position.lng], map.getZoom());
     
     // Отрисовываем путь
     if (state.path && state.path.length > 0) {
+        console.log(`📏 Drawing path with ${state.path.length} points`);
+        
         if (publicPathLine) {
             map.removeLayer(publicPathLine);
         }
         
         const latlngs = state.path.map(point => [point.lat, point.lng]);
-        
         publicPathLine = L.polyline(latlngs, {
             color: '#FF6B35',
             weight: 4,
@@ -145,55 +179,30 @@ function renderPublicBalloon(state) {
         }).addTo(map);
     }
     
-    // Обновляем информационную панель
-    updateInfoPanel(state);
-}
-
-// Обновление информационной панели
-function updateInfoPanel(state) {
-    const panel = document.querySelector('.info-panel');
-    if (!panel) return;
+    // Обновляем статус
+    updateStatus(`🟢 LIVE: Трансляция идет`);
     
-    const pointsCount = state.path ? state.path.length : 0;
-    
-    panel.innerHTML = `
-        <h3>🎈 Aerostar Public Balloon</h3>
-        <p>📍 Текущая позиция: ${state.position.lat.toFixed(4)}°, ${state.position.lng.toFixed(4)}°</p>
-        <p>📊 Пройдено точек: ${pointsCount}</p>
-        <p style="font-size: 11px; margin-top: 5px;">⏱️ Обновление в реальном времени</p>
-    `;
-}
-
-// Отслеживание/Отключение следования за шаром (опционально)
-let followEnabled = true;
-
-function toggleFollow() {
-    followEnabled = !followEnabled;
-    const btn = document.getElementById('followBtn');
-    if (btn) {
-        btn.textContent = followEnabled ? '📌 Следовать' : '🔓 Свободно';
+    // Скрываем загрузку
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) {
+        loadingEl.style.display = 'none';
     }
 }
 
-// Добавляем кнопку следования (опционально)
-setTimeout(() => {
-    const followBtn = document.createElement('button');
-    followBtn.id = 'followBtn';
-    followBtn.textContent = '📌 Следовать';
-    followBtn.style.cssText = `
-        position: absolute;
-        bottom: 20px;
-        right: 20px;
-        z-index: 1000;
-        background: rgba(0,0,0,0.7);
-        color: white;
-        border: none;
-        padding: 10px 15px;
-        border-radius: 25px;
-        cursor: pointer;
-        font-size: 14px;
-        backdrop-filter: blur(5px);
-    `;
-    followBtn.onclick = toggleFollow;
-    document.body.appendChild(followBtn);
-}, 1000);
+// Обновление статуса
+function updateStatus(message) {
+    const statusEl = document.getElementById('connectionStatus');
+    if (statusEl) {
+        statusEl.textContent = message;
+    }
+    console.log('Status:', message);
+}
+
+// Экспортируем функции для отладки в консоли
+window.watchDebug = {
+    socket: () => socket,
+    emit: (event, data) => socket?.emit(event, data),
+    status: () => console.log('Connected:', socket?.connected, 'Marker:', !!publicBalloonMarker)
+};
+
+console.log('🎈 Watch page script loaded');
