@@ -60,16 +60,19 @@ function connectSocket() {
         socket.on('connect', () => {
             console.log('✅ WebSocket connected');
             document.getElementById('loading').style.display = 'none';
+            
+            // Запрашиваем публичный шар
+            socket.emit('watch-public-balloon');
         });
         
-        // Получаем текущее состояние
-        socket.on('public_balloon_state', (data) => {
+        // Получаем текущее состояние (новое название события)
+        socket.on('public-balloon-state', (data) => {
             console.log('Received initial state:', data);
             renderPublicBalloon(data);
         });
         
-        // Получаем обновления
-        socket.on('public_balloon_update', (data) => {
+        // Получаем обновления (новое название события)
+        socket.on('public-balloon-update', (data) => {
             console.log('Received update:', data);
             renderPublicBalloon(data);
         });
