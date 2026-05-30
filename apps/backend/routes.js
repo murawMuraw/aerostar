@@ -1,4 +1,3 @@
-
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -259,14 +258,11 @@ router.post('/balloons/:id/stop', async (req, res) => {
   }
 });
 
-// ========== ЭНДПОИНТ /api/balloons (ВРЕМЕННО С ДИАГНОСТИКОЙ) ==========
-
-// ========== ЭНДПОИНТ /api/balloons (ИСПРАВЛЕННЫЙ) ==========
+// ========== ЭНДПОИНТ /api/balloons ==========
 router.get('/balloons', async (req, res) => {
   try {
     console.log('🔍 Запрос к /api/balloons получен');
     
-    // Исправляем JOIN - явно приводим типы или используем правильное сравнение
     const dbResult = await pool.query(
       `SELECT 
         b.id, 
@@ -284,7 +280,6 @@ router.get('/balloons', async (req, res) => {
     
     console.log(`🔍 Найдено шаров в БД: ${dbResult.rows.length}`);
     
-    // Для гостевых шаров - фиксированный email
     const guestBalloonsList = guestStore.getActive().map(balloon => ({
       id: balloon.id,
       user_id: balloon.user_id,
@@ -306,6 +301,48 @@ router.get('/balloons', async (req, res) => {
     console.error('❌ Ошибка в /api/balloons:', error.message);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
+});
+
+// ========== ПУБЛИЧНЫЙ ШАР AEROSTAR ==========
+// Хранилище для публичного шара (в памяти сервера)
+let publicAerostarBalloon = {
+    position: null,
+    path: [],
+    lastUpdate: null
+};
+
+// GET - получить публичный шар (доступно всем, без авторизации)
+router.get('/public-aerostar', (req, res) => {
+    res.json(publicAerostarBalloon);
+});
+
+// POST - обновить публичный шар (только для aerostar@aerost.art)
+router.post('/public-aerostar', authenticateToken, async (req, res) => {
+    try {
+        // Проверяем, что это тот самый пользователь
+        if (req.user.email !== 'aerostar@aerost.art') {
+            return res.status(403).json({ error: 'Доступ только для aerostar@aerost.art' });
+        }
+        
+        const { position, path } = req.body;
+        
+        if (!position || !position.lat || !position.lng) {
+            return res.status(400).json({ error: 'Неверные координаты' });
+        }
+        
+        publicAerostarBalloon = {
+            position: { lat: position.lat, lng: position.lng },
+            path: path || [],
+            lastUpdate: new Date()
+        };
+        
+        console.log(`🎈 Публичный шар обновлен: ${position.lat}, ${position.lng}, точек пути: ${path ? path.length : 0}`);
+        res.json({ success: true, lastUpdate: publicAerostarBalloon.lastUpdate });
+        
+    } catch (error) {
+        console.error('Ошибка обновления публичного шара:', error);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
 // ========== СТАТИСТИКА ==========
