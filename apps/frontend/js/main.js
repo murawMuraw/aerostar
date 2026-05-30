@@ -3,6 +3,8 @@
 // Функция инициализации socket
 function initSocket() {
     const wsUrl = window.App.API_URL || window.location.origin;
+    
+    // 🔥 СОЗДАЕМ ГЛОБАЛЬНЫЙ SOCKET
     window.socket = io(wsUrl, {
         transports: ['websocket', 'polling'],
         reconnection: true,
@@ -28,6 +30,13 @@ function initSocket() {
     
     window.socket.on('disconnect', (reason) => {
         console.log('🔌 Socket disconnected:', reason);
+    });
+    
+    // 🔥 НОВОЕ: Слушаем подтверждение публичного вещателя
+    window.socket.on('public-broadcaster-confirmed', (data) => {
+        if (data.status) {
+            console.log('🎉 Вы подтверждены как публичный вещатель!');
+        }
     });
 }
 
@@ -184,15 +193,6 @@ function initUIHandlers() {
             }
         }
     });
-    
-    // 🔥 НОВОЕ: Обработчик для кнопки LIVE на главной странице
-    const liveButton = document.getElementById('liveButton');
-    if (liveButton) {
-        liveButton.addEventListener('click', (e) => {
-            // Не блокируем стандартное поведение, просто логируем
-            console.log('🎬 Переход на страницу LIVE трансляции');
-        });
-    }
 }
 
 // Global Error Handling
