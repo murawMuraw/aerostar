@@ -57,6 +57,7 @@ function updateCoordDisplay(lat, lng) {
 }
 
 // Отображение информации о ветре
+// Отображение информации о ветре, температуре и осадках
 function updateWindDisplay(wind) {
     const windInfo = document.getElementById('windInfo');
     if (!windInfo) return;
@@ -64,16 +65,32 @@ function updateWindDisplay(wind) {
     if (wind) {
         const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
         const index = Math.round(wind.direction / 45) % 8;
+        
+        // Извлекаем температуру и осадки (поддерживаем разные возможные названия ключей от API)
+        const temperature = wind.temp !== undefined ? wind.temp : (wind.temperature !== undefined ? wind.temperature : '--');
+        const precipitation = wind.precip !== undefined ? wind.precip : (wind.precipitation !== undefined ? wind.precipitation : '--');
+        const windLayer = wind.layer || 'Surface';
+
         windInfo.innerHTML = `
-            <div>🌬️ Wind ${wind.speed.toFixed(1)} m/s</div>
+            <div>🌬️ Wind ${windLayer}</div>
             <div>🧭 Direction ${wind.direction}° (${directions[index]})</div>
-            ${wind.gust ? `<div>💨 Wind gusts ${wind.gust.toFixed(1)} m/s</div>` : ''}
-            <div>⏱️ ${new Date().toLocaleTimeString()}</div>
+            <div>📏 Speed ${wind.speed.toFixed(1)} m/s</div>
+            ${wind.gust ? `<div style="font-size: 12px; color: #ff9800; padding-left: 15px;">💨 Порывы: ${wind.gust.toFixed(1)} m/s</div>` : ''}
+            <div>🌡️ Temp: ${temperature} °C</div>
+            <div>☔ Precip: ${precipitation} mm/h</div>
         `;
     } else {
-        windInfo.innerHTML = `<div>🌬️ Wind --</div><div>🧭 Direction --</div><div>📏 Speed -- m/s</div>`;
+        // Дефолтное состояние (сброс), если данные не получены
+        windInfo.innerHTML = `
+            <div>🌬️ Wind --</div>
+            <div>🧭 Direction --</div>
+            <div>📏 Speed -- m/s</div>
+            <div>🌡️ Temp: -- °C</div>
+            <div>☔ Precip: -- mm/h</div>
+        `;
     }
 }
+
 
 // Обновление статуса полёта
 function updateFlightStatus(status, message) {
