@@ -6,21 +6,48 @@ async function getWindData(lat, lng) {
     const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${config.openWeatherApiKey}&units=metric`;
     const response = await axios.get(url);
     
+    // Получаем температуру из блока main
+    const temp = response.data.main && response.data.main.temp !== undefined 
+      ? response.data.main.temp 
+      : '--';
+
+    // Получаем осадки (проверяем дождь или снег за последний 1 час '1h')
+    let precip = 0;
+    if (response.data.rain && response.data.rain['1h']) {
+      precip = response.data.rain['1h'];
+    } else if (response.data.snow && response.data.snow['1h']) {
+      precip = response.data.snow['1h'];
+    }
+
     if (response.data.wind) {
       return {
         speed: response.data.wind.speed,
         direction: response.data.wind.deg,
-        gust: response.data.wind.gust || 0
+        gust: response.data.wind.gust || 0,
+        temp: temp,       // <-- Добавили температуру в ответ
+        precip: precip    // <-- Добавили объем осадков в ответ
       };
     }
-    return null;
+    
+    // Если блока wind почему-то нет, но погода пришла
+    return {
+      speed: 0,
+      direction: 0,
+      gust: 0,
+      temp: temp,
+      precip: precip
+    };
+
   } catch (error) {
-    console.error('Ошибка получения ветра:', error.message);
-    console.log('⚠️ Используем тестовые данные ветра');
+    console.error('Ошибка получения ветра и погоды:', error.message);
+    console.log('⚠️ Используем тестовые данные ветра и погоды');
+    // Дефолтные тестовые данные на случай ошибки API
     return {
       speed: 3.0,
       direction: 270,
-      gust: 0
+      gust: 0,
+      temp: 15,
+      precip: 0.0
     };
   }
 }
@@ -48,3 +75,4 @@ function calculateNewPosition(lat, lng, windSpeed, windDirection, seconds) {
 }
 
 module.exports = { getWindData, calculateNewPosition };
+
