@@ -1,17 +1,24 @@
 const axios = require('axios');
 const config = require('./config');
 
+// Переменная для хранения последней успешной погоды (кэш на случай ошибок API)
+let lastValidWeatherData = {
+  speed: 3.0,
+  direction: 270,
+  gust: 0,
+  temp: 15,
+  precip: 0.0
+};
+
 async function getWindData(lat, lng) {
   try {
-    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${config.openWeatherApiKey}&units=metric`;
+    const url = `https://openweathermap.org{lat}&lon=${lng}&appid=${config.openWeatherApiKey}&units=metric`;
     const response = await axios.get(url);
     
-    // Получаем температуру из блока main
     const temp = response.data.main && response.data.main.temp !== undefined 
       ? response.data.main.temp 
-      : '--';
+      : lastValidWeatherData.temp;
 
-    // Получаем осадки (проверяем дождь или снег за последний 1 час '1h')
     let precip = 0;
     if (response.data.rain && response.data.rain['1h']) {
       precip = response.data.rain['1h'];
@@ -20,35 +27,25 @@ async function getWindData(lat, lng) {
     }
 
     if (response.data.wind) {
-      return {
+      // Обновляем кэш успешными данными
+      lastValidWeatherData = {
         speed: response.data.wind.speed,
         direction: response.data.wind.deg,
         gust: response.data.wind.gust || 0,
-        temp: temp,       // <-- Добавили температуру в ответ
-        precip: precip    // <-- Добавили объем осадков в ответ
+        temp: temp,
+        precip: precip
       };
+      return lastValidWeatherData;
     }
     
-    // Если блока wind почему-то нет, но погода пришла
-    return {
-      speed: 0,
-      direction: 0,
-      gust: 0,
-      temp: temp,
-      precip: precip
-    };
+    return lastValidWeatherData;
 
   } catch (error) {
     console.error('Ошибка получения ветра и погоды:', error.message);
-    console.log('⚠️ Используем тестовые данные ветра и погоды');
-    // Дефолтные тестовые данные на случай ошибки API
-    return {
-      speed: 3.0,
-      direction: 270,
-      gust: 0,
-      temp: 15,
-      precip: 0.0
-    };
+    console.log('⚠️ API недоступно или превышен лимит запросов. Используем последние известные данные.');
+    
+    // Вместо жестких дефолтных значений возвращаем сохраненный кэш
+    return lastValidWeatherData;
   }
 }
 
@@ -75,4 +72,3 @@ function calculateNewPosition(lat, lng, windSpeed, windDirection, seconds) {
 }
 
 module.exports = { getWindData, calculateNewPosition };
-
