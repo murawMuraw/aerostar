@@ -20,15 +20,19 @@ async function apiRequest(url, options = {}) {
 
 async function getWindData(lat, lng) {
     try {
+        // Запрос к серверу (передаем координаты)
         const response = await fetch(`${window.App.API_URL}/api/wind?lat=${lat}&lon=${lng}`);
         const data = await response.json();
         
-        if (data.speed) {
-            return data;
+        // Проверяем, что сервер вернул корректный объект с данными
+        if (data && data.speed !== undefined) {
+            // Возвращаем весь объект целиком. 
+            // Он должен содержать: data.speed, data.direction, data.temp, data.precip
+            return data; 
         }
         return null;
     } catch (error) {
-        console.error('Error getting wind:', error);
+        console.error('Error getting wind and weather data:', error);
         return null;
     }
 }
