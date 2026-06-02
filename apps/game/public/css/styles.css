@@ -1,0 +1,208 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #0f172a;
+    color: #fff;
+    overflow: hidden;
+}
+
+#game-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+#map {
+    flex-grow: 1;
+    height: 100%;
+    z-index: 1;
+}
+
+/* Боковая панель */
+#sidebar {
+    width: 320px;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.95);
+    box-shadow: -4px 0 20px rgba(0,0,0,0.5);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+    backdrop-filter: blur(10px);
+    border-left: 1px solid rgba(255,255,255,0.1);
+}
+
+h2 {
+    margin-top: 0;
+    color: #38bdf8;
+    font-size: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 10px;
+}
+
+/* Витрина кастомизации */
+.catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin: 15px 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.skin-card {
+    background: rgba(255,255,255,0.05);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.skin-card:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.skin-card.selected {
+    border-color: #38bdf8;
+    background: rgba(56, 189, 248, 0.15);
+}
+
+.skin-preview {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 5px;
+}
+
+.skin-name {
+    font-size: 11px;
+    height: 14px;
+    overflow: hidden;
+}
+
+/* Формы */
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 5px;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    color: #fff;
+    box-sizing: border-box;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    background: #0284c7;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+button:hover {
+    background: #0369a1;
+}
+
+/* Приборы телеметрии */
+.telemetry-box {
+    background: rgba(0,0,0,0.4);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.tel-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.tel-row:last-child {
+    margin-bottom: 0;
+}
+
+.tel-val {
+    font-weight: bold;
+    color: #38bdf8;
+}
+
+/* Интерфейс высоты */
+.alt-slider-container {
+    margin-top: 20px;
+}
+
+.alt-slider {
+    width: 100%;
+    margin: 10px 0;
+    -webkit-appearance: none;
+    background: #334155;
+    height: 6px;
+    border-radius: 3px;
+    outline: none;
+}
+
+.alt-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #38bdf8;
+    cursor: pointer;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    background: #22c55e;
+}
+
+/* Иконка финиша */
+.finish-icon {
+    font-size: 24px;
+    text-align: center;
+    line-height: 24px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    #game-container {
+        flex-direction: column-reverse;
+    }
+    #sidebar {
+        width: 100%;
+        height: 290px;
+    }
+    #map {
+        height: calc(100% - 290px);
+    }
+}
+
