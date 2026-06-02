@@ -5,54 +5,51 @@
 
 const Datastore = require('nedb-promises');
 const path = require('path');
-const balloonCatalog = require('./balloonCatalog'); // Подключаем каталог
+const balloonCatalog = require('./balloonCatalog');
 
-// Создаем и инициализируем файл базы данных внутри папки проекта
+// Основная база данных игроков
 const db = Datastore.create({
     filename: path.join(__dirname, 'data', 'fiesta.db'),
-    autoload: true // Автоматически создавать файл, если его нет
+    autoload: true
 });
 
-// Настраиваем индексы для ускорения поиска по email (id) игрока
+// База данных настроек гонки
+const settingsDb = Datastore.create({
+    filename: path.join(__dirname, 'data', 'fiesta_settings.db'),
+    autoload: true
+});
+
+// Настраиваем уникальный индекс по email
 db.ensureIndex({ fieldName: 'email', unique: true }).catch(err => {
     console.error('[DB] Ошибка создания индекса email:', err.message);
 });
 
 /**
  * Регистрация нового пилота в соревновании
- * @param {string} email - Уникальный email пользователя (из сессии)
- * @param {string} username - Имя или никнейм пилота для таблицы лидеров
- * @param {number} startLat - Начальная широта старта в Америке
- * @param {number} startLng - Начальная долгота старта в Америке
  */
 async function registerPlayer(email, username, styleId, startLat, startLng) {
-    // 1. Проверяем, существует ли выбранный дизайн
     const selectedStyle = balloonCatalog[styleId];
     if (!selectedStyle) {
         throw new Error('Выбранный дизайн шара не найден в каталоге!');
     }
 
-    // 2. Генерируем уникальный порядковый номер шара
-    // Считаем сколько всего шаров уже зарегистрировано в этой гонке
     const totalRegistered = await db.count({});
-    const raceNumber = totalRegistered + 1; // Следующий номер
-    
-    // Форматируем номер в красивый вид (например, 1 -> "№001", 12 -> "№012")
-    const formattedNumber = `№${String(raceNumber).padStart(3, '0')}`;
+    const raceNumber = totalRegistered + 1;
+    const formattedNumber = "№" + String(raceNumber).padStart(3, '0');
 
     const newBalloon = {
         email: email,
         username: username,
-        raceNumber: formattedNumber, // Бортовой номер шара
-        balloonStyle: selectedStyle,  // Объект дизайна { id, name, filter }
+        raceNumber: formattedNumber,
+        balloonStyle: selectedStyle,
         lat: startLat,
         lng: startLng,
-        altitude: 1000, 
+        altitude: 1000,
         speed: 0,
         windDirection: 0,
         layerName: 'Приземный слой (эшелон 1)',
-        status: 'flying', 
-        path: [[startLat, startLng]], 
+        status: 'flying',
+        path: [[startLat, startLng]],
         registeredAt: Date.now(),
         lastUpdate: Date.now()
     };
@@ -61,7 +58,7 @@ async function registerPlayer(email, username, styleId, startLat, startLng) {
         return await db.insert(newBalloon);
     } catch (error) {
         if (error.message.includes('uniqueViolated')) {
-            throw new Error('Вы уже зарегистрированы! У вас может быть только один бортовой номер.');
+            throw new Error('Вы уже зарегистрированы в этой фиесте!');
         }
         throw error;
     }
@@ -75,13 +72,11 @@ async function getPlayer(email) {
 }
 
 /**
- * Изменение высоты шара игроком (Главный игровой процесс)
- * @param {string} email - Кого обновляем
- * @param {number} newAltitude - Новая высота в метрах
+ * Изменение высоты шара игроком
  */
 async function updatePlayerAltitude(email, newAltitude) {
     if (newAltitude < 0 || newAltitude > 15000) {
-        throw new Error('Недопустимая высота для аэростата (разрешено от 0 до 15000м)');
+        throw new Error('Недопустимая высота для аэростата (от 0 до 15000м)');
     }
     
     return await db.update(
@@ -92,7 +87,7 @@ async function updatePlayerAltitude(email, newAltitude) {
 }
 
 /**
- * Фиксация финиша (если игрок вошел в радиус Эйфелевой башни)
+ * Фиксация финиша
  */
 async function setPlayerFinished(email) {
     return await db.update(
@@ -101,30 +96,21 @@ async function setPlayerFinished(email) {
     );
 }
 
-
-
-// Создаем вторую изолированную коллекцию внутри файла fiesta_settings.db
-const settingsDb = Datastore.create({
-    filename: path.join(__dirname, 'data', 'fiesta_settings.db'),
-    autoload: true
-});
-
 /**
  * Получить текущие активные настройки гонки
  */
 async function getActiveRaceConfig() {
     let config = await settingsDb.findOne({ type: 'race_config' });
     
-    // Если игра запущена впервые и настроек в базе нет — создаем дефолтные
     if (!config) {
         config = {
             type: 'race_config',
-            finishCoords: { lat: 48.8584, lng: 2.2945 }, // Эйфелева башня
+            finishCoords: { lat: 48.8584, lng: 2.2945 },
             startWindowFrom: new Date("2026-06-02T00:00:00Z").getTime(),
             startWindowTo: new Date("2026-06-10T23:59:59Z").getTime(),
             allowedStartRegion: {
                 minLat: -56.0, maxLat: 75.0,
-                minLng: -168.0, maxLng: -34.0 // Обе Америки
+                minLng: -168.0, maxLng: -34.0
             },
             updatedBy: 'system'
         };
@@ -134,11 +120,11 @@ async function getActiveRaceConfig() {
 }
 
 /**
- * Обновление настроек гонки администратором aerostar@aerost.art
+ * Обновление настроек гонки администратором
  */
 async function updateRaceConfig(adminEmail, newConfig) {
     if (adminEmail !== 'aerostar@aerost.art') {
-        throw new Error('Доступ запрещен. Вы не являетесь главным администратором.');
+        throw new Error('Доступ запрещен. Вы не являетесь администратором.');
     }
 
     return await settingsDb.update(
@@ -160,18 +146,13 @@ async function updateRaceConfig(adminEmail, newConfig) {
     );
 }
 
-
-
-/**
- * Экспортируем функции и сам инстанс БД для физического движка engine.js
- */
+// ПРАВИЛЬНЫЙ СИНТАКСИС ЭКСПОРТА ОБЪЕКТА
 module.exports = {
     rawDb: db,
-    registerPlayer,
-    getPlayer: async (email) => await db.findOne({ email }),
-    updatePlayerAltitude: async (email, alt) => await db.update({ email, status: 'flying' }, { $set: { altitude: Number(alt) } }),
-    setPlayerFinished: async (email) => await db.update({ email }, { $set: { status: 'finished', speed: 0 } })
-    getActiveRaceConfig,
-    updateRaceConfig
-    
+    registerPlayer: registerPlayer,
+    getPlayer: getPlayer,
+    updatePlayerAltitude: updatePlayerAltitude,
+    setPlayerFinished: setPlayerFinished,
+    getActiveRaceConfig: getActiveRaceConfig,
+    updateRaceConfig: updateRaceConfig
 };
