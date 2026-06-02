@@ -45,22 +45,46 @@ io.on('connection', (socket) => {
         // Ожидаем email и username пользователя
         socket.userEmail = userData.email;
         socket.username = userData.username;
-        
-        console.log(`[Game Server] Пилот ${socket.username} (${socket.userEmail}) авторизован в игре.`);
-        
-        // Отправляем игроку список доступных кастомных дизайнов из каталога
+                // 1. Загружаем кастомные настройки гонки из БД и отправляем клиенту
+        const currentRaceConfig = await dbModule.getActiveRaceConfig();
+        socket.emit('fiesta-race-config', currentRaceConfig);
+
         socket.emit('fiesta-balloon-catalog', balloonCatalog);
 
-        // Проверяем, зарегистрирован ли уже этот пилот и запущен ли его шар
         const playerBalloon = await dbModule.getPlayer(socket.userEmail);
         if (playerBalloon) {
-            // Передаем персональное состояние его шара
             socket.emit('fiesta-my-state', playerBalloon);
         }
 
-        // Отправляем массив ВСЕХ остальных летящих шаров для отрисовки общей карты фиесты
         const allActiveBalloons = await dbModule.rawDb.find({ status: 'flying' });
         socket.emit('fiesta-all-balloons', allActiveBalloons);
+    });
+       
+
+    
+
+    /**
+     * СЕКРЕТНАЯ КОМАНДА ОТ АДМИНИСТРАТОРА
+     * Позволяет aerostar@aerost.art менять правила гонки на лету
+     */
+    socket.on('fiesta-admin-change-rules', async (newRulesData) => {
+        if (socket.userEmail !== 'aerostar@aerost.art') {
+            return socket.emit('fiesta-error', 'Критическая ошибка: У вас нет прав администратора!');
+        }
+
+        try {
+            // Сохраняем новые правила в базу данных settingsDb
+            await dbModule.updateRaceConfig(socket.userEmail, newRulesData);
+            
+            // Получаем свежий конфиг из базы
+            const updatedConfig = await dbModule.getActiveRaceConfig();
+            
+            // Мгновенно вещаем НОВЫЕ правила (финиш, дедлайн) ВСЕМ подключенным игрокам
+            io.emit('fiesta-race-config', updatedConfig);
+            console.log(`[Game Admin] 🛠️ Пользователь aerostar@aerost.art обновил правила соревнований!`);
+        } catch (error) {
+            socket.emit('fiesta-error', error.message);
+        }
     });
 
     /**
@@ -75,27 +99,31 @@ io.on('connection', (socket) => {
         }
 
         try {
-            // Регистрируем игрока. Функция сама выдаст бортовой номер и проверит styleId
-            const newBalloon = await dbModule.registerPlayer(
-                socket.userEmail, 
-                socket.username, 
-                styleId, 
-                lat, 
-                lng
-            );
-            
-            // Возвращаем пилоту подтверждение успешного старта с его номером
+            // Подтягиваем актуальные правила из базы перед взлетом
+            const config = await dbModule.getActiveRaceConfig();
+            const reg = config.allowedStartRegion;
+            const now = Date.now();
+
+            // 1. Проверяем временное окно старта
+            if (now < config.startWindowFrom || now > config.startWindowTo) {
+                return socket.emit('fiesta-error', 'Период регистрации и старта в данной фиесте закрыт или еще не начался!');
+            }
+
+            // 2. Проверяем географическую зону старта
+            if (lat < reg.minLat || lat > reg.maxLat || lng < reg.minLng || lng > reg.maxLng) {
+                return socket.emit('fiesta-error', 'Выбранная точка находится вне разрешенной зоны старта соревнований!');
+            }
+
+            // Если всё ок — регистрируем и запускаем в воздух
+            const newBalloon = await dbModule.registerPlayer(socket.userEmail, socket.username, styleId, lat, lng);
             socket.emit('fiesta-my-state', newBalloon);
-            
-            // Транслируем появление нового уникального шара абсолютно всем зрителям на карте гонки
             io.emit('fiesta-balloon-created', newBalloon);
-            
-            console.log(`[Game Server] 🚀 Борт ${newBalloon.raceNumber} (${newBalloon.balloonStyle.name}) пилота ${socket.username} успешно взлетел из точки [${lat}, ${lng}]`);
         } catch (error) {
-            // Отправляем клиенту сообщение об ошибке (например, если он уже зарегистрирован)
             socket.emit('fiesta-error', error.message);
         }
     });
+
+     
 
     /**
      * 3. Управление высотой полета аэростата
