@@ -24,6 +24,39 @@
             <!-- ЭКРАН 1: РЕГИСТРАЦИЯ И ВЗЛЕТ -->
             <div id="screen-register">
                 <h2>Регистрация в Фиесте</h2>
+                
+<!-- СЕКРЕТНАЯ АДМИН-ПАНЕЛЬ (скрыта по умолчанию) -->
+<div id="admin-panel" class="hidden" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+    <h3 style="margin: 0 0 10px 0; color: #f87171; font-size: 14px; text-align: center;">⚙️ Управление фиестой (Админ)</h3>
+    
+    <div class="form-group" style="margin-bottom: 8px;">
+        <label style="color: #f87171;">Финиш (Lat, Lng)</label>
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="admin-finish-lat" placeholder="Широта" style="padding: 6px; font-size: 12px;" />
+            <input type="text" id="admin-finish-lng" placeholder="Долгота" style="padding: 6px; font-size: 12px;" />
+        </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 8px;">
+        <label style="color: #f87171;">Окно старта (С ... По ...)</label>
+        <input type="text" id="admin-date-from" placeholder="ГГГГ-ММ-ДД" style="padding: 6px; font-size: 12px; margin-bottom: 4px;" />
+        <input type="text" id="admin-date-to" placeholder="ГГГГ-ММ-ДД" style="padding: 6px; font-size: 12px;" />
+    </div>
+
+    <div class="form-group" style="margin-bottom: 10px;">
+        <label style="color: #f87171;">Границы Америки (minLat, maxLat, minLng, maxLng)</label>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
+            <input type="text" id="admin-box-minlat" placeholder="min Lat" style="padding: 5px; font-size: 11px;" />
+            <input type="text" id="admin-box-maxlat" placeholder="max Lat" style="padding: 5px; font-size: 11px;" />
+            <input type="text" id="admin-box-minlng" placeholder="min Lng" style="padding: 5px; font-size: 11px;" />
+            <input type="text" id="admin-box-maxlng" placeholder="max Lng" style="padding: 5px; font-size: 11px;" />
+        </div>
+    </div>
+
+    <button id="btn-admin-save" style="background: #dc2626; padding: 8px; font-size: 12px;">ПРИМЕНИТЬ НА ЛЕТУ 🛠️</button>
+</div>
+
+                
                 <p style="font-size: 11px; color: #94a3b8; margin: 0 0 12px 0;">🎯 Кликните на карту в районе Южной или Северной Америки, чтобы выбрать место старта.</p>
                 
                 <div class="form-group">
@@ -73,40 +106,44 @@
     </div>
 
     <!-- ИГРОВАЯ СКРИПТОВАЯ ЛОГИКА -->
-    <script>
+<script>
         document.addEventListener("DOMContentLoaded", () => {
-            // Генерируем временного случайного пользователя (для тестов, пока нет интеграции с вашей auth.js)
+            // ВАЖНО: Для тестирования панели управления оставлен email главного организатора
+            // Если сменить его на любой другой (например, "user@mail.com"), админка автоматически скроется
             const fakeUser = {
-                email: "pilot_" + Math.random().toString(36).substring(5) + "@aerost.art",
-                username: "Пилот_" + Math.floor(Math.random() * 900 + 100)
+                email: "aerostar@aerost.art", 
+                username: "Организатор Аэростар"
             };
             document.getElementById('player-name').value = fakeUser.username;
 
-            // 1. Инициализация карты Leaflet
+            // Проверка прав администратора при загрузке страницы
+            if (fakeUser.email === 'aerostar@aerost.art') {
+                document.getElementById('admin-panel').classList.remove('hidden');
+            }
+
+            // 1. Инициализация карты Leaflet с обзором обоих полушарий
             const map = L.map('map', { center: [20, -40], zoom: 2, minZoom: 2, worldCopyJump: true });
             L.tileLayer('https://arcgisonline.com{z}/{y}/{x}', { 
                 attribution: 'Tiles © Esri' 
             }).addTo(map);
 
-            // Метка финиша — Эйфелева башня
-            const finishCoords = [48.8584, 2.2945];
-            L.marker(finishCoords, {
-                icon: L.divIcon({ html: '🗼', className: 'finish-icon', iconSize:, iconAnchor: })
-            }).addTo(map).bindPopup("<b>🏁 ФИНИШ: Эйфелева башня, Париж!</b><br>Цель — долететь сюда как можно ближе.");
- // Хранилища состояния выбора
+            // Динамический маркер финиша (инициализируется данными из базы данных сервера)
+            let finishMarker = null;
+
+            // Хранилища состояния выбора точки взлета и объектов на карте
             let selectedStartCoords = null;
             let selectedStyleId = null;
             let startClickMarker = null;
             
-            const gameBalloons = {}; // Хранилище объектов на карте { id: { marker, polyline } }
+            const gameBalloons = {}; // Глобальное хранилище { id: { marker, polyline } }
             const balloonIcon = L.icon({ 
                 iconUrl: 'images/balloon.png', 
-                iconSize: [32, 40], 
-                iconAnchor: [16, 40], 
+                iconSize: [32, 42], 
+                iconAnchor: [16, 42], 
                 popupAnchor: [0, -32] 
             });
 
-            // 2. Выбор точки взлета кликом по карте
+            // 2. Обработка клика по карте для выбора точки старта (только для незарегистрированных)
             map.on('click', (e) => {
                 const isRegOpen = !document.getElementById('screen-register').classList.contains('hidden');
                 if (isRegOpen) {
@@ -121,14 +158,61 @@
                 }
             });
 
-            // 3. Работа с Socket.io (игровой бэкенд)
+            // 3. Подключение к игровому WebSocket серверу (порт 3001)
             const socket = io();
 
             socket.on('connect', () => {
                 socket.emit('fiesta-auth', fakeUser);
             });
 
-            // Получение каталога расцветок шаров
+            /**
+             * ПРИЕМ ДИНАМИЧЕСКИХ НАСТРОЕК ГОНКИ ИЗ БАЗЫ ДАННЫХ
+             * Срабатывает при старте и каждый раз, когда админ меняет правила
+             */
+            socket.on('fiesta-race-config', (config) => {
+                const fCoords = [config.finishCoords.lat, config.finishCoords.lng];
+                
+                // Переставляем или создаем маркер финиша
+                if (!finishMarker) {
+                    finishMarker = L.marker(fCoords, {
+                        icon: L.divIcon({ html: '🗼', className: 'finish-icon', iconSize: [24, 24], iconAnchor: [12, 12] })
+                    }).addTo(map);
+                } else {
+                    finishMarker.setLatLng(fCoords);
+                }
+                finishMarker.bindPopup(`<b>🏁 ФИНИШ: Точка назначения</b><br>Координаты: ${config.finishCoords.lat.toFixed(4)}, ${config.finishCoords.lng.toFixed(4)}`);
+
+                // Автоматически предзаполняем поля админ-формы текущими значениями из базы
+                if (fakeUser.email === 'aerostar@aerost.art') {
+                    document.getElementById('admin-finish-lat').value = config.finishCoords.lat;
+                    document.getElementById('admin-finish-lng').value = config.finishCoords.lng;
+                    document.getElementById('admin-date-from').value = new Date(config.startWindowFrom).toISOString().split('T')[0];
+                    document.getElementById('admin-date-to').value = new Date(config.startWindowTo).toISOString().split('T')[0];
+                    document.getElementById('admin-box-minlat').value = config.allowedStartRegion.minLat;
+                    document.getElementById('admin-box-maxlat').value = config.allowedStartRegion.maxLat;
+                    document.getElementById('admin-box-minlng').value = config.allowedStartRegion.minLng;
+                    document.getElementById('admin-box-maxlng').value = config.allowedStartRegion.maxLng;
+                }
+            });
+
+            // Клик по кнопке «Применить на лету» на панели администратора
+            document.getElementById('btn-admin-save').addEventListener('click', () => {
+                const updatedRules = {
+                    lat: document.getElementById('admin-finish-lat').value,
+                    lng: document.getElementById('admin-finish-lng').value,
+                    dateFrom: document.getElementById('admin-date-from').value,
+                    dateTo: document.getElementById('admin-date-to').value,
+                    minLat: document.getElementById('admin-box-minlat').value,
+                    maxLat: document.getElementById('admin-box-maxlat').value,
+                    minLng: document.getElementById('admin-box-minlng').value,
+                    maxLng: document.getElementById('admin-box-maxlng').value
+                };
+                
+                socket.emit('fiesta-admin-change-rules', updatedRules);
+                alert("Новые правила фиесты отправлены на сервер и сохранены в БД!");
+            });
+
+            // Получение каталога расцветок шаров и построение витрины
             socket.on('fiesta-balloon-catalog', (catalog) => {
                 const grid = document.getElementById('catalog-grid');
                 grid.innerHTML = '';
@@ -165,7 +249,7 @@
             }
             document.getElementById('player-name').addEventListener('input', checkValidation);
 
-            // Клик по кнопке «Взлет»
+            // Отправка команды «Взлет» на сервер
             document.getElementById('btn-takeoff').addEventListener('click', () => {
                 const name = document.getElementById('player-name').value.trim();
                 fakeUser.username = name;
@@ -177,7 +261,7 @@
                 });
             });
 
-            // Работа с ползунком высоты
+            // Обработка ручного перемещения ползунка высоты
             const slider = document.getElementById('alt-slider');
             slider.addEventListener('change', (e) => {
                 const targetAlt = e.target.value;
@@ -185,7 +269,7 @@
                 socket.emit('fiesta-change-altitude', { altitude: targetAlt });
             });
 
-            // Прием личного состояния шара пилота
+            // Прием личного состояния шара текущего пилота (переключение экранов)
             socket.on('fiesta-my-state', (balloon) => {
                 if (startClickMarker) map.removeLayer(startClickMarker);
                 
@@ -200,46 +284,40 @@
                 slider.value = balloon.altitude;
                 document.getElementById('alt-slider-val').innerText = balloon.altitude + " м";
 
+                // Центрируем камеру на собственном шаре при первом открытии сессии
                 if (!window.mapCentered) {
                     map.setView([balloon.lat, balloon.lng], 5);
                     window.mapCentered = true;
                 }
             });
 
-            // Загрузка всей эскадры при входе
+            // Загрузка радара всей эскадры участников при входе в игру
             socket.on('fiesta-all-balloons', (balloons) => {
                 balloons.forEach(b => renderOrUpdateBalloon(b));
             });
 
-            // Появление нового участника
             socket.on('fiesta-balloon-created', (balloon) => {
                 renderOrUpdateBalloon(balloon);
             });
 
-            // Ежеминутный сдвиг от физического движка
             socket.on('fiesta-balloon-updated', (balloon) => {
                 renderOrUpdateBalloon(balloon);
-                
-                // Если обновился наш собственный шар — обновляем приборы скорости
                 const currentHull = document.getElementById('flight-hull-number').innerText;
                 if (currentHull.includes(balloon.raceNumber) || balloon.username === fakeUser.username) {
-                    document.getElementById('tel-speed').innerText = `${Math.round(balloon.speed)} км/ч`;
-                    document.getElementById('tel-layer').innerText = balloon.layerName || 'В полете';
+                    document.getElementById('tel-speed').innerText = Math.round(balloon.speed) + " км/ч";
+                    document.getElementById('tel-layer').innerText = balloon.layerName || "В полете";
                 }
             });
 
-            // Универсальная функция отрисовки Leaflet маркеров и линий
             function renderOrUpdateBalloon(data) {
                 const id = data._id || data.id;
                 if (!id) return;
                 const coords = [data.lat, data.lng];
                 
-                // Отрисовка маркера
                 if (!gameBalloons[id]) {
                     gameBalloons[id] = {};
                     gameBalloons[id].marker = L.marker(coords, { icon: balloonIcon }).addTo(map);
                     
-                    // Накладываем CSS скин-фильтр оболочки после добавления на карту
                     gameBalloons[id].marker.on('add', function() {
                         if (data.balloonStyle && data.balloonStyle.filter) {
                             this._icon.style.filter = data.balloonStyle.filter;
@@ -252,28 +330,26 @@
                     gameBalloons[id].marker.setLatLng(coords);
                 }
 
-                // Всплывающее окно
-                gameBalloons[id].marker.bindPopup(`
-                    <div style="font-family: sans-serif; color: #000; min-width: 140px;">
-                        <b style="font-size: 14px; color: #0284c7;">Борт ${data.raceNumber || '№---'}</b><br>
-                        Пилот: <b>${data.username}</b><br>
-                        <hr style="border:0; border-top:1px solid #eee; margin: 4px 0;">
-                        Высота: ${data.altitude} м<br>
-                        Скорость: ${Math.round(data.speed || 0)} км/ч
-                    </div>
-                `);
+                const popupContent = "<div style='font-family: sans-serif; color: #000; min-width: 140px;'>" +
+                    "<b style='font-size: 14px; color: #0284c7;'>Борт " + (data.raceNumber || "№---") + "</b><br>" +
+                    "Пилот: <b>" + data.username + "</b><br>" +
+                    "<hr style='border:0; border-top:1px solid #eee; margin: 4px 0;'>" +
+                    "Высота: " + data.altitude + " м<br>" +
+                    "Скорость: " + Math.round(data.speed || 0) + " км/ч" +
+                    "</div>";
 
-                // Отрисовка трека линии пути
+                gameBalloons[id].marker.bindPopup(popupContent);
+
                 if (data.path && data.path.length > 0) {
                     const formattedPath = data.path.map(p => Array.isArray(p) ? p : [p.lat, p.lng]);
-                    const pathColor = data.balloonStyle && data.balloonStyle.id === 'fire_red' ? '#ef4444' : '#38bdf8';
+                    const pathColor = data.balloonStyle && data.balloonStyle.id === "fire_red" ? "#ef4444" : "#38bdf8";
                     
                     if (!gameBalloons[id].polyline) {
                         gameBalloons[id].polyline = L.polyline(formattedPath, { 
                             color: pathColor, 
                             weight: 3, 
                             opacity: 0.5,
-                            lineJoin: 'round'
+                            lineJoin: "round"
                         }).addTo(map);
                     } else {
                         gameBalloons[id].polyline.setLatLngs(formattedPath);
@@ -283,5 +359,9 @@
 
             socket.on('fiesta-error', (msg) => alert("⚠️ Ошибка: " + msg));
         });
-          
+    </script>
+</body>
 
+
+    
+   
