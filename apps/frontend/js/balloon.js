@@ -140,6 +140,7 @@ function moveBalloon() {
 }
 
 // Старт полета
+// Старт полета (Исправленная версия с поддержкой погоды)
 async function startFlight() {
     if (!window.App.balloonPosition) {
         showError('Select the starting point on the map');
@@ -163,10 +164,17 @@ async function startFlight() {
         if (balloon.error) throw new Error(balloon.error);
         
         window.App.balloonId = balloon.id;
+        
+        // ИСПРАВЛЕНИЕ: Передаем в объект также температуру и осадки, которые вернул сервер
         window.App.currentWind = { 
             speed: balloon.wind_speed, 
-            direction: balloon.wind_direction 
+            direction: balloon.wind_direction,
+            gust: balloon.wind_gust || 0,
+            temp: balloon.temp !== undefined ? balloon.temp : '--',
+            precip: balloon.precip !== undefined ? balloon.precip : '--'
         };
+        
+        // Сразу же отображаем полные данные на главной панели
         updateWindDisplay(window.App.currentWind);
         
         if (window.App.startMarker) {
@@ -193,6 +201,7 @@ async function startFlight() {
         if (window.App.movementInterval) clearInterval(window.App.movementInterval);
         window.App.movementInterval = setInterval(moveBalloon, 1000);
         
+        // Интервал обновления погоды (работает раз в минуту, запрашивает кэш сервера)
         if (window.App.windUpdateInterval) clearInterval(window.App.windUpdateInterval);
         window.App.windUpdateInterval = setInterval(async () => {
             if (window.App.isFlying && window.App.balloonPosition) {
