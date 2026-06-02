@@ -101,6 +101,67 @@ async function setPlayerFinished(email) {
     );
 }
 
+
+
+// Создаем вторую изолированную коллекцию внутри файла fiesta_settings.db
+const settingsDb = Datastore.create({
+    filename: path.join(__dirname, 'data', 'fiesta_settings.db'),
+    autoload: true
+});
+
+/**
+ * Получить текущие активные настройки гонки
+ */
+async function getActiveRaceConfig() {
+    let config = await settingsDb.findOne({ type: 'race_config' });
+    
+    // Если игра запущена впервые и настроек в базе нет — создаем дефолтные
+    if (!config) {
+        config = {
+            type: 'race_config',
+            finishCoords: { lat: 48.8584, lng: 2.2945 }, // Эйфелева башня
+            startWindowFrom: new Date("2026-06-02T00:00:00Z").getTime(),
+            startWindowTo: new Date("2026-06-10T23:59:59Z").getTime(),
+            allowedStartRegion: {
+                minLat: -56.0, maxLat: 75.0,
+                minLng: -168.0, maxLng: -34.0 // Обе Америки
+            },
+            updatedBy: 'system'
+        };
+        await settingsDb.insert(config);
+    }
+    return config;
+}
+
+/**
+ * Обновление настроек гонки администратором aerostar@aerost.art
+ */
+async function updateRaceConfig(adminEmail, newConfig) {
+    if (adminEmail !== 'aerostar@aerost.art') {
+        throw new Error('Доступ запрещен. Вы не являетесь главным администратором.');
+    }
+
+    return await settingsDb.update(
+        { type: 'race_config' },
+        { 
+            $set: {
+                finishCoords: { lat: Number(newConfig.lat), lng: Number(newConfig.lng) },
+                startWindowFrom: new Date(newConfig.dateFrom).getTime(),
+                startWindowTo: new Date(newConfig.dateTo).getTime(),
+                allowedStartRegion: {
+                    minLat: Number(newConfig.minLat), maxLat: Number(newConfig.maxLat),
+                    minLng: Number(newConfig.minLng), maxLng: Number(newConfig.maxLng)
+                },
+                updatedBy: adminEmail,
+                lastUpdated: Date.now()
+            }
+        },
+        { returnUpdatedDocs: true }
+    );
+}
+
+
+
 /**
  * Экспортируем функции и сам инстанс БД для физического движка engine.js
  */
@@ -110,5 +171,7 @@ module.exports = {
     getPlayer: async (email) => await db.findOne({ email }),
     updatePlayerAltitude: async (email, alt) => await db.update({ email, status: 'flying' }, { $set: { altitude: Number(alt) } }),
     setPlayerFinished: async (email) => await db.update({ email }, { $set: { status: 'finished', speed: 0 } })
+    getActiveRaceConfig,
+    updateRaceConfig
+    
 };
-
