@@ -1,1 +1,463 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Аэростар — Виртуальная Фиеста</title>
+    
+    <!-- Подключаем Leaflet и Socket.io -->
+    <link rel="stylesheet" href="https://jsdelivr.net" />
+    <script src="https://jsdelivr.net"></script>
+    <script src="/socket.io/socket.io.js"></script>
+
+    <style>
+        html, body { 
+            margin: 0; 
+            padding: 0; 
+            width: 100%; 
+            height: 100%; 
+            font-family: system-ui, -apple-system, sans-serif; 
+            background: #0f172a; 
+            color: #fff; 
+            overflow: hidden; 
+        }
+        #game-container { 
+            display: flex; 
+            width: 100%; 
+            height: 100%; 
+        }
+        #map { 
+            flex-grow: 1; 
+            height: 100%; 
+            z-index: 1; 
+        }
+        
+        /* Боковая панель интерфейса */
+        #sidebar { 
+            width: 320px; 
+            height: 100%; 
+            background: rgba(15, 23, 42, 0.95); 
+            box-shadow: -4px 0 20px rgba(0,0,0,0.5); 
+            z-index: 10; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 20px; 
+            box-sizing: border-box; 
+            backdrop-filter: blur(10px); 
+            border-left: 1px solid rgba(255,255,255,0.1); 
+        }
+        h2 { 
+            margin-top: 0; 
+            color: #38bdf8; 
+            font-size: 20px; 
+            border-bottom: 1px solid rgba(255,255,255,0.1); 
+            padding-bottom: 10px; 
+        }
+        
+        /* Сетка каталога шаров */
+        .catalog-grid { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 10px; 
+            margin: 15px 0; 
+            max-height: 200px; 
+            overflow-y: auto; 
+        }
+        .skin-card { 
+            background: rgba(255,255,255,0.05); 
+            border: 2px solid transparent; 
+            border-radius: 8px; 
+            padding: 10px; 
+            text-align: center; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+        .skin-card:hover { 
+            background: rgba(255,255,255,0.1); 
+        }
+        .skin-card.selected { 
+            border-color: #38bdf8; 
+            background: rgba(56, 189, 248, 0.15); 
+        }
+        .skin-preview { 
+            width: 40px; 
+            height: 40px; 
+            margin-bottom: 5px; 
+        }
+        .skin-name { 
+            font-size: 11px; 
+            height: 14px; 
+            overflow: hidden; 
+        }
+
+        /* Формы и элементы управления */
+        .form-group { 
+            margin-bottom: 15px; 
+        }
+        label { 
+            display: block; 
+            font-size: 12px; 
+            color: #94a3b8; 
+            margin-bottom: 5px; 
+        }
+        input[type="text"] { 
+            width: 100%; 
+            padding: 10px; 
+            background: rgba(0,0,0,0.3); 
+            border: 1px solid rgba(255,255,255,0.2); 
+            border-radius: 6px; 
+            color: #fff; 
+            box-sizing: border-box; 
+        }
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            background: #0284c7; 
+            border: none; 
+            border-radius: 6px; 
+            color: #fff; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: background 0.2s; 
+        }
+        button:hover { 
+            background: #0369a1; 
+        }
+        
+        /* Телеметрия */
+        .telemetry-box { 
+            background: rgba(0,0,0,0.4); 
+            border-radius: 8px; 
+            padding: 15px; 
+            margin-bottom: 20px; 
+            border: 1px solid rgba(255,255,255,0.05); 
+        }
+        .tel-row { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-bottom: 8px; 
+            font-size: 14px; 
+        }
+        .tel-row:last-child { 
+            margin-bottom: 0; 
+        }
+        .tel-val { 
+            font-weight: bold; 
+            color: #38bdf8; 
+        }
+        
+        /* Слайдер */
+        .alt-slider-container { 
+            margin-top: 20px; 
+        }
+        .alt-slider { 
+            width: 100%; 
+            margin: 10px 0; 
+            -webkit-appearance: none; 
+            background: #334155; 
+            height: 6px; 
+            border-radius: 3px; 
+            outline: none; 
+        }
+        .alt-slider::-webkit-slider-thumb { 
+            -webkit-appearance: none; 
+            width: 18px; 
+            height: 18px; 
+            border-radius: 50%; 
+            background: #38bdf8; 
+            cursor: pointer; 
+        }
+
+        .hidden { 
+            display: none !important; 
+        }
+        .status-badge { 
+            display: inline-block; 
+            padding: 3px 8px; 
+            border-radius: 4px; 
+            font-size: 11px; 
+            font-weight: bold; 
+            background: #22c55e; 
+        }
+
+        /* Оптимизация под мобильные телефоны */
+        @media (max-width: 768px) {
+            #game-container { flex-direction: column-reverse; }
+            #sidebar { width: 100%; height: 290px; }
+            #map { height: calc(100% - 290px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- КАРТА СОРЕВНОВАНИЙ LEAFLET -->
+        <div id="map"></div>
+
+        <!-- БОКОВАЯ ПАНЕЛЬ ИГРЫ -->
+        <div id="sidebar">
+            
+            <!-- ЭКРАН 1: РЕГИСТРАЦИЯ И ВЗЛЕТ -->
+            <div id="screen-register">
+                <h2>Регистрация в Фиесте</h2>
+                <p style="font-size: 11px; color: #94a3b8; margin: 0 0 12px 0;">🎯 Кликните на карту в районе Южной или Северной Америки, чтобы выбрать место старта.</p>
+                
+                <div class="form-group">
+                    <label>Позывной пилота</label>
+                    <input type="text" id="player-name" placeholder="Введите ваш никнейм..." />
+                </div>
+
+                <div class="form-group">
+                    <label>Выберите уникальный аэростат</label>
+                    <div class="catalog-grid" id="catalog-grid">
+                        <!-- Заполняется динамически из сокетов бэкенда -->
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Координаты старта</label>
+                    <div id="start-coords-text" style="font-size: 13px; color: #e2e8f0; font-weight: bold;">Не выбраны (кликните на карту)</div>
+                </div>
+
+                <button id="btn-takeoff" disabled style="background: #475569; cursor: not-allowed;">ВЗЛЁТ 🚀</button>
+            </div>
+
+            <!-- ЭКРАН 2: ПАНЕЛЬ УПРАВЛЕНИЯ ПОЛЕТОМ -->
+            <div id="screen-flight" class="hidden">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2 style="margin: 0; border: none; padding: 0;" id="flight-hull-number">Борт №---</h2>
+                    <span class="status-badge">В ПОЛЁТЕ</span>
+                </div>
+
+                <div class="telemetry-box">
+                    <div class="tel-row">Пилот: <span class="tel-val" id="tel-name">---</span></div>
+                    <div class="tel-row">Скорость: <span class="tel-val" id="tel-speed">0 км/ч</span></div>
+                    <div class="tel-row">Ветер: <span class="tel-val" id="tel-layer" style="font-size: 11px; text-align: right; max-width: 160px;">---</span></div>
+                </div>
+
+                <div class="alt-slider-container">
+                    <label style="display: flex; justify-content: space-between;">
+                        <span>Высота полета:</span>
+                        <span id="alt-slider-val" style="color: #38bdf8; font-weight: bold;">1000 м</span>
+                    </label>
+                    <input type="range" id="alt-slider" class="alt-slider" min="500" max="13000" step="500" value="1000" />
+                    <p style="font-size: 11px; color: #94a3b8; margin: 8px 0 0 0;">Меняйте высоту, чтобы ловить попутные высотные ветры и струйные течения на пути к Парижу.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ИГРОВАЯ СКРИПТОВАЯ ЛОГИКА -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Генерируем временного случайного пользователя (для тестов, пока нет интеграции с вашей auth.js)
+            const fakeUser = {
+                email: "pilot_" + Math.random().toString(36).substring(5) + "@aerost.art",
+                username: "Пилот_" + Math.floor(Math.random() * 900 + 100)
+            };
+            document.getElementById('player-name').value = fakeUser.username;
+
+            // 1. Инициализация карты Leaflet
+            const map = L.map('map', { center: [20, -40], zoom: 2, minZoom: 2, worldCopyJump: true });
+            L.tileLayer('https://arcgisonline.com{z}/{y}/{x}', { 
+                attribution: 'Tiles © Esri' 
+            }).addTo(map);
+
+            // Метка финиша — Эйфелева башня
+            const finishCoords = [48.8584, 2.2945];
+            L.marker(finishCoords, {
+                icon: L.divIcon({ html: '🗼', className: 'finish-icon', iconSize:, iconAnchor: })
+            }).addTo(map).bindPopup("<b>🏁 ФИНИШ: Эйфелева башня, Париж!</b><br>Цель — долететь сюда как можно ближе.");
+ // Хранилища состояния выбора
+            let selectedStartCoords = null;
+            let selectedStyleId = null;
+            let startClickMarker = null;
+            
+            const gameBalloons = {}; // Хранилище объектов на карте { id: { marker, polyline } }
+            const balloonIcon = L.icon({ 
+                iconUrl: 'images/balloon.png', 
+                iconSize: [32, 40], 
+                iconAnchor: [16, 40], 
+                popupAnchor: [0, -32] 
+            });
+
+            // 2. Выбор точки взлета кликом по карте
+            map.on('click', (e) => {
+                const isRegOpen = !document.getElementById('screen-register').classList.contains('hidden');
+                if (isRegOpen) {
+                    const { lat, lng } = e.latlng;
+                    selectedStartCoords = { lat, lng };
+                    
+                    if (startClickMarker) map.removeLayer(startClickMarker);
+                    startClickMarker = L.marker([lat, lng]).addTo(map);
+                    
+                    document.getElementById('start-coords-text').innerText = `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+                    checkValidation();
+                }
+            });
+
+            // 3. Работа с Socket.io (игровой бэкенд)
+            const socket = io();
+
+            socket.on('connect', () => {
+                socket.emit('fiesta-auth', fakeUser);
+            });
+
+            // Получение каталога расцветок шаров
+            socket.on('fiesta-balloon-catalog', (catalog) => {
+                const grid = document.getElementById('catalog-grid');
+                grid.innerHTML = '';
+                
+                Object.values(catalog).forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'skin-card';
+                    card.dataset.id = item.id;
+                    card.innerHTML = `
+                        <img src="images/balloon.png" class="skin-preview" style="filter: ${item.filter || 'none'}" />
+                        <div class="skin-name">${item.name}</div>
+                    `;
+                    
+                    card.addEventListener('click', () => {
+                        document.querySelectorAll('.skin-card').forEach(c => c.classList.remove('selected'));
+                        card.classList.add('selected');
+                        selectedStyleId = item.id;
+                        checkValidation();
+                    });
+                    
+                    grid.appendChild(card);
+                });
+            });
+
+            function checkValidation() {
+                const btn = document.getElementById('btn-takeoff');
+                const name = document.getElementById('player-name').value.trim();
+                
+                if (selectedStartCoords && selectedStyleId && name.length > 0) {
+                    btn.disabled = false;
+                    btn.style.background = '#0284c7';
+                    btn.style.cursor = 'pointer';
+                }
+            }
+            document.getElementById('player-name').addEventListener('input', checkValidation);
+
+            // Клик по кнопке «Взлет»
+            document.getElementById('btn-takeoff').addEventListener('click', () => {
+                const name = document.getElementById('player-name').value.trim();
+                fakeUser.username = name;
+                
+                socket.emit('fiesta-start-flight', {
+                    lat: selectedStartCoords.lat,
+                    lng: selectedStartCoords.lng,
+                    styleId: selectedStyleId
+                });
+            });
+
+            // Работа с ползунком высоты
+            const slider = document.getElementById('alt-slider');
+            slider.addEventListener('change', (e) => {
+                const targetAlt = e.target.value;
+                document.getElementById('alt-slider-val').innerText = targetAlt + " м";
+                socket.emit('fiesta-change-altitude', { altitude: targetAlt });
+            });
+
+            // Прием личного состояния шара пилота
+            socket.on('fiesta-my-state', (balloon) => {
+                if (startClickMarker) map.removeLayer(startClickMarker);
+                
+                document.getElementById('screen-register').classList.add('hidden');
+                document.getElementById('screen-flight').classList.remove('hidden');
+                
+                document.getElementById('flight-hull-number').innerText = `Борт ${balloon.raceNumber}`;
+                document.getElementById('tel-name').innerText = balloon.username;
+                document.getElementById('tel-speed').innerText = `${Math.round(balloon.speed)} км/ч`;
+                document.getElementById('tel-layer').innerText = balloon.layerName;
+                
+                slider.value = balloon.altitude;
+                document.getElementById('alt-slider-val').innerText = balloon.altitude + " м";
+
+                if (!window.mapCentered) {
+                    map.setView([balloon.lat, balloon.lng], 5);
+                    window.mapCentered = true;
+                }
+            });
+
+            // Загрузка всей эскадры при входе
+            socket.on('fiesta-all-balloons', (balloons) => {
+                balloons.forEach(b => renderOrUpdateBalloon(b));
+            });
+
+            // Появление нового участника
+            socket.on('fiesta-balloon-created', (balloon) => {
+                renderOrUpdateBalloon(balloon);
+            });
+
+            // Ежеминутный сдвиг от физического движка
+            socket.on('fiesta-balloon-updated', (balloon) => {
+                renderOrUpdateBalloon(balloon);
+                
+                // Если обновился наш собственный шар — обновляем приборы скорости
+                const currentHull = document.getElementById('flight-hull-number').innerText;
+                if (currentHull.includes(balloon.raceNumber) || balloon.username === fakeUser.username) {
+                    document.getElementById('tel-speed').innerText = `${Math.round(balloon.speed)} км/ч`;
+                    document.getElementById('tel-layer').innerText = balloon.layerName || 'В полете';
+                }
+            });
+
+            // Универсальная функция отрисовки Leaflet маркеров и линий
+            function renderOrUpdateBalloon(data) {
+                const id = data._id || data.id;
+                if (!id) return;
+                const coords = [data.lat, data.lng];
+                
+                // Отрисовка маркера
+                if (!gameBalloons[id]) {
+                    gameBalloons[id] = {};
+                    gameBalloons[id].marker = L.marker(coords, { icon: balloonIcon }).addTo(map);
+                    
+                    // Накладываем CSS скин-фильтр оболочки после добавления на карту
+                    gameBalloons[id].marker.on('add', function() {
+                        if (data.balloonStyle && data.balloonStyle.filter) {
+                            this._icon.style.filter = data.balloonStyle.filter;
+                        }
+                    });
+                    if (gameBalloons[id].marker._icon && data.balloonStyle && data.balloonStyle.filter) {
+                        gameBalloons[id].marker._icon.style.filter = data.balloonStyle.filter;
+                    }
+                } else {
+                    gameBalloons[id].marker.setLatLng(coords);
+                }
+
+                // Всплывающее окно
+                gameBalloons[id].marker.bindPopup(`
+                    <div style="font-family: sans-serif; color: #000; min-width: 140px;">
+                        <b style="font-size: 14px; color: #0284c7;">Борт ${data.raceNumber || '№---'}</b><br>
+                        Пилот: <b>${data.username}</b><br>
+                        <hr style="border:0; border-top:1px solid #eee; margin: 4px 0;">
+                        Высота: ${data.altitude} м<br>
+                        Скорость: ${Math.round(data.speed || 0)} км/ч
+                    </div>
+                `);
+
+                // Отрисовка трека линии пути
+                if (data.path && data.path.length > 0) {
+                    const formattedPath = data.path.map(p => Array.isArray(p) ? p : [p.lat, p.lng]);
+                    const pathColor = data.balloonStyle && data.balloonStyle.id === 'fire_red' ? '#ef4444' : '#38bdf8';
+                    
+                    if (!gameBalloons[id].polyline) {
+                        gameBalloons[id].polyline = L.polyline(formattedPath, { 
+                            color: pathColor, 
+                            weight: 3, 
+                            opacity: 0.5,
+                            lineJoin: 'round'
+                        }).addTo(map);
+                    } else {
+                        gameBalloons[id].polyline.setLatLngs(formattedPath);
+                    }
+                }
+            }
+
+            socket.on('fiesta-error', (msg) => alert("⚠️ Ошибка: " + msg));
+        });
+          
 
