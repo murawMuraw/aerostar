@@ -5,6 +5,7 @@
 
 const Datastore = require('nedb-promises');
 const path = require('path');
+const balloonCatalog = require('./balloonCatalog'); // Подключаем каталог
 
 // Создаем и инициализируем файл базы данных внутри папки проекта
 const db = Datastore.create({
@@ -24,18 +25,34 @@ db.ensureIndex({ fieldName: 'email', unique: true }).catch(err => {
  * @param {number} startLat - Начальная широта старта в Америке
  * @param {number} startLng - Начальная долгота старта в Америке
  */
-async function registerPlayer(email, username, startLat, startLng) {
+async function registerPlayer(email, username, styleId, startLat, startLng) {
+    // 1. Проверяем, существует ли выбранный дизайн
+    const selectedStyle = balloonCatalog[styleId];
+    if (!selectedStyle) {
+        throw new Error('Выбранный дизайн шара не найден в каталоге!');
+    }
+
+    // 2. Генерируем уникальный порядковый номер шара
+    // Считаем сколько всего шаров уже зарегистрировано в этой гонке
+    const totalRegistered = await db.count({});
+    const raceNumber = totalRegistered + 1; // Следующий номер
+    
+    // Форматируем номер в красивый вид (например, 1 -> "№001", 12 -> "№012")
+    const formattedNumber = `№${String(raceNumber).padStart(3, '0')}`;
+
     const newBalloon = {
         email: email,
         username: username,
+        raceNumber: formattedNumber, // Бортовой номер шара
+        balloonStyle: selectedStyle,  // Объект дизайна { id, name, filter }
         lat: startLat,
         lng: startLng,
-        altitude: 1000, // Начальная высота полета по умолчанию (1 км)
+        altitude: 1000, 
         speed: 0,
         windDirection: 0,
         layerName: 'Приземный слой (эшелон 1)',
-        status: 'flying', // Статусы: 'flying' (в полете), 'finished' (долетел), 'disqualified'
-        path: [[startLat, startLng]], // Массив точек для Leaflet трека
+        status: 'flying', 
+        path: [[startLat, startLng]], 
         registeredAt: Date.now(),
         lastUpdate: Date.now()
     };
@@ -44,7 +61,7 @@ async function registerPlayer(email, username, startLat, startLng) {
         return await db.insert(newBalloon);
     } catch (error) {
         if (error.message.includes('uniqueViolated')) {
-            throw new Error('Вы уже зарегистрированы в этой фиесте и ваш шар находится на карте!');
+            throw new Error('Вы уже зарегистрированы! У вас может быть только один бортовой номер.');
         }
         throw error;
     }
@@ -90,8 +107,8 @@ async function setPlayerFinished(email) {
 module.exports = {
     rawDb: db,
     registerPlayer,
-    getPlayer,
-    updatePlayerAltitude,
-    setPlayerFinished
+    getPlayer: async (email) => await db.findOne({ email }),
+    updatePlayerAltitude: async (email, alt) => await db.update({ email, status: 'flying' }, { $set: { altitude: Number(alt) } }),
+    setPlayerFinished: async (email) => await db.update({ email }, { $set: { status: 'finished', speed: 0 } })
 };
 
