@@ -12,7 +12,7 @@ let lastValidWeatherData = {
 
 async function getWindData(lat, lng) {
   try {
-    const url = `https://openweathermap.org{lat}&lon=${lng}&appid=${config.openWeatherApiKey}&units=metric`;
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${config.openWeatherApiKey}&units=metric`;
     const response = await axios.get(url);
     
     const temp = response.data.main && response.data.main.temp !== undefined 
