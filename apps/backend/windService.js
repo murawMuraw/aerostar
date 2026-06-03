@@ -33,8 +33,8 @@ async function getWindData(lat, lng) {
     if (response.data.wind) {
       // Обновляем кэш успешными данными
       lastValidWeatherData = {
-        speed: response.data.wind.speed,
-        direction: response.data.wind.deg,
+        speed: response.data.wind.speed !== undefined ? response.data.wind.speed : lastValidWeatherData.speed,
+        direction: response.data.wind.deg !== undefined ? response.data.wind.deg : lastValidWeatherData.direction,
         gust: response.data.wind.gust || 0,
         temp: temp,
         precip: precip
