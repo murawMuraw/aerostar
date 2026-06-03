@@ -127,24 +127,34 @@
         <div>🌬️ Wind --</div>
         <div>🧭 Direction --</div>
         <div>📏 Speed -- m/s</div>
-         <div>🌡️ Temp: -- °C</div>
-         <div>☔ Precip: -- mm/h</div>
+        <div>🌡️ Temp: -- °C</div>
+        <div>☔ Precip: -- mm/h</div>
     </div>
     <div class="flight-status status-ready" id="flightStatus">⏸️ Waiting for start</div>
     <div id="placeInfo" style="margin-top: 15px; padding: 10px; background: #f9f9f9; border-radius: 8px; display: none; border-left: 3px solid #ff9800;">
         <div id="placeName" style="font-weight: bold; color: #333; margin-bottom: 8px;"></div>
         <div id="placeLink" style="margin-top: 5px;"></div>
     </div>
+    
+    <!-- Game Fiesta Button -->
+    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; text-align: center;">
+        <a href="http://91.149.179.79:3001/fiesta.html" target="_blank" 
+           style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                  color: white; padding: 12px 24px; 
+                  text-decoration: none; border-radius: 50px; 
+                  font-size: 16px; font-weight: bold; 
+                  display: inline-block; 
+                  transition: transform 0.3s, box-shadow 0.3s;
+                  box-shadow: 0 4px 15px rgba(0,0,0,0.2);"
+           onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.3)';"
+           onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.2)';">
+            🎮 Game Fiesta
+        </a>
+    </div>
 </div>
 
 <div class="hint" id="hint">👆 Click on the map to set a start location</div>
 <div class="loading" id="loading">Loading Map... 🗺️</div>
-
-    <a href="http://91.149.179.79:3001/fiesta.html" target="_blank" 
-   style="background: #ff6b6b; color: white; padding: 10px 20px; 
-          text-decoration: none; border-radius: 5px; display: inline-block;">
-    🎮 Game Fiesta
-</a>
 
 <!-- SEO Footer (visible content for search engines) -->
 <footer class="seo-footer">
@@ -381,4 +391,3 @@
 <a href="/watch.html" class="live-button">🔴 LIVE AEROSTAR</a>
 </body>
 </html>
-
