@@ -1,16 +1,26 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+   
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Аэростар — Виртуальная Фиеста</title>
     
-    <!-- Подключаем Leaflet и Socket.io -->
-    <link rel="stylesheet" href="https://jsdelivr.net" />
-    <script src="https://jsdelivr.net"></script>
+    <!-- Подключение Leaflet и Socket.io -->
+    <link rel="stylesheet" href="https://unpkg.com" />
+    <script src="https://unpkg.com"></script>
     <script src="/socket.io/socket.io.js"></script>
 
-   <link rel="stylesheet" href="css/styles.css" />
+    <!-- 1. Подключаем оригинальные стили из aerost.art -->
+    <link rel="stylesheet" href="css/styles.css" />
+    
+    <!-- 2. Подключаем переименованные игровые стили боковой панели -->
+    <link rel="stylesheet" href="css/game-ui.css" />
+    
+    <!-- 3. Подключаем вашу оригинальную карту -->
+    <script src="js/map.js"></script>
+
+
 </head>
 <body>
 
@@ -122,10 +132,8 @@
             }
 
             // 1. Инициализация карты Leaflet с обзором обоих полушарий
-            const map = L.map('map', { center: [20, -40], zoom: 2, minZoom: 2, worldCopyJump: true });
-            L.tileLayer('https://arcgisonline.com{z}/{y}/{x}', { 
-                attribution: 'Tiles © Esri' 
-            }).addTo(map);
+            const map = window.map; 
+            
 
             // Динамический маркер финиша (инициализируется данными из базы данных сервера)
             let finishMarker = null;
