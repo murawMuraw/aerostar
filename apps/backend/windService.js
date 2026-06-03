@@ -3,10 +3,10 @@ const config = require('./config');
 
 // Переменная для хранения последней успешной погоды (кэш на случай ошибок API)
 let lastValidWeatherData = {
-  speed: 3.0,
+  speed: 0.0,
   direction: 270,
   gust: 0,
-  temp: 15,
+  temp: 0,
   precip: 0.0
 };
 
@@ -14,6 +14,10 @@ async function getWindData(lat, lng) {
   try {
     const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${config.openWeatherApiKey}&units=metric`;
     const response = await axios.get(url);
+    // Проверяем наличие структуры данных в ответе
+    if (!response.data || !response.data.main) {
+      throw new Error('Некорректная структура ответа от OpenWeather API');
+    }
     
     const temp = response.data.main && response.data.main.temp !== undefined 
       ? response.data.main.temp 
