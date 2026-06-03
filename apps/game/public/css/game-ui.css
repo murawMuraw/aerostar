@@ -1,1 +1,1033 @@
-game-ui.css
+/* =========================================================
+   AEROST.ART — FUTURISTIC HUD UI
+   ========================================================= */
+
+:root {
+
+    --hud-bg: rgba(12, 22, 40, 0.48);
+    --hud-bg-strong: rgba(15, 25, 45, 0.78);
+
+    --hud-border: rgba(255,255,255,0.10);
+
+    --hud-text: rgba(255,255,255,0.92);
+    --hud-subtext: rgba(255,255,255,0.62);
+
+    --hud-accent: #8fd3ff;
+
+    --hud-shadow:
+        0 8px 32px rgba(0,0,0,0.28),
+        inset 0 0 0 1px rgba(255,255,255,0.03);
+
+    --hud-blur: blur(14px);
+
+    --success: #8fffa6;
+    --warning: #ffd580;
+    --info: #8fd3ff;
+}
+
+/* =========================================================
+   RESET
+   ========================================================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+
+    width: 100%;
+    height: 100%;
+
+    overflow: hidden;
+
+    background: #071018;
+
+    color: var(--hud-text);
+
+    font-family: Inter, "Segoe UI", sans-serif;
+}
+
+/* =========================================================
+   MAP
+   ========================================================= */
+
+#map {
+
+    width: 100%;
+    height: 100%;
+
+    background: #071018;
+
+    position: relative;
+
+    z-index: 1;
+}
+
+#haze-canvas {
+
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    pointer-events: none;
+
+    z-index: 1000;
+}
+
+/* =========================================================
+   GLOBAL HUD PANEL
+   ========================================================= */
+
+.hud-panel {
+
+    background: var(--hud-bg);
+
+    backdrop-filter: var(--hud-blur);
+
+    border: 1px solid var(--hud-border);
+
+    box-shadow: var(--hud-shadow);
+
+    border-radius: 22px;
+}
+
+/* =========================================================
+   PROFILE BUTTON
+   ========================================================= */
+
+.profile-btn {
+
+    position: absolute;
+
+    top: 20px;
+    right: 20px;
+
+    z-index: 2000;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 10px 18px;
+
+    border-radius: 999px;
+
+    background: rgba(0,0,0,0);
+
+    //backdrop-filter: blur(18px);
+
+    border: 1px solid rgba(255,255,255,0.1);
+
+    color: rgba(0,0,0,1);
+
+    font-size: 14px;
+    font-weight: 600;
+
+    box-shadow:
+        0 8px 24px rgba(0,0,0,0.7);
+
+    cursor: pointer;
+
+    transition: 0.25s ease;
+}
+
+
+.profile-btn:hover {
+    background: rgba(255, 255, 255, 1) !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* =========================================================
+   LEFT CONTROLS
+   ========================================================= */
+
+.left-controls {
+
+    position: absolute;
+
+    top: 20px;
+    left: 50px;
+
+    z-index: 2000;
+
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* =========================================================
+   CUSTOM BUTTONS
+   ========================================================= */
+
+.custom-button {
+
+    min-width: 170px;
+
+    padding: 14px 22px;
+
+    border-radius: 18px;
+
+    border: 1px solid var(--hud-border);
+
+    background: var(--hud-bg);
+
+    backdrop-filter: var(--hud-blur);
+
+    color: white;
+
+    font-size: 15px;
+    font-weight: 600;
+
+    letter-spacing: 0.5px;
+
+    box-shadow: var(--hud-shadow);
+
+    cursor: pointer;
+
+    transition: all 0.25s ease;
+}
+
+.custom-button:hover {
+
+    transform: translateY(-2px);
+
+    background: rgba(255,255,255,0.08);
+}
+
+.custom-button:disabled {
+
+    opacity: 0.35;
+
+    cursor: not-allowed;
+}
+
+/* =========================================================
+   INFO PANEL
+   ========================================================= */
+
+.info-panel {
+
+    position: absolute;
+
+    top: 85px;
+    right: 20px;
+
+    min-width: 280px;
+
+    padding: 18px;
+
+    border-radius: 24px;
+
+    background: var(--hud-bg-strong);
+
+    backdrop-filter: var(--hud-blur);
+
+    border: 1px solid var(--hud-border);
+
+    box-shadow: var(--hud-shadow);
+
+    z-index: 2000;
+}
+
+/* =========================================================
+   COORDS
+   ========================================================= */
+
+.coord-display {
+
+    margin: 14px 0;
+
+    padding: 12px;
+
+    border-radius: 14px;
+
+    background: rgba(255,255,255,0.04);
+
+    border: 1px solid rgba(255,255,255,0.05);
+
+    border-left: 2px solid var(--hud-accent);
+
+    font-family: Consolas, monospace;
+
+    color: rgba(255,255,255,0.85);
+
+    line-height: 1.5;
+}
+
+/* =========================================================
+   WIND INFO
+   ========================================================= */
+
+.wind-info {
+
+    margin-top: 14px;
+
+    padding: 12px;
+
+    border-radius: 14px;
+
+    background: rgba(143,211,255,0.08);
+
+    border: 1px solid rgba(143,211,255,0.14);
+
+    color: rgba(255,255,255,0.88);
+
+    line-height: 1.5;
+}
+
+/* =========================================================
+   FLIGHT STATUS
+   ========================================================= */
+
+.flight-status {
+
+    margin-top: 14px;
+
+    padding: 12px;
+
+    border-radius: 14px;
+
+    text-align: center;
+
+    font-weight: 600;
+
+    backdrop-filter: blur(10px);
+}
+
+.status-ready {
+
+    background: rgba(255,193,7,0.15);
+
+    color: var(--warning);
+}
+
+.status-flying {
+
+    background: rgba(76,175,80,0.15);
+
+    color: var(--success);
+}
+
+.status-waiting {
+
+    background: rgba(33,150,243,0.15);
+
+    color: var(--info);
+}
+
+/* =========================================================
+   HINT
+   ========================================================= */
+
+.hint {
+
+    position: absolute;
+
+    bottom: 30px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    padding: 10px 18px;
+
+    border-radius: 999px;
+
+    background: rgba(10,20,35,0.65);
+
+    backdrop-filter: blur(12px);
+
+    border: 1px solid rgba(255,255,255,0.08);
+
+    color: white;
+
+    font-size: 14px;
+
+    z-index: 2000;
+
+    pointer-events: none;
+}
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+.loading {
+
+    position: absolute;
+
+    top: 50%;
+    left: 50%;
+
+    transform: translate(-50%, -50%);
+
+    padding: 16px 24px;
+
+    border-radius: 16px;
+
+    background: rgba(10,20,35,0.88);
+
+    border: 1px solid rgba(255,255,255,0.08);
+
+    backdrop-filter: blur(14px);
+
+    color: white;
+
+    z-index: 3000;
+}
+
+/* =========================================================
+   AUTH MODAL
+   ========================================================= */
+
+.auth-modal {
+
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    background: rgba(0,0,0,0.75);
+
+    backdrop-filter: blur(8px);
+
+    z-index: 10000;
+}
+
+.auth-modal.hidden {
+    display: none;
+}
+
+.auth-container {
+
+    width: 90%;
+    max-width: 420px;
+
+    padding: 30px;
+
+    border-radius: 28px;
+
+    background: rgba(15,25,45,0.85);
+
+    backdrop-filter: blur(18px);
+
+    border: 1px solid rgba(255,255,255,0.08);
+
+    box-shadow:
+        0 20px 60px rgba(0,0,0,0.45);
+
+    color: white;
+}
+
+/* =========================================================
+   AUTH TABS
+   ========================================================= */
+
+.auth-tabs {
+
+    display: flex;
+
+    gap: 10px;
+
+    margin-bottom: 24px;
+}
+
+.auth-tab {
+
+    flex: 1;
+
+    padding: 12px;
+
+    text-align: center;
+
+    border-radius: 14px;
+
+    cursor: pointer;
+
+    color: rgba(255,255,255,0.6);
+
+    transition: 0.2s;
+}
+
+.auth-tab.active {
+
+    background: rgba(255,255,255,0.08);
+
+    color: white;
+}
+
+/* =========================================================
+   AUTH FORM
+   ========================================================= */
+
+.auth-form {
+
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.auth-form.hidden {
+    display: none;
+}
+
+.auth-form input {
+
+    padding: 14px 16px;
+
+    border-radius: 14px;
+
+    border: 1px solid rgba(255,255,255,0.08);
+
+    background: rgba(255,255,255,0.04);
+
+    color: white;
+
+    outline: none;
+
+    font-size: 15px;
+}
+
+.auth-form input:focus {
+
+    border-color: rgba(143,211,255,0.5);
+}
+
+.auth-form button {
+
+    padding: 14px;
+
+    border: none;
+
+    border-radius: 16px;
+
+    background: rgba(255,255,255,0.08);
+
+    color: white;
+
+    font-size: 15px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.auth-form button:hover {
+
+    background: rgba(255,255,255,0.1);
+}
+
+.auth-error {
+
+    color: #ff8a8a;
+
+    text-align: center;
+
+    font-size: 14px;
+}
+
+/* =========================================================
+   USER INFO
+   ========================================================= */
+
+.user-info {
+
+    position: absolute;
+
+    top: 20px;
+    right: 20px;
+
+    z-index: 2000;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 12px 18px;
+
+    border-radius: 999px;
+
+    background: rgba(15,25,45,0.88);
+
+    backdrop-filter: blur(18px);
+
+    border: 1px solid rgba(255,255,255,0.08);
+
+    box-shadow:
+        0 8px 24px rgba(0,0,0,0.35);
+
+    color: white !important;
+
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* =========================================================
+   BADGES
+   ========================================================= */
+
+.guest-badge,
+.logout-btn {
+
+    padding: 6px 12px;
+
+    border-radius: 999px;
+
+    border: none;
+
+    font-size: 12px;
+}
+
+.guest-badge {
+
+    background: rgba(255,193,7,0.15);
+
+    color: var(--warning);
+}
+
+.logout-btn {
+
+    background: rgba(255,80,80,0.18);
+
+    color: white;
+
+    cursor: pointer;
+}
+
+/* =========================================================
+   LEAFLET CONTROLS
+   ========================================================= */
+
+.leaflet-control-layers {
+
+    background: var(--hud-bg) !important;
+
+    backdrop-filter: var(--hud-blur);
+
+    border: 1px solid var(--hud-border) !important;
+
+    border-radius: 18px !important;
+
+    color: white !important;
+
+    overflow: hidden;
+
+    box-shadow: var(--hud-shadow);
+
+    left: 20px !important;
+
+    top: 70px !important;
+}
+
+.leaflet-control-layers label {
+
+    color: white !important;
+}
+
+.leaflet-control-scale {
+
+    background: rgba(10,20,35,0.65);
+
+    border-radius: 10px;
+
+    padding: 4px 8px;
+
+    color: white;
+}
+
+/* =========================================================
+   BALLOON MARKER
+   ========================================================= */
+
+.balloon-marker {
+
+    font-size: 26px;
+
+    filter:
+        drop-shadow(0 0 12px rgba(255,255,255,0.55));
+}
+
+/* =========================================================
+   NOTIFICATIONS
+   ========================================================= */
+
+@keyframes slideIn {
+
+    from {
+        transform: translateX(-50%) translateY(-60px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+
+    from {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(-50%) translateY(-60px);
+        opacity: 0;
+    }
+}
+
+.error-notification,
+.success-notification {
+
+    animation: slideIn 0.3s ease-out;
+}
+
+.error-notification div,
+.success-notification div {
+
+    backdrop-filter: blur(12px);
+}
+
+/* =========================================================
+   WELCOME MODAL
+   ========================================================= */
+
+.welcome-modal {
+
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(0,0,0,0.72);
+
+    backdrop-filter: blur(8px);
+
+    z-index: 2000;
+}
+
+.welcome-container {
+
+    width: 90%;
+    max-width: 520px;
+
+    border-radius: 28px;
+
+    background: rgba(15,25,45,0.82);
+
+    backdrop-filter: blur(18px);
+
+    border: 1px solid rgba(255,255,255,0.08);
+
+    box-shadow:
+        0 20px 60px rgba(0,0,0,0.45);
+
+    animation: slideIn 0.3s ease-out;
+}
+
+.welcome-content {
+
+    padding: 32px;
+
+    text-align: center;
+}
+
+.welcome-icon {
+
+    font-size: 60px;
+
+    margin-bottom: 18px;
+}
+
+.welcome-title {
+
+    font-size: 30px;
+
+    font-weight: 700;
+
+    margin-bottom: 18px;
+}
+
+.welcome-text {
+
+    color: rgba(255,255,255,0.72);
+
+    line-height: 1.7;
+
+    margin-bottom: 22px;
+}
+
+.welcome-features {
+
+    margin: 24px 0;
+
+    padding: 18px;
+
+    border-radius: 18px;
+
+    background: rgba(255,255,255,0.04);
+
+    text-align: left;
+}
+
+.welcome-features h4 {
+
+    margin-bottom: 10px;
+
+    color: var(--hud-accent);
+}
+
+.welcome-features ul {
+
+    padding-left: 18px;
+}
+
+.welcome-features li {
+
+    margin: 8px 0;
+
+    color: rgba(255,255,255,0.75);
+}
+
+.welcome-buttons {
+
+    margin: 28px 0 14px;
+}
+
+.welcome-btn {
+
+    padding: 14px 30px;
+
+    border: 1px solid rgba(255,255,255,0.08);
+
+    border-radius: 999px;
+
+    background: rgba(255,255,255,0.08);
+
+    color: white;
+
+    font-size: 15px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.welcome-btn:hover {
+
+    background: rgba(255,255,255,0.14);
+
+    transform: translateY(-2px);
+}
+
+.dont-show-again {
+
+    margin-top: 16px;
+
+    font-size: 12px;
+
+    color: rgba(255,255,255,0.5);
+}
+
+/* =========================================================
+   SUPPORT BANNER
+   ========================================================= */
+
+#support-banner {
+
+    position: fixed;
+
+    bottom: 20px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    z-index: 1500;
+
+    padding: 14px 18px;
+
+    border-radius: 22px;
+
+    background: rgba(12,22,40,0.78);
+
+    backdrop-filter: blur(18px);
+
+    border: 1px solid rgba(255,255,255,0.08);
+
+    box-shadow: var(--hud-shadow);
+
+    color: white;
+
+    max-width: 92%;
+}
+
+.support-content {
+
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.support-icon {
+
+    font-size: 24px;
+}
+
+.support-text {
+
+    display: flex;
+    flex-direction: column;
+}
+
+.support-title {
+
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.support-subtitle {
+
+    margin-top: 2px;
+
+    font-size: 12px;
+
+    color: rgba(255,255,255,0.58);
+}
+
+.support-button {
+
+    padding: 10px 18px;
+
+    border-radius: 999px;
+
+    background: rgba(255,255,255,0.08);
+
+    border: 1px solid rgba(255,255,255,0.08);
+
+    text-decoration: none;
+
+    color: white;
+
+    font-weight: 600;
+
+    transition: 0.2s;
+}
+
+.support-button:hover {
+
+    background: rgba(255,255,255,0.14);
+
+    transform: translateY(-1px);
+}
+
+.close-button {
+
+    background: transparent;
+
+    border: none;
+
+    color: rgba(255,255,255,0.7);
+
+    font-size: 18px;
+
+    cursor: pointer;
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+    .left-controls {
+
+        left: 12px;
+        top: 12px;
+    }
+
+    .custom-button {
+
+        min-width: 130px;
+
+        padding: 12px 16px;
+
+        font-size: 14px;
+    }
+
+    .info-panel {
+
+        right: 12px;
+
+        width: calc(100% - 24px);
+
+        min-width: unset;
+    }
+
+    .support-subtitle {
+
+        display: none;
+    }
+
+    .support-content {
+
+        gap: 10px;
+    }
+}
+
+/* LIVE AEROSTAR кнопка */
+.live-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #ff0000, #cc0000);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 40px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+    z-index: 1000;
+    box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.live-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(255, 0, 0, 0.4);
+}
+
+/* На мобильных устройствах чуть меньше */
+@media (max-width: 768px) {
+    .live-button {
+        padding: 8px 16px;
+        font-size: 12px;
+        bottom: 15px;
+        right: 15px;
+    }
+}
