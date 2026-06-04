@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Aerostar — Virtual Fiesta Race</title>
     
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Local Leaflet CSS -->
+    <link rel="stylesheet" href="lib/leaflet/leaflet.css" />
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/styles.css" />
@@ -264,8 +264,8 @@
         </div>
     </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Local Leaflet JS -->
+    <script src="lib/leaflet/leaflet.js"></script>
     
     <!-- Map initialization -->
     <script src="js/map.js"></script>
@@ -332,7 +332,7 @@
             });
             
             socket.on('connect', () => {
-                console.log('✅ Connected');
+                console.log('✅ Connected to Fiesta server');
                 socket.emit('fiesta-auth', {
                     email: 'aerostar@aerost.art',
                     username: document.getElementById('player-name').value || 'Organizer'
@@ -340,6 +340,7 @@
             });
             
             socket.on('fiesta-balloon-catalog', (catalog) => {
+                console.log('📦 Balloon catalog received');
                 const grid = document.getElementById('catalog-grid');
                 if (grid && Object.keys(catalog).length > 0) {
                     grid.innerHTML = '';
@@ -363,6 +364,7 @@
             });
             
             socket.on('fiesta-race-config', (config) => {
+                console.log('🏁 Race config received');
                 if (config.finishCoords) {
                     const finishIcon = L.divIcon({ html: '🏁', className: 'finish-icon', iconSize: [32, 32] });
                     L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon })
@@ -372,6 +374,7 @@
             });
             
             socket.on('fiesta-my-state', (balloon) => {
+                console.log('🎈 My balloon:', balloon.raceNumber);
                 window.gameState.myBalloonId = balloon.id;
                 document.getElementById('screen-register').classList.add('hidden');
                 document.getElementById('screen-flight').classList.remove('hidden');
@@ -460,9 +463,6 @@
 </body>
 </html>
 
-
-
-    
    
     
    
