@@ -23,6 +23,38 @@
 <body>
 
     <div id="game-container">
+<!-- СЕКРЕТНАЯ АДМИН-ПАНЕЛЬ СЛЕВА НАД КАРТОЙ -->
+        <div id="admin-panel" class="hidden">
+            <h3 style="margin: 0 0 12px 0; color: #f87171; font-size: 14px; text-align: center; font-weight: bold; letter-spacing: 0.5px;">⚙️ НАСТРОЙКА ФИЕСТЫ</h3>
+            
+            <div class="form-group" style="margin-bottom: 10px;">
+                <label style="color: #f87171; font-size: 11px;">Точка финиша (Широта, Долгота)</label>
+                <div style="display: flex; gap: 6px;">
+                    <input type="text" id="admin-finish-lat" placeholder="Lat" />
+                    <input type="text" id="admin-finish-lng" placeholder="Lng" />
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 10px;">
+                <label style="color: #f87171; font-size: 11px;">Окно старта (Начало / Конец)</label>
+                <input type="text" id="admin-date-from" placeholder="ГГГГ-ММ-ДД" style="margin-bottom: 4px;" />
+                <input type="text" id="admin-date-to" placeholder="ГГГГ-ММ-ДД" />
+            </div>
+
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label style="color: #f87171; font-size: 11px;">Регион старта (minLat, maxLat, minLng, maxLng)</label>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
+                    <input type="text" id="admin-box-minlat" placeholder="min Lat" />
+                    <input type="text" id="admin-box-maxlat" placeholder="max Lat" />
+                    <input type="text" id="admin-box-minlng" placeholder="min Lng" />
+                    <input type="text" id="admin-box-maxlng" placeholder="max Lng" />
+                </div>
+            </div>
+
+            <button id="btn-admin-save" style="background: #dc2626; padding: 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Применить изменения 🛠️</button>
+        </div>
+
+           
         <!-- КАРТА СОРЕВНОВАНИЙ LEAFLET -->
         <div id="map"></div>
 
@@ -33,17 +65,7 @@
             <div id="screen-register">
                 <h2>Регистрация в Фиесте</h2>
                 
-<!-- СЕКРЕТНАЯ АДМИН-ПАНЕЛЬ (скрыта по умолчанию) -->
-<div id="admin-panel" class="hidden" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
-    <h3 style="margin: 0 0 10px 0; color: #f87171; font-size: 14px; text-align: center;">⚙️ Управление фиестой (Админ)</h3>
-    
-    <div class="form-group" style="margin-bottom: 8px;">
-        <label style="color: #f87171;">Финиш (Lat, Lng)</label>
-        <div style="display: flex; gap: 5px;">
-            <input type="text" id="admin-finish-lat" placeholder="Широта" style="padding: 6px; font-size: 12px;" />
-            <input type="text" id="admin-finish-lng" placeholder="Долгота" style="padding: 6px; font-size: 12px;" />
-        </div>
-    </div>
+
 
     <div class="form-group" style="margin-bottom: 8px;">
         <label style="color: #f87171;">Окно старта (С ... По ...)</label>
