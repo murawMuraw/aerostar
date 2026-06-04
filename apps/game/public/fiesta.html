@@ -1,25 +1,23 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-   
-    <meta charset="UTF-8">
+       <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Аэростар — Виртуальная Фиеста</title>
     
-    <!-- Подключение Leaflet и Socket.io -->
+    <!-- 1. СНАЧАЛА ЗАГРУЖАЕМ СТИЛИ И ЯДРО LEAFLET -->
     <link rel="stylesheet" href="https://unpkg.com" />
     <script src="https://unpkg.com"></script>
+    
+    <!-- 2. ПОДКЛЮЧАЕМ СЕТЕВОЙ СЛОЙ SOCKET.IO -->
     <script src="/socket.io/socket.io.js"></script>
 
-    <!-- 1. Подключаем оригинальные стили из aerost.art -->
+    <!-- 3. ПОДКЛЮЧАЕМ СТИЛИ САЙТА И ИГРЫ -->
     <link rel="stylesheet" href="css/styles.css" />
-    
-    <!-- 2. Подключаем переименованные игровые стили боковой панели -->
     <link rel="stylesheet" href="css/game-ui.css" />
     
-    <!-- 3. Подключаем вашу оригинальную карту -->
+    <!-- 4. И ТОЛЬКО ТЕПЕРЬ ПОДКЛЮЧАЕМ КАРТУ, КОГДА ОБЪЕКТ 'L' ТОЧНО ЕСТЬ В ПАМЯТИ -->
     <script src="js/map.js"></script>
-
 
 </head>
 <body>
