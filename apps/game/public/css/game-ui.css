@@ -1031,3 +1031,48 @@ body {
         right: 15px;
     }
 }
+/* Вынос секретной админки на левый край экрана поверх карты */
+#admin-panel {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1000; /* Гарантирует отображение поверх карты Leaflet */
+    width: 280px;
+    background: rgba(26, 26, 46, 0.95); /* Глубокий темный фон */
+    border: 1px solid rgba(239, 68, 68, 0.5); /* Красная полупрозрачная рамка */
+    border-radius: 12px;
+    padding: 16px;
+    box-sizing: border-box;
+    box-shadow: 0 4px 25px rgba(239, 68, 68, 0.25);
+    backdrop-filter: blur(8px);
+}
+
+/* Оптимизация полей ввода внутри плавающей админки */
+#admin-panel input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    color: #fff;
+    box-sizing: border-box;
+}
+
+#admin-panel input[type="text"]:focus {
+    border-color: #f87171;
+    outline: none;
+}
+
+/* 📱 Стили для мобильных телефонов (экраны меньше 768px) */
+@media (max-width: 767px) {
+    #admin-panel {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        max-height: 50vh; /* Ограничиваем по высоте на смартфонах */
+        overflow-y: auto;
+        padding: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    }
+}
