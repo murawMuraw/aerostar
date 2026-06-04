@@ -75,7 +75,6 @@ function updateWindDisplay(wind) {
             <div>🌬️ Wind ${windLayer}</div>
             <div>🧭 Direction ${wind.direction}° (${directions[index]})</div>
             <div>📏 Speed ${wind.speed.toFixed(1)} m/s</div>
-            ${wind.gust ? `<div style="font-size: 12px; color: #ff9800; padding-left: 15px;">💨 Порывы: ${wind.gust.toFixed(1)} m/s</div>` : ''}
             <div>🌡️ Temp: ${temperature} °C</div>
             <div>☔ Precip: ${precipitation} mm/h</div>
         `;
