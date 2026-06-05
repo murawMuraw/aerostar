@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Aerostar — Fiesta Race Map</title>
-    <link rel="stylesheet" href="https://unpkg.com" />
+    <!-- Локальное подключение стилей Leaflet для защиты от Tracking Prevention -->
+    <link rel="stylesheet" href="/lib/leaflet/leaflet.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { overflow: hidden; font-family: 'Segoe UI', sans-serif; }
@@ -52,6 +53,7 @@
         @media (max-width: 768px) { .info-panel { width: 220px; padding: 10px; } .btn { padding: 8px 16px; font-size: 12px; } }
     </style>
 </head>
+
 <body>
     <div id="map"></div>
     <div class="info-panel">
@@ -67,7 +69,7 @@
         <a href="register.html" class="btn" id="register-btn">📝 Register</a>
     </div>
 
-    <script src="https://unpkg.com"></script>
+   <script src="/lib/leaflet/leaflet.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         let map, socket, finishMarker, balloonsMarkers = {}, myBalloonId = null, currentConfig = null;
@@ -210,13 +212,17 @@
             });
         }
         
-        // Инициализация после загрузки страницы
-        document.addEventListener('DOMContentLoaded', () => {
-            initMap();
-            // Даем карте время на инициализацию
-            setTimeout(() => {
-                connect();
-            }, 500);
+          // Инициализация после загрузки страницы и всех скриптов
+        window.addEventListener('load', () => {
+            // Проверяем, загрузилась ли библиотека Leaflet локально
+            if (typeof L !== 'undefined') {
+                initMap();
+                setTimeout(() => {
+                    connect();
+                }, 500);
+            } else {
+                console.error('Ошибка: Локальный Leaflet не загрузился. Проверьте пути к файлам.');
+            }
         });
         
          // Периодическое обновление погоды
