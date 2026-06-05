@@ -74,40 +74,66 @@
     <script>
         let map, socket, finishMarker, balloonsMarkers = {}, myBalloonId = null, currentConfig = null;
         
+               
         function initMap() {
+            // Инициализируем карту
             map = L.map('map').setView([30, -90], 4);
-            L.tileLayer('https://{s}://{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://openstreetmap.org">OSM</a> &copy; CartoDB',
-                subdomains: 'abcd',
+            
+            // Настраиваем слои по аналогии с оригинальным проектом aerostar
+            const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
                 maxZoom: 19
+            });
+
+            const esriSatellite = L.tileLayer('https://arcgisonline.com{z}/{y}/{x}', {
+                attribution: 'Tiles © Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+                maxZoom: 19
+            });
+
+            // Добавляем схему OSM на карту по умолчанию
+            osmStandard.addTo(map);
+
+            // Добавляем контрол переключения слоёв в левый верхний угол
+            L.control.layers({
+                "🗺 Схема OSM": osmStandard,
+                "🛰 Спутник ESRI": esriSatellite
+            }, null, {
+                position: 'topleft',
+                collapsed: true
+            }).addTo(map);
+
+            // Добавляем шкалу масштаба
+            L.control.scale({
+                metric: true,
+                position: 'bottomleft'
             }).addTo(map);
         }
         
-     function updateFinishWeather(lat, lng) {
-    if (!lat || !lng) return;
-    // ВАЖНО: Используются косые кавычки ` для интерполяции переменных
-    fetch(`https://open-meteo.com{lat}&longitude=${lng}&current_weather=true`)
-        .then(r => {
-            if (!r.ok) throw new Error('Network response was not ok');
-            return r.json();
-        })
-        .then(data => {
-            if (data && data.current_weather) {
-                const w = data.current_weather;
-                document.getElementById('finish-weather').innerHTML = `
-                    <div class="weather-item">🌡️ Temp: ${w.temperature}°C</div>
-                    <div class="weather-item">💨 Wind: ${w.windspeed} m/s</div>
-                    <div class="weather-item">🧭 Dir: ${w.winddirection}°</div>
-                `;
-            }
-        })
-        .catch(err => {
-            console.error('Weather fetch error:', err);
-            document.getElementById('finish-weather').innerHTML = `
-                <div class="weather-item" style="color: #f87171;">Offline (Check Tracking Prevention)</div>
-            `;
-        });
-}
+        function updateFinishWeather(lat, lng) {
+            if (!lat || !lng) return;
+            // Исправлено: строго косые кавычки для корректной подстановки координат
+            fetch(`https://open-meteo.com{lat}&longitude=${lng}&current_weather=true`)
+                .then(r => {
+                    if (!r.ok) throw new Error('Ошибка сети при запросе погоды');
+                    return r.json();
+                })
+                .then(data => {
+                    if (data && data.current_weather) {
+                        const w = data.current_weather;
+                        document.getElementById('finish-weather').innerHTML = `
+                            <div class="weather-item">🌡️ Temp: ${w.temperature}°C</div>
+                            <div class="weather-item">💨 Wind: ${w.windspeed} m/s</div>
+                            <div class="weather-item">🧭 Dir: ${w.winddirection}°</div>
+                        `;
+                    }
+                })
+                .catch(err => {
+                    console.error('Weather fetch error:', err);
+                    document.getElementById('finish-weather').innerHTML = `
+                        <div class="weather-item" style="color: #f87171;">Weather Offline</div>
+                    `;
+                });
+        }
         
         function clearBalloons() {
             Object.values(balloonsMarkers).forEach(marker => {
@@ -168,10 +194,8 @@
                     document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
                     document.getElementById('race-deadline').innerHTML = config.startWindowTo ? new Date(config.startWindowTo).toLocaleString() : '--';
                     
-                    // Удаляем старый маркер финиша, если он был
                     if (finishMarker && map) map.removeLayer(finishMarker);
                     
-                    // Исправлено: сброшен дефолтный класс Leaflet (className: '') и добавлен стилизованный блок для эмодзи
                     const finishIcon = L.divIcon({ 
                         html: '<div style="font-size: 26px; text-align: center; line-height: 32px;">🏁</div>', 
                         iconSize: [32, 32],
@@ -181,7 +205,7 @@
                     finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
                     finishMarker.bindPopup('🏁 FINISH LINE');
                     
-                    // Центрируем камеру на финише при получении конфига
+                    // Фокусируем камеру на точку финиша
                     map.setView([config.finishCoords.lat, config.finishCoords.lng], 6);
                     
                     updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
@@ -221,20 +245,19 @@
             });
         }
         
-          // Инициализация после загрузки страницы и всех скриптов
+        // Надежная инициализация после полной загрузки всех библиотек и скриптов
         window.addEventListener('load', () => {
-            // Проверяем, загрузилась ли библиотека Leaflet локально
             if (typeof L !== 'undefined') {
                 initMap();
                 setTimeout(() => {
                     connect();
                 }, 500);
             } else {
-                console.error('Ошибка: Локальный Leaflet не загрузился. Проверьте пути к файлам.');
+                console.error('Ошибка: Локальная библиотека Leaflet не загружена. Проверьте теги подключения.');
             }
         });
         
-         // Периодическое обновление погоды
+        // Периодическое обновление погоды
         setInterval(() => {
             if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng) {
                 updateFinishWeather(currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
