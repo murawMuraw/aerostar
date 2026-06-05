@@ -4,96 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Aerostar — Race Administrator Panel</title>
-    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-family: 'Segoe UI', system-ui, sans-serif;
             background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
             min-height: 100vh;
             padding: 40px 20px;
         }
-        
-        .admin-container {
-            max-width: 900px;
-            margin: 0 auto;
-        }
-        
+        .admin-container { max-width: 900px; margin: 0 auto; }
         .login-container {
             max-width: 400px;
             margin: 100px auto;
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(15,23,42,0.95);
             backdrop-filter: blur(10px);
             border-radius: 24px;
             padding: 40px;
             border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
         }
-        
-        .login-container h1 {
-            color: #f87171;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        
-        .login-container p {
-            color: #94a3b8;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .admin-header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        
-        .admin-header h1 {
-            font-size: 32px;
-            color: #f87171;
-            margin-bottom: 10px;
-        }
-        
-        .admin-header p {
-            color: #94a3b8;
-        }
-        
+        .login-container h1 { color: #f87171; text-align: center; margin-bottom: 30px; }
+        .admin-header { text-align: center; margin-bottom: 40px; }
+        .admin-header h1 { font-size: 32px; color: #f87171; margin-bottom: 10px; }
         .admin-card {
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(15,23,42,0.95);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             border: 1px solid rgba(255,255,255,0.1);
             padding: 30px;
             margin-bottom: 30px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
         }
-        
-        .admin-card h2 {
-            color: #38bdf8;
-            margin-top: 0;
-            margin-bottom: 20px;
-            font-size: 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 10px;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 13px;
-            color: #94a3b8;
-            font-weight: 500;
-        }
-        
-        input, textarea {
+        .admin-card h2 { color: #38bdf8; margin-bottom: 20px; font-size: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-size: 13px; color: #94a3b8; }
+        input, select {
             width: 100%;
             padding: 12px;
             background: rgba(0,0,0,0.3);
@@ -101,26 +45,8 @@
             border-radius: 10px;
             color: white;
             font-size: 14px;
-            box-sizing: border-box;
         }
-        
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: #38bdf8;
-        }
-        
-        .coord-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        
-        .region-group {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-        }
-        
+        .coord-group, .region-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         button {
             width: 100%;
             padding: 14px;
@@ -133,329 +59,155 @@
             cursor: pointer;
             transition: all 0.3s;
         }
-        
-        button:hover {
-            background: #0369a1;
-            transform: translateY(-2px);
-        }
-        
-        .logout-btn {
-            background: #475569;
-            margin-top: 20px;
-        }
-        
-        .logout-btn:hover {
-            background: #334155;
-        }
-        
-        .status-message {
-            margin-top: 15px;
-            padding: 12px;
-            border-radius: 10px;
-            text-align: center;
-            font-size: 14px;
-        }
-        
-        .status-success {
-            background: rgba(34, 197, 94, 0.2);
-            border: 1px solid #22c55e;
-            color: #22c55e;
-        }
-        
-        .status-error {
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid #ef4444;
-            color: #ef4444;
-        }
-        
+        button:hover { background: #0369a1; transform: translateY(-2px); }
+        .radio-group { display: flex; gap: 20px; margin-top: 10px; }
+        .radio-group label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
         .current-config {
-            background: rgba(56, 189, 248, 0.1);
+            background: rgba(56,189,248,0.1);
             border-radius: 12px;
             padding: 15px;
             margin-top: 20px;
             font-size: 13px;
-            line-height: 1.6;
         }
-        
-        .connected-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #22c55e;
-            margin-right: 8px;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-        
-        .status-connected {
-            display: flex;
-            align-items: center;
-            font-size: 12px;
-            color: #22c55e;
-            margin-bottom: 20px;
-            justify-content: center;
-        }
-        
-        @media (max-width: 768px) {
-            .admin-container {
-                padding: 20px;
-            }
-            .admin-card {
-                padding: 20px;
-            }
-            .region-group {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
+        .connected-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; margin-right: 8px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
-    <div id="app">
-        <!-- Login Screen -->
-        <div id="login-screen" style="display: none;">
-            <div class="login-container">
-                <h1>🔐 Admin Access</h1>
-                <p>Enter administrator credentials</p>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="admin-email" placeholder="admin@aerost.art" />
-                </div>
-                <div class="form-group">
-                    <label>Password (optional)</label>
-                    <input type="password" id="admin-password" placeholder="••••••" />
-                </div>
-                <button id="login-btn">Login to Admin Panel</button>
-                <div id="login-error" class="status-message status-error" style="display: none;"></div>
-            </div>
-        </div>
-        
-        <!-- Admin Panel -->
-        <div id="admin-panel" style="display: none;">
-            <div class="admin-container">
-                <div class="admin-header">
-                    <h1>🏁 Fiesta Race Administrator</h1>
-                    <p>Configure race rules and manage competition</p>
-                    <div class="status-connected">
-                        <span class="connected-indicator"></span>
-                        <span id="status-text">Connected to server</span>
-                    </div>
-                    <button id="logout-btn" class="logout-btn" style="width: auto; padding: 8px 20px; margin-top: 10px;">🚪 Logout</button>
-                </div>
-                
-                <div class="admin-card">
-                    <h2>📍 Finish Line Configuration</h2>
-                    <div class="coord-group">
-                        <div class="form-group">
-                            <label>Latitude</label>
-                            <input type="text" id="finish-lat" placeholder="48.8566" />
-                        </div>
-                        <div class="form-group">
-                            <label>Longitude</label>
-                            <input type="text" id="finish-lng" placeholder="2.3522" />
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="admin-card">
-                    <h2>📅 Race Start Window</h2>
-                    <div class="coord-group">
-                        <div class="form-group">
-                            <label>Start Date (From)</label>
-                            <input type="date" id="start-from" />
-                        </div>
-                        <div class="form-group">
-                            <label>End Date (To)</label>
-                            <input type="date" id="start-to" />
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="admin-card">
-                    <h2>🌎 Allowed Start Region (Americas)</h2>
-                    <div class="region-group">
-                        <div class="form-group">
-                            <label>Min Latitude</label>
-                            <input type="text" id="min-lat" placeholder="15" />
-                        </div>
-                        <div class="form-group">
-                            <label>Max Latitude</label>
-                            <input type="text" id="max-lat" placeholder="60" />
-                        </div>
-                        <div class="form-group">
-                            <label>Min Longitude</label>
-                            <input type="text" id="min-lng" placeholder="-130" />
-                        </div>
-                        <div class="form-group">
-                            <label>Max Longitude</label>
-                            <input type="text" id="max-lng" placeholder="-30" />
-                        </div>
-                    </div>
-                </div>
-                
-                <button id="save-config">💾 Save Race Configuration</button>
-                
-                <div id="status-message" class="status-message" style="display: none;"></div>
-                
-                <div class="admin-card">
-                    <h2>📋 Current Race Rules</h2>
-                    <div class="current-config" id="current-config">
-                        Loading...
-                    </div>
-                </div>
-            </div>
+    <div id="login-screen">
+        <div class="login-container">
+            <h1>🔐 Admin Access</h1>
+            <div class="form-group"><label>Email</label><input type="email" id="admin-email" placeholder="admin@aerost.art" /></div>
+            <div class="form-group"><label>Password</label><input type="password" id="admin-password" placeholder="••••••" /></div>
+            <button id="login-btn">Login</button>
         </div>
     </div>
-    
+    <div id="admin-panel" style="display: none;">
+        <div class="admin-container">
+            <div class="admin-header"><h1>🏁 Fiesta Race Administrator</h1><div class="connected-indicator"></div><span id="status-text">Connected</span><button id="logout-btn" style="width: auto; padding: 8px 20px; margin-top: 10px;">Logout</button></div>
+            
+            <div class="admin-card">
+                <h2>📍 Finish Line</h2>
+                <div class="coord-group">
+                    <div class="form-group"><label>Latitude</label><input type="text" id="finish-lat" placeholder="48.8566" /></div>
+                    <div class="form-group"><label>Longitude</label><input type="text" id="finish-lng" placeholder="2.3522" /></div>
+                </div>
+            </div>
+            
+            <div class="admin-card">
+                <h2>🏁 Start Zone Configuration</h2>
+                <div class="radio-group">
+                    <label><input type="radio" name="zone-type" value="rectangle" checked> Rectangle (Lat/Lng bounds)</label>
+                    <label><input type="radio" name="zone-type" value="circle"> Circle (Center + Radius)</label>
+                </div>
+                <div id="rectangle-zone">
+                    <div class="region-group">
+                        <div class="form-group"><label>Min Latitude</label><input type="text" id="min-lat" placeholder="15" /></div>
+                        <div class="form-group"><label>Max Latitude</label><input type="text" id="max-lat" placeholder="60" /></div>
+                        <div class="form-group"><label>Min Longitude</label><input type="text" id="min-lng" placeholder="-130" /></div>
+                        <div class="form-group"><label>Max Longitude</label><input type="text" id="max-lng" placeholder="-30" /></div>
+                    </div>
+                </div>
+                <div id="circle-zone" style="display: none;">
+                    <div class="coord-group">
+                        <div class="form-group"><label>Center Latitude</label><input type="text" id="center-lat" placeholder="40.0" /></div>
+                        <div class="form-group"><label>Center Longitude</label><input type="text" id="center-lng" placeholder="-100.0" /></div>
+                    </div>
+                    <div class="form-group"><label>Radius (km)</label><input type="text" id="radius" placeholder="500" /></div>
+                </div>
+            </div>
+            
+            <div class="admin-card">
+                <h2>📅 Race Start Window</h2>
+                <div class="coord-group">
+                    <div class="form-group"><label>Start Date</label><input type="date" id="start-from" /></div>
+                    <div class="form-group"><label>End Date</label><input type="date" id="start-to" /></div>
+                </div>
+            </div>
+            
+            <button id="save-config">💾 Save Race Configuration</button>
+            <div class="admin-card"><h2>📋 Current Rules</h2><div class="current-config" id="current-config">Loading...</div></div>
+        </div>
+    </div>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         let socket = null;
-        let isAdmin = false;
-        
-        // Admin credentials (in production, use proper authentication)
         const ADMIN_EMAIL = "aerostar@aerost.art";
         
-        function showStatus(message, isError = false) {
-            const statusDiv = document.getElementById('status-message');
-            statusDiv.textContent = message;
-            statusDiv.className = `status-message ${isError ? 'status-error' : 'status-success'}`;
-            statusDiv.style.display = 'block';
-            setTimeout(() => {
-                statusDiv.style.display = 'none';
-            }, 3000);
-        }
-        
-        function showLoginError(message) {
-            const errorDiv = document.getElementById('login-error');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-            setTimeout(() => {
-                errorDiv.style.display = 'none';
-            }, 3000);
-        }
+        document.querySelectorAll('input[name="zone-type"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                document.getElementById('rectangle-zone').style.display = e.target.value === 'rectangle' ? 'block' : 'none';
+                document.getElementById('circle-zone').style.display = e.target.value === 'circle' ? 'block' : 'none';
+            });
+        });
         
         function updateCurrentConfig(config) {
-            const configDiv = document.getElementById('current-config');
-            if (!config) {
-                configDiv.innerHTML = 'No configuration loaded';
-                return;
-            }
-            
-            configDiv.innerHTML = `
-                <strong>🏁 Finish Line:</strong> ${config.finishCoords?.lat?.toFixed(4) || '?'}°, ${config.finishCoords?.lng?.toFixed(4) || '?'}°<br>
-                <strong>📅 Start Window:</strong> ${new Date(config.startWindowFrom).toLocaleDateString()} - ${new Date(config.startWindowTo).toLocaleDateString()}<br>
-                <strong>🌎 Allowed Region:</strong> Lat ${config.allowedStartRegion?.minLat || '?'}° to ${config.allowedStartRegion?.maxLat || '?'}°, Lng ${config.allowedStartRegion?.minLng || '?'}° to ${config.allowedStartRegion?.maxLng || '?'}°
+            const zoneText = config.zoneType === 'circle' 
+                ? `Circle: center (${config.startZone?.centerLat}, ${config.startZone?.centerLng}), radius ${config.startZone?.radius} km`
+                : `Rectangle: Lat ${config.allowedStartRegion?.minLat}°-${config.allowedStartRegion?.maxLat}°, Lng ${config.allowedStartRegion?.minLng}°-${config.allowedStartRegion?.maxLng}°`;
+            document.getElementById('current-config').innerHTML = `
+                <strong>🏁 Finish:</strong> ${config.finishCoords?.lat?.toFixed(4)}°, ${config.finishCoords?.lng?.toFixed(4)}°<br>
+                <strong>📍 Start Zone:</strong> ${zoneText}<br>
+                <strong>📅 Period:</strong> ${new Date(config.startWindowFrom).toLocaleDateString()} - ${new Date(config.startWindowTo).toLocaleDateString()}
             `;
         }
         
-        function connectSocketAsAdmin() {
-            socket = io({
-                transports: ['polling'],
-                upgrade: false,
-                reconnection: true
-            });
-            
-            socket.on('connect', () => {
-                document.getElementById('status-text').textContent = 'Connected to server';
-                socket.emit('fiesta-auth', {
-                    email: ADMIN_EMAIL,
-                    username: 'Race Administrator'
-                });
-            });
-            
-            socket.on('connect_error', (error) => {
-                document.getElementById('status-text').textContent = 'Connection error';
-                showStatus('Connection error: ' + error.message, true);
-            });
-            
+        function login() {
+            if (document.getElementById('admin-email').value === ADMIN_EMAIL) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                connectSocket();
+            }
+        }
+        
+        function connectSocket() {
+            socket = io({ transports: ['polling'], upgrade: false });
+            socket.on('connect', () => socket.emit('fiesta-auth', { email: ADMIN_EMAIL, username: 'Admin' }));
             socket.on('fiesta-race-config', (config) => {
                 updateCurrentConfig(config);
-                
-                // Populate form fields
-                if (config.finishCoords) {
-                    document.getElementById('finish-lat').value = config.finishCoords.lat;
-                    document.getElementById('finish-lng').value = config.finishCoords.lng;
+                document.getElementById('finish-lat').value = config.finishCoords?.lat;
+                document.getElementById('finish-lng').value = config.finishCoords?.lng;
+                if (config.zoneType === 'circle') {
+                    document.querySelector('input[value="circle"]').checked = true;
+                    document.getElementById('rectangle-zone').style.display = 'none';
+                    document.getElementById('circle-zone').style.display = 'block';
+                    document.getElementById('center-lat').value = config.startZone?.centerLat;
+                    document.getElementById('center-lng').value = config.startZone?.centerLng;
+                    document.getElementById('radius').value = config.startZone?.radius;
+                } else {
+                    document.querySelector('input[value="rectangle"]').checked = true;
+                    document.getElementById('rectangle-zone').style.display = 'block';
+                    document.getElementById('circle-zone').style.display = 'none';
+                    document.getElementById('min-lat').value = config.allowedStartRegion?.minLat;
+                    document.getElementById('max-lat').value = config.allowedStartRegion?.maxLat;
+                    document.getElementById('min-lng').value = config.allowedStartRegion?.minLng;
+                    document.getElementById('max-lng').value = config.allowedStartRegion?.maxLng;
                 }
-                if (config.startWindowFrom) {
-                    document.getElementById('start-from').value = new Date(config.startWindowFrom).toISOString().split('T')[0];
-                }
-                if (config.startWindowTo) {
-                    document.getElementById('start-to').value = new Date(config.startWindowTo).toISOString().split('T')[0];
-                }
-                if (config.allowedStartRegion) {
-                    document.getElementById('min-lat').value = config.allowedStartRegion.minLat;
-                    document.getElementById('max-lat').value = config.allowedStartRegion.maxLat;
-                    document.getElementById('min-lng').value = config.allowedStartRegion.minLng;
-                    document.getElementById('max-lng').value = config.allowedStartRegion.maxLng;
-                }
+                document.getElementById('start-from').value = new Date(config.startWindowFrom).toISOString().split('T')[0];
+                document.getElementById('start-to').value = new Date(config.startWindowTo).toISOString().split('T')[0];
             });
-            
-            socket.on('fiesta-error', (msg) => {
-                showStatus('Error: ' + msg, true);
-            });
-        }
-        
-        function login() {
-            const email = document.getElementById('admin-email').value.trim();
-            const password = document.getElementById('admin-password').value;
-            
-            if (email !== ADMIN_EMAIL) {
-                showLoginError('Invalid admin credentials');
-                return;
-            }
-            
-            // In production, verify password properly
-            isAdmin = true;
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('admin-panel').style.display = 'block';
-            connectSocketAsAdmin();
-        }
-        
-        function logout() {
-            isAdmin = false;
-            if (socket) {
-                socket.disconnect();
-                socket = null;
-            }
-            document.getElementById('admin-panel').style.display = 'none';
-            document.getElementById('login-screen').style.display = 'block';
-            document.getElementById('admin-email').value = '';
-            document.getElementById('admin-password').value = '';
         }
         
         document.getElementById('login-btn').addEventListener('click', login);
-        document.getElementById('logout-btn').addEventListener('click', logout);
-        
+        document.getElementById('logout-btn').addEventListener('click', () => location.reload());
         document.getElementById('save-config').addEventListener('click', () => {
-            if (!socket) return;
-            
-            const config = {
-                lat: parseFloat(document.getElementById('finish-lat').value),
-                lng: parseFloat(document.getElementById('finish-lng').value),
-                dateFrom: document.getElementById('start-from').value,
-                dateTo: document.getElementById('start-to').value,
-                minLat: parseFloat(document.getElementById('min-lat').value),
-                maxLat: parseFloat(document.getElementById('max-lat').value),
-                minLng: parseFloat(document.getElementById('min-lng').value),
-                maxLng: parseFloat(document.getElementById('max-lng').value)
-            };
-            
-            socket.emit('fiesta-admin-change-rules', config);
-            showStatus('✅ Race configuration saved! All players will see updated rules.');
+            const zoneType = document.querySelector('input[name="zone-type"]:checked').value;
+            let startZone;
+            if (zoneType === 'circle') {
+                startZone = { type: 'circle', centerLat: parseFloat(document.getElementById('center-lat').value), centerLng: parseFloat(document.getElementById('center-lng').value), radius: parseFloat(document.getElementById('radius').value) };
+            } else {
+                startZone = { type: 'rectangle', minLat: parseFloat(document.getElementById('min-lat').value), maxLat: parseFloat(document.getElementById('max-lat').value), minLng: parseFloat(document.getElementById('min-lng').value), maxLng: parseFloat(document.getElementById('max-lng').value) };
+            }
+            socket.emit('fiesta-admin-change-rules', {
+                finishCoords: { lat: parseFloat(document.getElementById('finish-lat').value), lng: parseFloat(document.getElementById('finish-lng').value) },
+                startZone: startZone,
+                zoneType: zoneType,
+                startWindowFrom: document.getElementById('start-from').value,
+                startWindowTo: document.getElementById('start-to').value
+            });
+            alert('Configuration saved!');
         });
-        
-        // Enter on password field
-        document.getElementById('admin-password').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') login();
-        });
-        
-        // Show login screen initially
-        document.getElementById('login-screen').style.display = 'block';
+        document.getElementById('admin-password').addEventListener('keypress', (e) => { if (e.key === 'Enter') login(); });
     </script>
 </body>
 </html>
