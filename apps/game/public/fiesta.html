@@ -93,30 +93,34 @@
        
         
         function updateFinishWeather(lat, lng) {
-            if (!lat || !lng) return;
-            // Исправлено: строго косые кавычки для корректной подстановки координат
-            fetch(`https://open-meteo.com{lat}&longitude=${lng}&current_weather=true`)
-                .then(r => {
-                    if (!r.ok) throw new Error('Ошибка сети при запросе погоды');
-                    return r.json();
-                })
-                .then(data => {
-                    if (data && data.current_weather) {
-                        const w = data.current_weather;
-                        document.getElementById('finish-weather').innerHTML = `
-                            <div class="weather-item">🌡️ Temp: ${w.temperature}°C</div>
-                            <div class="weather-item">💨 Wind: ${w.windspeed} m/s</div>
-                            <div class="weather-item">🧭 Dir: ${w.winddirection}°</div>
-                        `;
-                    }
-                })
-                .catch(err => {
-                    console.error('Weather fetch error:', err);
-                    document.getElementById('finish-weather').innerHTML = `
-                        <div class="weather-item" style="color: #f87171;">Weather Offline</div>
-                    `;
-                });
-        }
+    if (!lat || !lng) return;
+    // ИСПРАВЛЕНО: правильный URL с параметрами
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`)
+        .then(r => {
+            if (!r.ok) throw new Error('Ошибка сети при запросе погоды');
+            return r.json();
+        })
+        .then(data => {
+            if (data && data.current_weather) {
+                const w = data.current_weather;
+                document.getElementById('finish-weather').innerHTML = `
+                    <div class="weather-item">🌡️ Temp: ${w.temperature}°C</div>
+                    <div class="weather-item">💨 Wind: ${w.windspeed} m/s</div>
+                    <div class="weather-item">🧭 Dir: ${w.winddirection}°</div>
+                `;
+            } else {
+                document.getElementById('finish-weather').innerHTML = `
+                    <div class="weather-item" style="color: #fbbf24;">⏳ Нет данных погоды</div>
+                `;
+            }
+        })
+        .catch(err => {
+            console.error('Weather fetch error:', err);
+            document.getElementById('finish-weather').innerHTML = `
+                <div class="weather-item" style="color: #f87171;">🌧️ Погода временно недоступна</div>
+            `;
+        });
+}
         
         function clearBalloons() {
             Object.values(balloonsMarkers).forEach(marker => {
@@ -171,6 +175,7 @@
             });
             
             socket.on('fiesta-race-config', (config) => {
+                 console.log('🔍 Получен конфиг:', config); // <-- Должен выводиться в консоль
                 if (!config) return;
                 currentConfig = config;
                 console.log('Получен конфиг гонки:', config); // Лог для проверки прихода координат
