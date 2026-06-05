@@ -4,54 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Aerostar — Fiesta Race Map</title>
-    
-    <!-- Local Leaflet CSS -->
-    <link rel="stylesheet" href="lib/leaflet/leaflet.css" />
-    
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/styles.css" />
-    <link rel="stylesheet" href="css/game-ui.css" />
-    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-        
-        #map {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 1;
-        }
-        
-        /* Flight info panel */
-        #flight-panel {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 300px;
-            z-index: 2000;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(14px);
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
-            padding: 20px;
-            display: none;
-        }
-        
-        #flight-panel.active {
-            display: block;
-        }
-        
-        #register-link {
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; }
+        .control-panel {
             position: absolute;
             bottom: 20px;
             right: 20px;
             z-index: 2000;
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 12px 24px;
             border-radius: 50px;
@@ -60,188 +26,110 @@
             font-weight: bold;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             transition: transform 0.3s;
-        }
-        
-        #register-link:hover {
-            transform: translateY(-2px);
-        }
-        
-        #start-instruction {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            z-index: 2000;
-            background: rgba(0,0,0,0.7);
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-size: 14px;
-            color: #38bdf8;
-            pointer-events: none;
-        }
-        
-        .telemetry-box {
-            background: rgba(0,0,0,0.4);
-            border-radius: 12px;
-            padding: 12px;
-            margin: 15px 0;
-        }
-        
-        .tel-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 13px;
-        }
-        
-        .tel-val {
-            color: #38bdf8;
-            font-weight: bold;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: bold;
-            background: #10b981;
-        }
-        
-        .alt-slider {
-            width: 100%;
-            margin: 10px 0;
-            -webkit-appearance: none;
-            background: #334155;
-            height: 4px;
-            border-radius: 2px;
-        }
-        
-        .alt-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: #38bdf8;
+            border: none;
             cursor: pointer;
+            display: inline-block;
         }
-        
-        .balloon-marker {
-            font-size: 28px;
-            filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.8));
+        .btn:hover { transform: translateY(-2px); }
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 260px;
+            z-index: 2000;
+            background: rgba(15,23,42,0.95);
+            backdrop-filter: blur(14px);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 15px;
+            font-size: 12px;
         }
-        
-        .finish-marker {
-            font-size: 28px;
-        }
-        
-        .hidden {
-            display: none !important;
-        }
+        .info-panel h3 { color: #38bdf8; margin-bottom: 10px; font-size: 14px; }
+        .info-item { display: flex; justify-content: space-between; margin: 8px 0; }
+        .deadline { color: #f87171; font-weight: bold; }
+        .weather-item { display: flex; justify-content: space-between; margin: 5px 0; font-size: 11px; }
+        @media (max-width: 768px) { .info-panel { width: 220px; padding: 10px; } .btn { padding: 8px 16px; font-size: 12px; } }
     </style>
 </head>
 <body>
-
     <div id="map"></div>
-    
-    <!-- Register link -->
-    <a href="register.html" id="register-link" target="_blank">🎈 Register for Race</a>
-    
-    <!-- Start instruction -->
-    <div id="start-instruction">
-        ✨ Click on map in allowed region to set start location → Go to Register page
+    <div class="info-panel">
+        <h3>🏁 Race Info</h3>
+        <div class="info-item"><span>⏰ Race Ends:</span><span class="deadline" id="race-deadline">--</span></div>
+        <div class="info-item"><span>🏆 Finish:</span><span id="finish-coords">--</span></div>
+        <h3>🌤️ Weather at Finish</h3>
+        <div id="finish-weather"><div class="weather-item">Loading...</div></div>
+        <div class="info-item" style="margin-top: 10px;"><span>🎈 Active Balloons:</span><span id="balloon-count">0</span></div>
     </div>
-    
-    <!-- Flight panel (visible after takeoff) -->
-    <div id="flight-panel">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3 style="margin: 0; color: #38bdf8;" id="flight-number">Flight #---</h3>
-            <span class="status-badge">IN FLIGHT</span>
-        </div>
-        
-        <div class="telemetry-box">
-            <div class="tel-row">Pilot: <span class="tel-val" id="tel-name">---</span></div>
-            <div class="tel-row">Speed: <span class="tel-val" id="tel-speed">0 km/h</span></div>
-            <div class="tel-row">Altitude: <span class="tel-val" id="tel-altitude">1000 m</span></div>
-            <div class="tel-row">Wind Layer: <span class="tel-val" id="tel-layer">---</span></div>
-        </div>
-        
-        <div>
-            <label>Altitude: <span id="alt-slider-val">1000</span> m</label>
-            <input type="range" id="alt-slider" class="alt-slider" min="500" max="13000" step="500" value="1000" />
-            <div style="font-size: 10px; color: #94a3b8; margin-top: 5px;">💨 Change altitude to catch favorable winds</div>
-        </div>
+    <div class="control-panel">
+        <a href="gondola.html" class="btn" id="gondola-btn" style="display: none;">🎈 My Gondola</a>
+        <a href="register.html" class="btn" id="register-btn">📝 Register</a>
     </div>
-
-    <script src="lib/leaflet/leaflet.js"></script>
-    <script src="js/map.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    
     <script>
-        let map, socket;
-        let selectedStartCoords = null;
-        let startMarker = null;
-        let myBalloonId = null;
-        let balloonMarker = null;
-        let pathLine = null;
-        let finishMarker = null;
-        let currentConfig = null;
+        let map, socket, finishMarker, balloonsMarkers = {}, myBalloonId = null, currentConfig = null;
         
-        // Wait for map
-        const waitForMap = setInterval(() => {
-            if (window.map) {
-                clearInterval(waitForMap);
-                initGame();
-            }
-        }, 100);
+        function initMap() {
+            map = L.map('map').setView([30, -90], 4);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; CartoDB',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+        }
         
-        function initGame() {
-            map = window.map;
+        function updateFinishWeather(lat, lng) {
+            if (!lat || !lng) return;
+            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.current_weather) {
+                        const w = data.current_weather;
+                        document.getElementById('finish-weather').innerHTML = `
+                            <div class="weather-item">🌡️ Temp: ${w.temperature}°C</div>
+                            <div class="weather-item">💨 Wind: ${w.windspeed} m/s</div>
+                            <div class="weather-item">🧭 Dir: ${w.winddirection}°</div>
+                        `;
+                    }
+                })
+                .catch(err => console.error('Weather fetch error:', err));
+        }
+        
+        function clearBalloons() {
+            Object.values(balloonsMarkers).forEach(marker => {
+                if (marker && map) map.removeLayer(marker);
+            });
+            balloonsMarkers = {};
+        }
+        
+        function updateBalloons(balloons) {
+            if (!map) return;
+            clearBalloons();
             
-            map.on('click', (e) => {
-                if (!myBalloonId) {
-                    const { lat, lng } = e.latlng;
-                    
-                    // Check if in allowed region
-                    if (currentConfig && currentConfig.allowedStartRegion) {
-                        const region = currentConfig.allowedStartRegion;
-                        if (lat >= region.minLat && lat <= region.maxLat &&
-                            lng >= region.minLng && lng <= region.maxLng) {
-                            selectedStartCoords = { lat, lng };
-                            
-                            if (startMarker) map.removeLayer(startMarker);
-                            startMarker = L.marker([lat, lng]).addTo(map);
-                            
-                            // Save to localStorage for register page
-                            localStorage.setItem('fiesta_start_coords', JSON.stringify(selectedStartCoords));
-                            
-                            // Show instruction update
-                            document.getElementById('start-instruction').innerHTML = 
-                                '✅ Start location selected! Go to Register page →';
-                            document.getElementById('start-instruction').style.color = '#22c55e';
-                            
-                            setTimeout(() => {
-                                document.getElementById('start-instruction').innerHTML = 
-                                    '✨ Click on map to change start location → Go to Register page';
-                                document.getElementById('start-instruction').style.color = '#38bdf8';
-                            }, 3000);
-                        } else {
-                            document.getElementById('start-instruction').innerHTML = 
-                                '⚠️ Click in allowed region (Americas): Lat 15-60°, Lng -130 to -30°';
-                            document.getElementById('start-instruction').style.color = '#f87171';
-                            setTimeout(() => {
-                                document.getElementById('start-instruction').innerHTML = 
-                                    '✨ Click on map in allowed region to set start location → Go to Register page';
-                                document.getElementById('start-instruction').style.color = '#38bdf8';
-                            }, 3000);
-                        }
+            if (!balloons || !Array.isArray(balloons)) return;
+            
+            balloons.forEach(b => {
+                if (b && b.lat && b.lng) {
+                    const isMyBalloon = myBalloonId === b.id;
+                    const icon = L.divIcon({ 
+                        html: isMyBalloon ? '🎈' : '🪁', 
+                        iconSize: [28, 28],
+                        className: isMyBalloon ? 'my-balloon-marker' : 'balloon-marker'
+                    });
+                    try {
+                        const marker = L.marker([b.lat, b.lng], { icon }).addTo(map);
+                        marker.bindPopup(`<b>${b.username || '?'}</b><br>#${b.raceNumber || '?'}<br>${Math.round(b.speed || 0)} km/h`);
+                        balloonsMarkers[b.id] = marker;
+                    } catch(e) {
+                        console.error('Error creating marker:', e);
                     }
                 }
             });
-            
-            connectSocket();
+            document.getElementById('balloon-count').innerHTML = Object.keys(balloonsMarkers).length;
         }
         
-        function connectSocket() {
+        function connect() {
             socket = io({
                 transports: ['polling'],
                 upgrade: false,
@@ -250,102 +138,80 @@
             
             socket.on('connect', () => {
                 console.log('✅ Connected to race server');
-                socket.emit('fiesta-auth', {
-                    email: 'viewer@race.com',
-                    username: 'Race Viewer'
+                socket.emit('fiesta-auth', { 
+                    email: localStorage.getItem('fiesta_email') || 'viewer@race.com', 
+                    username: localStorage.getItem('fiesta_name') || 'Viewer' 
                 });
             });
             
+            socket.on('connect_error', (error) => {
+                console.error('Connection error:', error);
+            });
+            
             socket.on('fiesta-race-config', (config) => {
+                if (!config) return;
                 currentConfig = config;
-                updateFinishMarker(config);
+                if (config.finishCoords && config.finishCoords.lat && config.finishCoords.lng) {
+                    document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
+                    document.getElementById('race-deadline').innerHTML = config.startWindowTo ? new Date(config.startWindowTo).toLocaleString() : '--';
+                    
+                    if (finishMarker && map) map.removeLayer(finishMarker);
+                    const finishIcon = L.divIcon({ html: '🏁', iconSize: [32, 32] });
+                    finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
+                    finishMarker.bindPopup('🏁 FINISH LINE');
+                    
+                    updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
+                }
             });
             
             socket.on('fiesta-my-state', (balloon) => {
-                startFlight(balloon);
+                if (balloon && balloon.id) {
+                    myBalloonId = balloon.id;
+                    localStorage.setItem('fiesta_name', balloon.username);
+                    document.getElementById('gondola-btn').style.display = 'block';
+                    document.getElementById('register-btn').style.display = 'none';
+                    console.log('My balloon ID:', myBalloonId);
+                }
             });
             
-            socket.on('fiesta-balloon-updated', (balloon) => {
-                if (myBalloonId === balloon.id) {
-                    updateMyBalloon(balloon);
-                } else {
-                    updateOtherBalloon(balloon);
+            socket.on('fiesta-all-balloons', (balloons) => {
+                if (balloons && Array.isArray(balloons)) {
+                    updateBalloons(balloons);
                 }
+            });
+            
+            socket.on('fiesta-balloon-created', () => {
+                socket.emit('fiesta-get-participants');
+            });
+            
+            socket.on('fiesta-balloon-updated', () => {
+                socket.emit('fiesta-get-participants');
+            });
+            
+            socket.on('fiesta-balloon-removed', () => {
+                socket.emit('fiesta-get-participants');
             });
             
             socket.on('fiesta-error', (msg) => {
-                console.error('Error:', msg);
+                console.error('Server error:', msg);
             });
         }
         
-        function updateFinishMarker(config) {
-            if (config.finishCoords && map) {
-                if (finishMarker) {
-                    finishMarker.setLatLng([config.finishCoords.lat, config.finishCoords.lng]);
-                } else {
-                    const finishIcon = L.divIcon({ html: '🏁', iconSize: [32, 32], className: 'finish-marker' });
-                    finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon })
-                        .addTo(map)
-                        .bindPopup('<b>🏁 FINISH LINE</b><br>Race destination');
-                }
+        // Инициализация после загрузки страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            // Даем карте время на инициализацию
+            setTimeout(() => {
+                connect();
+            }, 500);
+        });
+        
+        // Периодическое обновление погоды
+        setInterval(() => {
+            if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng) {
+                updateFinishWeather(currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
             }
-        }
-        
-        function startFlight(balloon) {
-            myBalloonId = balloon.id;
-            document.getElementById('flight-panel').classList.add('active');
-            document.getElementById('register-link').style.display = 'none';
-            document.getElementById('start-instruction').style.display = 'none';
-            
-            document.getElementById('flight-number').innerHTML = `Flight ${balloon.raceNumber}`;
-            document.getElementById('tel-name').innerHTML = balloon.username;
-            document.getElementById('tel-speed').innerHTML = `${Math.round(balloon.speed)} km/h`;
-            document.getElementById('tel-altitude').innerHTML = `${balloon.altitude} m`;
-            document.getElementById('tel-layer').innerHTML = balloon.layerName || 'Surface Layer';
-            
-            const balloonIcon = L.divIcon({ html: '🎈', iconSize: [32, 32], className: 'balloon-marker' });
-            balloonMarker = L.marker([balloon.lat, balloon.lng], { icon: balloonIcon }).addTo(map);
-            map.setView([balloon.lat, balloon.lng], 8);
-            
-            if (startMarker) map.removeLayer(startMarker);
-            
-            // Remove start coords from localStorage
-            localStorage.removeItem('fiesta_start_coords');
-        }
-        
-        function updateMyBalloon(balloon) {
-            if (balloonMarker) {
-                balloonMarker.setLatLng([balloon.lat, balloon.lng]);
-                document.getElementById('tel-speed').innerHTML = `${Math.round(balloon.speed)} km/h`;
-                document.getElementById('tel-altitude').innerHTML = `${balloon.altitude} m`;
-                document.getElementById('tel-layer').innerHTML = balloon.layerName;
-                
-                if (balloon.path && balloon.path.length > 0) {
-                    const pathCoords = balloon.path.map(p => [p.lat, p.lng]);
-                    if (pathLine) {
-                        pathLine.setLatLngs(pathCoords);
-                    } else {
-                        pathLine = L.polyline(pathCoords, { color: '#f87171', weight: 3, opacity: 0.7 }).addTo(map);
-                    }
-                }
-            }
-        }
-        
-        function updateOtherBalloon(balloon) {
-            // Optional: show other balloons on map
-        }
-        
-        const slider = document.getElementById('alt-slider');
-        const sliderVal = document.getElementById('alt-slider-val');
-        if (slider) {
-            slider.addEventListener('input', (e) => sliderVal.innerHTML = e.target.value);
-            slider.addEventListener('change', (e) => {
-                if (socket && myBalloonId) {
-                    socket.emit('fiesta-change-altitude', { altitude: parseInt(e.target.value) });
-                }
-            });
-        }
+        }, 60000);
     </script>
 </body>
 </html>
-   
