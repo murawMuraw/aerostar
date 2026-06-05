@@ -37,17 +37,23 @@ app.use(express.json());
 // Файл для сохранения конфигурации гонки
 const CONFIG_FILE = path.join(__dirname, 'race-config.json');
 
+// Максимальное количество участников
+const MAX_PARTICIPANTS = 7;
+
 // Данные игры
 let raceConfig = {
     finishCoords: { lat: 48.8566, lng: 2.3522 }, // Париж по умолчанию
-    startWindowFrom: new Date('2024-06-01'),
-    startWindowTo: new Date('2024-12-31'),
+    zoneType: 'rectangle', // 'rectangle' or 'circle'
     allowedStartRegion: {
         minLat: 15,
         maxLat: 60,
         minLng: -130,
         maxLng: -30
-    }
+    },
+    startZone: null, // For circle: { centerLat, centerLng, radius }
+    startWindowFrom: new Date('2024-06-01'),
+    startWindowTo: new Date('2024-12-31'),
+    maxParticipants: MAX_PARTICIPANTS
 };
 
 let balloons = {};
@@ -58,8 +64,19 @@ function loadConfig() {
     if (fs.existsSync(CONFIG_FILE)) {
         try {
             const saved = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-            raceConfig = saved;
-            console.log('✅ Loaded race config from file:', raceConfig.finishCoords);
+            raceConfig = {
+                ...raceConfig,
+                ...saved,
+                startWindowFrom: saved.startWindowFrom ? new Date(saved.startWindowFrom) : raceConfig.startWindowFrom,
+                startWindowTo: saved.startWindowTo ? new Date(saved.startWindowTo) : raceConfig.startWindowTo
+            };
+            console.log('✅ Loaded race config from file');
+            console.log(`   Zone type: ${raceConfig.zoneType}`);
+            if (raceConfig.zoneType === 'circle') {
+                console.log(`   Circle: center (${raceConfig.startZone?.centerLat}, ${raceConfig.startZone?.centerLng}), radius ${raceConfig.startZone?.radius} km`);
+            } else {
+                console.log(`   Rectangle: ${raceConfig.allowedStartRegion?.minLat}°-${raceConfig.allowedStartRegion?.maxLat}°, ${raceConfig.allowedStartRegion?.minLng}°-${raceConfig.allowedStartRegion?.maxLng}°`);
+            }
         } catch(e) {
             console.error('Error loading config:', e);
         }
@@ -71,8 +88,33 @@ function loadConfig() {
 
 // Сохранение конфигурации в файл
 function saveConfigToFile() {
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(raceConfig, null, 2));
+    const configToSave = {
+        ...raceConfig,
+        startWindowFrom: raceConfig.startWindowFrom.toISOString(),
+        startWindowTo: raceConfig.startWindowTo.toISOString()
+    };
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(configToSave, null, 2));
     console.log('💾 Race config saved to file');
+}
+
+// Проверка, находится ли точка в зоне старта
+function isInStartZone(lat, lng) {
+    if (raceConfig.zoneType === 'circle' && raceConfig.startZone) {
+        const zone = raceConfig.startZone;
+        const R = 6371;
+        const dLat = (lat - zone.centerLat) * Math.PI / 180;
+        const dLng = (lng - zone.centerLng) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(zone.centerLat * Math.PI/180) * Math.cos(lat * Math.PI/180) *
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c;
+        return distance <= zone.radius;
+    } else {
+        const zone = raceConfig.allowedStartRegion;
+        if (!zone) return true;
+        return lat >= zone.minLat && lat <= zone.maxLat && lng >= zone.minLng && lng <= zone.maxLng;
+    }
 }
 
 // Загружаем конфигурацию при старте
@@ -105,6 +147,11 @@ io.on('connection', (socket) => {
         console.log('📝 User authenticated:', user.username, user.email);
     });
     
+    // Получить участников
+    socket.on('fiesta-get-participants', () => {
+        socket.emit('fiesta-all-balloons', Object.values(balloons));
+    });
+    
     // Старт полета
     socket.on('fiesta-start-flight', (data) => {
         if (!currentUser) {
@@ -114,10 +161,16 @@ io.on('connection', (socket) => {
         
         const { lat, lng, styleId } = data;
         
+        // Проверка количества участников
+        const currentParticipants = Object.keys(balloons).length;
+        if (currentParticipants >= MAX_PARTICIPANTS) {
+            socket.emit('fiesta-error', `Maximum ${MAX_PARTICIPANTS} participants reached. Race is full!`);
+            return;
+        }
+        
         // Проверка координат старта
-        if (lat < raceConfig.allowedStartRegion.minLat || lat > raceConfig.allowedStartRegion.maxLat ||
-            lng < raceConfig.allowedStartRegion.minLng || lng > raceConfig.allowedStartRegion.maxLng) {
-            socket.emit('fiesta-error', 'Start location not in allowed region (Americas)');
+        if (!isInStartZone(lat, lng)) {
+            socket.emit('fiesta-error', 'Start location not in allowed start zone');
             return;
         }
         
@@ -158,9 +211,10 @@ io.on('connection', (socket) => {
         socket.emit('fiesta-my-state', newBalloon);
         
         // Оповещаем всех о новом шаре
-        socket.broadcast.emit('fiesta-balloon-created', newBalloon);
+        io.emit('fiesta-balloon-created', newBalloon);
         
         console.log(`🎈 Balloon created: #${raceNumber} (${currentUser.username}) at ${lat}, ${lng}`);
+        console.log(`   Total participants: ${Object.keys(balloons).length}/${MAX_PARTICIPANTS}`);
         
         // Запускаем симуляцию движения
         startBalloonSimulation(balloonId);
@@ -187,7 +241,7 @@ io.on('connection', (socket) => {
                 balloon.layerName = 'Jet Stream (8km+)';
             }
             
-            socket.emit('fiesta-balloon-updated', balloon);
+            io.emit('fiesta-balloon-updated', balloon);
         }
     });
     
@@ -239,25 +293,33 @@ io.on('connection', (socket) => {
     socket.on('fiesta-admin-change-rules', (rules) => {
         // Проверка прав администратора
         if (currentUser && currentUser.email === 'aerostar@aerost.art') {
+            // Обновляем финиш
             raceConfig.finishCoords = { 
-                lat: parseFloat(rules.lat), 
-                lng: parseFloat(rules.lng) 
+                lat: parseFloat(rules.finishCoords.lat), 
+                lng: parseFloat(rules.finishCoords.lng)
             };
-            raceConfig.startWindowFrom = new Date(rules.dateFrom);
-            raceConfig.startWindowTo = new Date(rules.dateTo);
-            raceConfig.allowedStartRegion = {
-                minLat: parseFloat(rules.minLat),
-                maxLat: parseFloat(rules.maxLat),
-                minLng: parseFloat(rules.minLng),
-                maxLng: parseFloat(rules.maxLng)
-            };
+            
+            // Обновляем зону старта
+            raceConfig.zoneType = rules.zoneType;
+            if (rules.zoneType === 'circle') {
+                raceConfig.startZone = rules.startZone;
+                raceConfig.allowedStartRegion = null;
+            } else {
+                raceConfig.allowedStartRegion = rules.startZone;
+                raceConfig.startZone = null;
+            }
+            
+            // Обновляем окно старта
+            raceConfig.startWindowFrom = new Date(rules.startWindowFrom);
+            raceConfig.startWindowTo = new Date(rules.startWindowTo);
             
             // Сохраняем в файл
             saveConfigToFile();
             
             // Оповещаем всех об изменении правил
             io.emit('fiesta-race-config', raceConfig);
-            console.log('🔧 Race config updated by admin:', raceConfig.finishCoords);
+            console.log('🔧 Race config updated by admin');
+            console.log(`   New finish: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
             
             socket.emit('fiesta-config-saved', { success: true });
         } else {
@@ -268,10 +330,12 @@ io.on('connection', (socket) => {
     // Отключение
     socket.on('disconnect', () => {
         console.log('🔌 Client disconnected:', socket.id);
-        if (currentBalloonId) {
+        if (currentBalloonId && balloons[currentBalloonId]) {
+            const balloon = balloons[currentBalloonId];
+            console.log(`🗑️ Balloon removed: #${balloon.raceNumber} (${balloon.username})`);
             delete balloons[currentBalloonId];
             io.emit('fiesta-balloon-removed', currentBalloonId);
-            console.log(`🗑️ Balloon removed: ${currentBalloonId}`);
+            io.emit('fiesta-all-balloons', Object.values(balloons));
         }
     });
 });
@@ -296,9 +360,16 @@ function deg2rad(deg) {
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`🎮 Fiesta Game Server running on port ${PORT}`);
     console.log(`📍 Race page: http://localhost:${PORT}/fiesta.html`);
+    console.log(`📝 Register page: http://localhost:${PORT}/register.html`);
     console.log(`🔧 Admin page: http://localhost:${PORT}/admin.html`);
+    console.log(`🎈 Gondola page: http://localhost:${PORT}/gondola.html`);
     console.log(`💾 Config file: ${CONFIG_FILE}`);
-    console.log(`🌍 Allowed region: ${raceConfig.allowedStartRegion.minLat}° to ${raceConfig.allowedStartRegion.maxLat}°`);
+    console.log(`👥 Max participants: ${MAX_PARTICIPANTS}`);
+    if (raceConfig.zoneType === 'circle') {
+        console.log(`📍 Start zone: Circle radius ${raceConfig.startZone?.radius} km around (${raceConfig.startZone?.centerLat}, ${raceConfig.startZone?.centerLng})`);
+    } else {
+        console.log(`📍 Start zone: Rectangle ${raceConfig.allowedStartRegion?.minLat}°-${raceConfig.allowedStartRegion?.maxLat}°, ${raceConfig.allowedStartRegion?.minLng}°-${raceConfig.allowedStartRegion?.maxLng}°`);
+    }
     console.log(`🏁 Finish: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
+    console.log(`📅 Race period: ${raceConfig.startWindowFrom.toLocaleDateString()} - ${raceConfig.startWindowTo.toLocaleDateString()}`);
 });
-
