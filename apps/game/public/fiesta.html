@@ -196,9 +196,12 @@
                     
                     // Фокусируем камеру на точку финиша
                     map.setView([config.finishCoords.lat, config.finishCoords.lng], 6);
-                    
+                    map.invalidateSize();
                     updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
-                }
+                }else {
+        // Добавьте для отладки:
+        console.warn('Нет координат финиша в конфиге:', config);
+    }
             });
             
             socket.on('fiesta-my-state', (balloon) => {
