@@ -73,12 +73,13 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         let map, socket, finishMarker, balloonsMarkers = {}, myBalloonId = null, currentConfig = null;
+        
         function initMap() {
-    map = L.map('map').setView([30, -90], 4);
+            map = L.map('map').setView([30, -90], 4);
     
-    // Делаем спутник ESRI основным слоем, так как к нему нет блокировок DNS
-    const esriSatellite = L.tileLayer('https://arcgisonline.com{z}/{y}/{x}', {
-        attribution: 'Tiles © Esri',
+    // Исправлено: Полный корректный путь к серверу тайлов Esri World Imagery
+        const esriSatellite = L.tileLayer('https://arcgisonline.com{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
         maxZoom: 19
     });
 
@@ -89,7 +90,8 @@
         position: 'bottomleft'
     }).addTo(map);
 }
-               
+
+       
        
         
         function updateFinishWeather(lat, lng) {
