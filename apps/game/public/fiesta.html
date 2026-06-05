@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Aerostar — Fiesta Race Map</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { overflow: hidden; font-family: 'Segoe UI', sans-serif; }
@@ -43,6 +43,7 @@
             border: 1px solid rgba(255,255,255,0.1);
             padding: 15px;
             font-size: 12px;
+            color: white;
         }
         .info-panel h3 { color: #38bdf8; margin-bottom: 10px; font-size: 14px; }
         .info-item { display: flex; justify-content: space-between; margin: 8px 0; }
@@ -65,15 +66,16 @@
         <a href="gondola.html" class="btn" id="gondola-btn" style="display: none;">🎈 My Gondola</a>
         <a href="register.html" class="btn" id="register-btn">📝 Register</a>
     </div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script src="https://unpkg.com"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         let map, socket, finishMarker, balloonsMarkers = {}, myBalloonId = null, currentConfig = null;
         
         function initMap() {
             map = L.map('map').setView([30, -90], 4);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; CartoDB',
+            L.tileLayer('https://{s}://{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://openstreetmap.org">OSM</a> &copy; CartoDB',
                 subdomains: 'abcd',
                 maxZoom: 19
             }).addTo(map);
@@ -81,7 +83,7 @@
         
         function updateFinishWeather(lat, lng) {
             if (!lat || !lng) return;
-            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`)
+            fetch(`https://open-meteo.com{lat}&longitude=${lng}&current_weather=true`)
                 .then(r => r.json())
                 .then(data => {
                     if (data.current_weather) {
@@ -113,7 +115,7 @@
                 if (b && b.lat && b.lng) {
                     const isMyBalloon = myBalloonId === b.id;
                     const icon = L.divIcon({ 
-                        html: isMyBalloon ? '🎈' : '🪁', 
+                        html: `<div style="font-size: 22px; text-align: center;">${isMyBalloon ? '🎈' : '🪁'}</div>`, 
                         iconSize: [28, 28],
                         className: isMyBalloon ? 'my-balloon-marker' : 'balloon-marker'
                     });
@@ -155,10 +157,21 @@
                     document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
                     document.getElementById('race-deadline').innerHTML = config.startWindowTo ? new Date(config.startWindowTo).toLocaleString() : '--';
                     
+                    // Удаляем старый маркер финиша, если он был
                     if (finishMarker && map) map.removeLayer(finishMarker);
-                    const finishIcon = L.divIcon({ html: '🏁', iconSize: [32, 32] });
+                    
+                    // Исправлено: сброшен дефолтный класс Leaflet (className: '') и добавлен стилизованный блок для эмодзи
+                    const finishIcon = L.divIcon({ 
+                        html: '<div style="font-size: 26px; text-align: center; line-height: 32px;">🏁</div>', 
+                        iconSize: [32, 32],
+                        className: '' 
+                    });
+                    
                     finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
                     finishMarker.bindPopup('🏁 FINISH LINE');
+                    
+                    // Центрируем камеру на финише при получении конфига
+                    map.setView([config.finishCoords.lat, config.finishCoords.lng], 6);
                     
                     updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
                 }
@@ -206,7 +219,7 @@
             }, 500);
         });
         
-        // Периодическое обновление погоды
+         // Периодическое обновление погоды
         setInterval(() => {
             if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng) {
                 updateFinishWeather(currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
