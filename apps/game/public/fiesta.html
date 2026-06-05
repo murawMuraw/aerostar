@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Aerostar — Virtual Fiesta Race</title>
+    <title>Aerostar — Fiesta Race Map</title>
     
     <!-- Local Leaflet CSS -->
     <link rel="stylesheet" href="lib/leaflet/leaflet.css" />
@@ -13,7 +13,6 @@
     <link rel="stylesheet" href="css/game-ui.css" />
     
     <style>
-        /* Layout */
         body {
             margin: 0;
             padding: 0;
@@ -29,198 +28,55 @@
             z-index: 1;
         }
         
-        /* Left Panel - Race Info & Rules */
-        #left-panel {
+        /* Flight info panel */
+        #flight-panel {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            width: 320px;
+            top: 20px;
+            right: 20px;
+            width: 300px;
             z-index: 2000;
             background: rgba(15, 23, 42, 0.95);
             backdrop-filter: blur(14px);
             border-radius: 20px;
             border: 1px solid rgba(255,255,255,0.1);
-            padding: 15px;
-            max-height: 40vh;
-            overflow-y: auto;
-            font-size: 12px;
+            padding: 20px;
+            display: none;
         }
         
-        /* Right Panel - Registration & Participants */
-        #right-panel {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 340px;
-            z-index: 2000;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        
-        .race-rules {
-            background: rgba(0,0,0,0.4);
-            border-radius: 12px;
-            padding: 12px;
-            margin-bottom: 15px;
-        }
-        
-        .race-rules h3 {
-            color: #f87171;
-            font-size: 14px;
-            margin: 0 0 10px 0;
-        }
-        
-        .rule-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 11px;
-        }
-        
-        .rule-label {
-            color: #94a3b8;
-        }
-        
-        .rule-value {
-            color: #38bdf8;
-            font-weight: bold;
-        }
-        
-        .participants-list {
-            background: rgba(0,0,0,0.4);
-            border-radius: 12px;
-            padding: 12px;
-            margin-top: 15px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        
-        .participant-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            font-size: 12px;
-        }
-        
-        .participant-bullet {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #10b981;
-        }
-        
-        .participant-name {
-            flex: 1;
-        }
-        
-        .participant-status {
-            font-size: 10px;
-            color: #94a3b8;
-        }
-        
-        /* Form styles */
-        .form-group {
-            margin-bottom: 15px;
-        }
-        
-        label {
+        #flight-panel.active {
             display: block;
-            margin-bottom: 5px;
-            font-size: 12px;
-            color: #94a3b8;
         }
         
-        input {
-            width: 100%;
-            padding: 10px;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 8px;
+        #register-link {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 2000;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 12px 24px;
+            border-radius: 50px;
+            text-decoration: none;
             color: white;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-        
-        button {
-            width: 100%;
-            padding: 12px;
-            background: #0284c7;
-            border: none;
-            border-radius: 10px;
-            color: white;
-            font-size: 14px;
             font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: transform 0.3s;
         }
         
-        button:hover:not(:disabled) {
-            background: #0369a1;
+        #register-link:hover {
             transform: translateY(-2px);
         }
         
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .catalog-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-            margin: 10px 0;
-        }
-        
-        .skin-card {
-            background: rgba(255,255,255,0.05);
-            border: 2px solid transparent;
-            border-radius: 10px;
-            padding: 8px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .skin-card:hover {
-            background: rgba(255,255,255,0.1);
-        }
-        
-        .skin-card.selected {
-            border-color: #38bdf8;
-            background: rgba(56, 189, 248, 0.15);
-        }
-        
-        .skin-preview {
-            font-size: 28px;
-        }
-        
-        .skin-name {
-            font-size: 10px;
-        }
-        
-        .coords-display {
-            background: rgba(0,0,0,0.3);
-            padding: 8px;
-            border-radius: 8px;
-            font-size: 11px;
-            text-align: center;
-            font-family: monospace;
+        #start-instruction {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 2000;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 14px;
             color: #38bdf8;
-        }
-        
-        .hidden {
-            display: none !important;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 15px;
-            font-size: 10px;
-            font-weight: bold;
-            background: #10b981;
+            pointer-events: none;
         }
         
         .telemetry-box {
@@ -233,13 +89,22 @@
         .tel-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 6px;
-            font-size: 12px;
+            margin-bottom: 8px;
+            font-size: 13px;
         }
         
         .tel-val {
             color: #38bdf8;
             font-weight: bold;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            background: #10b981;
         }
         
         .alt-slider {
@@ -260,26 +125,17 @@
             cursor: pointer;
         }
         
-        ::-webkit-scrollbar {
-            width: 5px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.2);
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #38bdf8;
-            border-radius: 3px;
-        }
-        
         .balloon-marker {
             font-size: 28px;
             filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.8));
         }
         
         .finish-marker {
-            font-size: 24px;
+            font-size: 28px;
+        }
+        
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
@@ -287,105 +143,32 @@
 
     <div id="map"></div>
     
-    <!-- Left Panel: Race Rules & Info -->
-    <div id="left-panel">
-        <div class="race-rules">
-            <h3>🏁 Race Rules</h3>
-            <div class="rule-item">
-                <span class="rule-label">Finish Line:</span>
-                <span class="rule-value" id="rule-finish">Loading...</span>
-            </div>
-            <div class="rule-item">
-                <span class="rule-label">Start Window:</span>
-                <span class="rule-value" id="rule-window">Loading...</span>
-            </div>
-            <div class="rule-item">
-                <span class="rule-label">Allowed Region:</span>
-                <span class="rule-value" id="rule-region">Loading...</span>
-            </div>
-        </div>
-        
-        <div class="race-rules">
-            <h3>📊 Race Statistics</h3>
-            <div class="rule-item">
-                <span class="rule-label">Active Balloons:</span>
-                <span class="rule-value" id="active-count">0</span>
-            </div>
-            <div class="rule-item">
-                <span class="rule-label">Total Pilots:</span>
-                <span class="rule-value" id="total-pilots">0</span>
-            </div>
-        </div>
+    <!-- Register link -->
+    <a href="register.html" id="register-link" target="_blank">🎈 Register for Race</a>
+    
+    <!-- Start instruction -->
+    <div id="start-instruction">
+        ✨ Click on map in allowed region to set start location → Go to Register page
     </div>
     
-    <!-- Right Panel -->
-    <div id="right-panel">
-        <!-- Registration Screen -->
-        <div id="screen-register" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(14px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); padding: 20px;">
-            <h2 style="margin-top: 0; font-size: 18px;">🎈 Register for Race</h2>
-            
-            <div class="form-group">
-                <label>Pilot Callsign</label>
-                <input type="text" id="player-name" placeholder="Enter your nickname..." value="Pilot" />
-            </div>
-            
-            <div class="form-group">
-                <label>Select Balloon</label>
-                <div class="catalog-grid" id="catalog-grid">
-                    <div class="skin-card selected" data-id="classic">
-                        <div class="skin-preview">🎈</div>
-                        <div class="skin-name">Classic</div>
-                    </div>
-                    <div class="skin-card" data-id="fire_red">
-                        <div class="skin-preview">🎈</div>
-                        <div class="skin-name">Fire Red</div>
-                    </div>
-                    <div class="skin-card" data-id="ocean_blue">
-                        <div class="skin-preview">🎈</div>
-                        <div class="skin-name">Ocean Blue</div>
-                    </div>
-                    <div class="skin-card" data-id="sunset">
-                        <div class="skin-preview">🎈</div>
-                        <div class="skin-name">Sunset</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Start Location (click on map)</label>
-                <div id="start-coords-text" class="coords-display">Not selected</div>
-            </div>
-            
-            <button id="btn-takeoff" disabled>🚀 TAKE OFF</button>
+    <!-- Flight panel (visible after takeoff) -->
+    <div id="flight-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="margin: 0; color: #38bdf8;" id="flight-number">Flight #---</h3>
+            <span class="status-badge">IN FLIGHT</span>
         </div>
         
-        <!-- Participants Panel -->
-        <div id="participants-panel" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(14px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); padding: 20px; margin-top: 15px;">
-            <h3 style="margin: 0 0 10px 0; font-size: 16px;">👥 Race Participants</h3>
-            <div id="participants-list" class="participants-list">
-                <div style="text-align: center; color: #94a3b8;">Waiting for participants...</div>
-            </div>
+        <div class="telemetry-box">
+            <div class="tel-row">Pilot: <span class="tel-val" id="tel-name">---</span></div>
+            <div class="tel-row">Speed: <span class="tel-val" id="tel-speed">0 km/h</span></div>
+            <div class="tel-row">Altitude: <span class="tel-val" id="tel-altitude">1000 m</span></div>
+            <div class="tel-row">Wind Layer: <span class="tel-val" id="tel-layer">---</span></div>
         </div>
         
-        <!-- Flight Screen (hidden initially) -->
-        <div id="screen-flight" class="hidden" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(14px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); padding: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0;" id="flight-hull-number">Flight #---</h3>
-                <span class="status-badge">IN FLIGHT</span>
-            </div>
-            
-            <div class="telemetry-box">
-                <div class="tel-row">Pilot: <span class="tel-val" id="tel-name">---</span></div>
-                <div class="tel-row">Speed: <span class="tel-val" id="tel-speed">0 km/h</span></div>
-                <div class="tel-row">Altitude: <span class="tel-val" id="tel-altitude">1000 m</span></div>
-                <div class="tel-row">Wind Layer: <span class="tel-val" id="tel-layer">---</span></div>
-            </div>
-            
-            <div class="form-group">
-                <label>Altitude: <span id="alt-slider-val">1000</span> m</label>
-                <input type="range" id="alt-slider" class="alt-slider" min="500" max="13000" step="500" value="1000" />
-                <div style="font-size: 10px; color: #94a3b8; margin-top: 5px;">💨 Change altitude to catch favorable winds</div>
-            </div>
+        <div>
+            <label>Altitude: <span id="alt-slider-val">1000</span> m</label>
+            <input type="range" id="alt-slider" class="alt-slider" min="500" max="13000" step="500" value="1000" />
+            <div style="font-size: 10px; color: #94a3b8; margin-top: 5px;">💨 Change altitude to catch favorable winds</div>
         </div>
     </div>
 
@@ -395,16 +178,13 @@
     
     <script>
         let map, socket;
-        let gameState = {
-            selectedStartCoords: null,
-            selectedStyleId: 'classic',
-            startMarker: null,
-            myBalloonId: null,
-            balloonMarker: null,
-            pathLine: null,
-            participants: {},
-            finishMarker: null
-        };
+        let selectedStartCoords = null;
+        let startMarker = null;
+        let myBalloonId = null;
+        let balloonMarker = null;
+        let pathLine = null;
+        let finishMarker = null;
+        let currentConfig = null;
         
         // Wait for map
         const waitForMap = setInterval(() => {
@@ -418,15 +198,43 @@
             map = window.map;
             
             map.on('click', (e) => {
-                const screenRegister = document.getElementById('screen-register');
-                if (screenRegister && !screenRegister.classList.contains('hidden')) {
+                if (!myBalloonId) {
                     const { lat, lng } = e.latlng;
-                    gameState.selectedStartCoords = { lat, lng };
                     
-                    if (gameState.startMarker) map.removeLayer(gameState.startMarker);
-                    gameState.startMarker = L.marker([lat, lng]).addTo(map);
-                    document.getElementById('start-coords-text').innerHTML = `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
-                    checkValidation();
+                    // Check if in allowed region
+                    if (currentConfig && currentConfig.allowedStartRegion) {
+                        const region = currentConfig.allowedStartRegion;
+                        if (lat >= region.minLat && lat <= region.maxLat &&
+                            lng >= region.minLng && lng <= region.maxLng) {
+                            selectedStartCoords = { lat, lng };
+                            
+                            if (startMarker) map.removeLayer(startMarker);
+                            startMarker = L.marker([lat, lng]).addTo(map);
+                            
+                            // Save to localStorage for register page
+                            localStorage.setItem('fiesta_start_coords', JSON.stringify(selectedStartCoords));
+                            
+                            // Show instruction update
+                            document.getElementById('start-instruction').innerHTML = 
+                                '✅ Start location selected! Go to Register page →';
+                            document.getElementById('start-instruction').style.color = '#22c55e';
+                            
+                            setTimeout(() => {
+                                document.getElementById('start-instruction').innerHTML = 
+                                    '✨ Click on map to change start location → Go to Register page';
+                                document.getElementById('start-instruction').style.color = '#38bdf8';
+                            }, 3000);
+                        } else {
+                            document.getElementById('start-instruction').innerHTML = 
+                                '⚠️ Click in allowed region (Americas): Lat 15-60°, Lng -130 to -30°';
+                            document.getElementById('start-instruction').style.color = '#f87171';
+                            setTimeout(() => {
+                                document.getElementById('start-instruction').innerHTML = 
+                                    '✨ Click on map in allowed region to set start location → Go to Register page';
+                                document.getElementById('start-instruction').style.color = '#38bdf8';
+                            }, 3000);
+                        }
+                    }
                 }
             });
             
@@ -443,202 +251,100 @@
             socket.on('connect', () => {
                 console.log('✅ Connected to race server');
                 socket.emit('fiesta-auth', {
-                    email: 'player@game.com',
-                    username: document.getElementById('player-name').value || 'Pilot'
+                    email: 'viewer@race.com',
+                    username: 'Race Viewer'
                 });
             });
             
-            socket.on('connect_error', (error) => {
-                console.error('Connection error:', error.message);
-            });
-            
             socket.on('fiesta-race-config', (config) => {
-                updateRaceRules(config);
-            });
-            
-            socket.on('fiesta-balloon-catalog', (catalog) => {
-                updateBalloonCatalog(catalog);
+                currentConfig = config;
+                updateFinishMarker(config);
             });
             
             socket.on('fiesta-my-state', (balloon) => {
                 startFlight(balloon);
             });
             
-            socket.on('fiesta-balloon-created', (balloon) => {
-                addParticipant(balloon);
-            });
-            
             socket.on('fiesta-balloon-updated', (balloon) => {
-                updateParticipant(balloon);
-                if (gameState.myBalloonId === balloon.id) {
+                if (myBalloonId === balloon.id) {
                     updateMyBalloon(balloon);
+                } else {
+                    updateOtherBalloon(balloon);
                 }
-            });
-            
-            socket.on('fiesta-all-balloons', (balloons) => {
-                updateParticipantsList(balloons);
             });
             
             socket.on('fiesta-error', (msg) => {
-                alert('Error: ' + msg);
+                console.error('Error:', msg);
             });
         }
         
-        function updateRaceRules(config) {
-            if (config.finishCoords) {
-                document.getElementById('rule-finish').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
-                
-                // Add or update finish marker
-                if (gameState.finishMarker) {
-                    gameState.finishMarker.setLatLng([config.finishCoords.lat, config.finishCoords.lng]);
+        function updateFinishMarker(config) {
+            if (config.finishCoords && map) {
+                if (finishMarker) {
+                    finishMarker.setLatLng([config.finishCoords.lat, config.finishCoords.lng]);
                 } else {
-                    const finishIcon = L.divIcon({ html: '🏁', iconSize: [24, 24], className: 'finish-marker' });
-                    gameState.finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon })
+                    const finishIcon = L.divIcon({ html: '🏁', iconSize: [32, 32], className: 'finish-marker' });
+                    finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon })
                         .addTo(map)
-                        .bindPopup('🏁 FINISH LINE');
+                        .bindPopup('<b>🏁 FINISH LINE</b><br>Race destination');
                 }
             }
-            
-            if (config.startWindowFrom && config.startWindowTo) {
-                document.getElementById('rule-window').innerHTML = `${new Date(config.startWindowFrom).toLocaleDateString()} - ${new Date(config.startWindowTo).toLocaleDateString()}`;
-            }
-            
-            if (config.allowedStartRegion) {
-                document.getElementById('rule-region').innerHTML = `Lat ${config.allowedStartRegion.minLat}°-${config.allowedStartRegion.maxLat}°, Lng ${config.allowedStartRegion.minLng}°-${config.allowedStartRegion.maxLng}°`;
-            }
-        }
-        
-        function updateBalloonCatalog(catalog) {
-            const grid = document.getElementById('catalog-grid');
-            if (grid && Object.keys(catalog).length > 0) {
-                grid.innerHTML = '';
-                Object.values(catalog).forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'skin-card';
-                    card.dataset.id = item.id;
-                    card.innerHTML = `<div class="skin-preview">🎈</div><div class="skin-name">${item.name}</div>`;
-                    card.addEventListener('click', () => {
-                        document.querySelectorAll('.skin-card').forEach(c => c.classList.remove('selected'));
-                        card.classList.add('selected');
-                        gameState.selectedStyleId = item.id;
-                        checkValidation();
-                    });
-                    grid.appendChild(card);
-                });
-            }
-        }
-        
-        function updateParticipantsList(balloons) {
-            gameState.participants = {};
-            balloons.forEach(b => {
-                gameState.participants[b.id] = b;
-            });
-            renderParticipantsList();
-            document.getElementById('active-count').innerHTML = Object.keys(gameState.participants).length;
-            document.getElementById('total-pilots').innerHTML = Object.keys(gameState.participants).length;
-        }
-        
-        function addParticipant(balloon) {
-            gameState.participants[balloon.id] = balloon;
-            renderParticipantsList();
-            document.getElementById('active-count').innerHTML = Object.keys(gameState.participants).length;
-            document.getElementById('total-pilots').innerHTML = Object.keys(gameState.participants).length;
-        }
-        
-        function updateParticipant(balloon) {
-            if (gameState.participants[balloon.id]) {
-                gameState.participants[balloon.id] = balloon;
-                renderParticipantsList();
-            }
-        }
-        
-        function renderParticipantsList() {
-            const container = document.getElementById('participants-list');
-            if (!container) return;
-            
-            const participants = Object.values(gameState.participants);
-            if (participants.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: #94a3b8;">No participants yet...</div>';
-                return;
-            }
-            
-            container.innerHTML = participants.map(p => `
-                <div class="participant-item">
-                    <div class="participant-bullet" style="background: ${p.id === gameState.myBalloonId ? '#38bdf8' : '#10b981'}"></div>
-                    <div class="participant-name"><strong>${p.username}</strong> #${p.raceNumber}</div>
-                    <div class="participant-status">${Math.round(p.speed || 0)} km/h</div>
-                </div>
-            `).join('');
         }
         
         function startFlight(balloon) {
-            gameState.myBalloonId = balloon.id;
-            document.getElementById('screen-register').classList.add('hidden');
-            document.getElementById('screen-flight').classList.remove('hidden');
+            myBalloonId = balloon.id;
+            document.getElementById('flight-panel').classList.add('active');
+            document.getElementById('register-link').style.display = 'none';
+            document.getElementById('start-instruction').style.display = 'none';
             
-            document.getElementById('flight-hull-number').innerHTML = `Flight ${balloon.raceNumber}`;
+            document.getElementById('flight-number').innerHTML = `Flight ${balloon.raceNumber}`;
             document.getElementById('tel-name').innerHTML = balloon.username;
             document.getElementById('tel-speed').innerHTML = `${Math.round(balloon.speed)} km/h`;
             document.getElementById('tel-altitude').innerHTML = `${balloon.altitude} m`;
             document.getElementById('tel-layer').innerHTML = balloon.layerName || 'Surface Layer';
             
             const balloonIcon = L.divIcon({ html: '🎈', iconSize: [32, 32], className: 'balloon-marker' });
-            gameState.balloonMarker = L.marker([balloon.lat, balloon.lng], { icon: balloonIcon }).addTo(map);
+            balloonMarker = L.marker([balloon.lat, balloon.lng], { icon: balloonIcon }).addTo(map);
             map.setView([balloon.lat, balloon.lng], 8);
             
-            if (gameState.startMarker) map.removeLayer(gameState.startMarker);
+            if (startMarker) map.removeLayer(startMarker);
+            
+            // Remove start coords from localStorage
+            localStorage.removeItem('fiesta_start_coords');
         }
         
         function updateMyBalloon(balloon) {
-            if (gameState.balloonMarker) {
-                gameState.balloonMarker.setLatLng([balloon.lat, balloon.lng]);
+            if (balloonMarker) {
+                balloonMarker.setLatLng([balloon.lat, balloon.lng]);
                 document.getElementById('tel-speed').innerHTML = `${Math.round(balloon.speed)} km/h`;
                 document.getElementById('tel-altitude').innerHTML = `${balloon.altitude} m`;
                 document.getElementById('tel-layer').innerHTML = balloon.layerName;
                 
                 if (balloon.path && balloon.path.length > 0) {
                     const pathCoords = balloon.path.map(p => [p.lat, p.lng]);
-                    if (gameState.pathLine) {
-                        gameState.pathLine.setLatLngs(pathCoords);
+                    if (pathLine) {
+                        pathLine.setLatLngs(pathCoords);
                     } else {
-                        gameState.pathLine = L.polyline(pathCoords, { color: '#f87171', weight: 3, opacity: 0.7 }).addTo(map);
+                        pathLine = L.polyline(pathCoords, { color: '#f87171', weight: 3, opacity: 0.7 }).addTo(map);
                     }
                 }
             }
         }
         
-        function checkValidation() {
-            const btn = document.getElementById('btn-takeoff');
-            const name = document.getElementById('player-name').value.trim();
-            if (gameState.selectedStartCoords && gameState.selectedStyleId && name) {
-                btn.disabled = false;
-            } else {
-                btn.disabled = true;
-            }
+        function updateOtherBalloon(balloon) {
+            // Optional: show other balloons on map
         }
-        
-        document.getElementById('btn-takeoff').addEventListener('click', () => {
-            if (gameState.selectedStartCoords) {
-                socket.emit('fiesta-start-flight', {
-                    lat: gameState.selectedStartCoords.lat,
-                    lng: gameState.selectedStartCoords.lng,
-                    styleId: gameState.selectedStyleId
-                });
-            }
-        });
-        
-        document.getElementById('player-name').addEventListener('input', checkValidation);
         
         const slider = document.getElementById('alt-slider');
         const sliderVal = document.getElementById('alt-slider-val');
         if (slider) {
             slider.addEventListener('input', (e) => sliderVal.innerHTML = e.target.value);
             slider.addEventListener('change', (e) => {
-                socket.emit('fiesta-change-altitude', { altitude: parseInt(e.target.value) });
+                if (socket && myBalloonId) {
+                    socket.emit('fiesta-change-altitude', { altitude: parseInt(e.target.value) });
+                }
             });
         }
-        
-        checkValidation();
     </script>
 </body>
 </html>
