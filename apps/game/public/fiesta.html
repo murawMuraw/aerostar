@@ -83,22 +83,31 @@
             }).addTo(map);
         }
         
-        function updateFinishWeather(lat, lng) {
-            if (!lat || !lng) return;
-            fetch(`https://open-meteo.com{lat}&longitude=${lng}&current_weather=true`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data.current_weather) {
-                        const w = data.current_weather;
-                        document.getElementById('finish-weather').innerHTML = `
-                            <div class="weather-item">🌡️ Temp: ${w.temperature}°C</div>
-                            <div class="weather-item">💨 Wind: ${w.windspeed} m/s</div>
-                            <div class="weather-item">🧭 Dir: ${w.winddirection}°</div>
-                        `;
-                    }
-                })
-                .catch(err => console.error('Weather fetch error:', err));
-        }
+     function updateFinishWeather(lat, lng) {
+    if (!lat || !lng) return;
+    // ВАЖНО: Используются косые кавычки ` для интерполяции переменных
+    fetch(`https://open-meteo.com{lat}&longitude=${lng}&current_weather=true`)
+        .then(r => {
+            if (!r.ok) throw new Error('Network response was not ok');
+            return r.json();
+        })
+        .then(data => {
+            if (data && data.current_weather) {
+                const w = data.current_weather;
+                document.getElementById('finish-weather').innerHTML = `
+                    <div class="weather-item">🌡️ Temp: ${w.temperature}°C</div>
+                    <div class="weather-item">💨 Wind: ${w.windspeed} m/s</div>
+                    <div class="weather-item">🧭 Dir: ${w.winddirection}°</div>
+                `;
+            }
+        })
+        .catch(err => {
+            console.error('Weather fetch error:', err);
+            document.getElementById('finish-weather').innerHTML = `
+                <div class="weather-item" style="color: #f87171;">Offline (Check Tracking Prevention)</div>
+            `;
+        });
+}
         
         function clearBalloons() {
             Object.values(balloonsMarkers).forEach(marker => {
