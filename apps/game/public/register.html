@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Aerostar — Fiesta Race Registration</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 42px;
+            color: #f87171;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #94a3b8;
+            font-size: 16px;
+        }
+        
+        /* Two column layout */
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        /* Cards */
+        .card {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 30px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+        
+        .card h2 {
+            color: #38bdf8;
+            font-size: 22px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 12px;
+        }
+        
+        .card h3 {
+            color: #f87171;
+            font-size: 18px;
+            margin: 20px 0 15px 0;
+        }
+        
+        /* Race rules */
+        .rule-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 14px;
+        }
+        
+        .rule-label {
+            color: #94a3b8;
+        }
+        
+        .rule-value {
+            color: #38bdf8;
+            font-weight: bold;
+        }
+        
+        /* Balloon catalog */
+        .catalog-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .skin-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid transparent;
+            border-radius: 16px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .skin-card:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .skin-card.selected {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.15);
+        }
+        
+        .skin-preview {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .skin-name {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        /* Form */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        
+        input {
+            width: 100%;
+            padding: 14px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #38bdf8;
+        }
+        
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #0284c7;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        button:hover:not(:disabled) {
+            background: #0369a1;
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Participants table */
+        .participants-table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        
+        .participants-table th,
+        .participants-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .participants-table th {
+            color: #f87171;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .participants-table td {
+            color: #cbd5e1;
+            font-size: 14px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .status-flying {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+        
+        .status-finished {
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+        }
+        
+        .empty-participants {
+            text-align: center;
+            color: #94a3b8;
+            padding: 40px;
+        }
+        
+        .coords-info {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            text-align: center;
+            color: #38bdf8;
+            font-family: monospace;
+            margin-top: 10px;
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #22c55e;
+            margin-top: 15px;
+            justify-content: center;
+        }
+        
+        .connected-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        @media (max-width: 900px) {
+            .two-columns {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            .header h1 {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎈 Fiesta Race Registration</h1>
+            <p>Register for the transcontinental balloon race</p>
+            <div class="connection-status" id="connection-status">
+                <span class="connected-indicator"></span>
+                <span id="status-text">Connecting to server...</span>
+            </div>
+        </div>
+        
+        <div class="two-columns">
+            <!-- Left Column: Race Rules & Balloons -->
+            <div class="card">
+                <h2>🏁 Race Rules</h2>
+                <div id="race-rules">
+                    <div class="rule-item">
+                        <span class="rule-label">Finish Line:</span>
+                        <span class="rule-value" id="rule-finish">Loading...</span>
+                    </div>
+                    <div class="rule-item">
+                        <span class="rule-label">Race Period:</span>
+                        <span class="rule-value" id="rule-period">Loading...</span>
+                    </div>
+                    <div class="rule-item">
+                        <span class="rule-label">Start Region:</span>
+                        <span class="rule-value" id="rule-region">Loading...</span>
+                    </div>
+                </div>
+                
+                <h3>🎨 Select Your Balloon</h3>
+                <div class="catalog-grid" id="catalog-grid">
+                    <div class="skin-card selected" data-id="classic">
+                        <div class="skin-preview">🎈</div>
+                        <div class="skin-name">Classic</div>
+                    </div>
+                </div>
+                
+                <h3>📍 Start Location</h3>
+                <div class="coords-info" id="start-coords-info">
+                    Select a location on the map in the main race view
+                </div>
+                <div style="font-size: 12px; color: #94a3b8; margin-top: 10px; text-align: center;">
+                    🎯 Go to <strong>Race Map</strong> → Click on allowed region → Come back to register
+                </div>
+            </div>
+            
+            <!-- Right Column: Registration Form -->
+            <div class="card">
+                <h2>📝 Pilot Registration</h2>
+                
+                <div class="form-group">
+                    <label>Pilot Callsign</label>
+                    <input type="text" id="player-name" placeholder="Enter your nickname..." />
+                </div>
+                
+                <div class="form-group">
+                    <label>Email (optional)</label>
+                    <input type="email" id="player-email" placeholder="your@email.com" />
+                </div>
+                
+                <div id="selected-balloon-info" style="margin-bottom: 15px; font-size: 13px; color: #38bdf8; text-align: center;">
+                    Selected: <strong>Classic</strong>
+                </div>
+                
+                <button id="btn-register" disabled>🎮 REGISTER FOR RACE</button>
+                
+                <div id="register-message" style="margin-top: 15px; font-size: 13px; text-align: center;"></div>
+            </div>
+        </div>
+        
+        <!-- Participants Table -->
+        <div class="card" style="margin-top: 30px;">
+            <h2>👥 Registered Pilots</h2>
+            <div id="participants-container">
+                <div class="empty-participants">Loading participants...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let socket = null;
+        let selectedStyleId = 'classic';
+        let savedStartCoords = null;
+        let currentConfig = null;
+        
+        // Get start coords from localStorage (set by fiesta.html)
+        function loadStartCoords() {
+            const coords = localStorage.getItem('fiesta_start_coords');
+            if (coords) {
+                try {
+                    savedStartCoords = JSON.parse(coords);
+                    document.getElementById('start-coords-info').innerHTML = 
+                        `📍 ${savedStartCoords.lat.toFixed(4)}°, ${savedStartCoords.lng.toFixed(4)}°<br>
+                        <span style="font-size: 10px;">Ready to take off!</span>`;
+                    checkRegistrationValidation();
+                    return true;
+                } catch(e) {}
+            }
+            return false;
+        }
+        
+        // Listen for storage changes (when user clicks on map in fiesta.html)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'fiesta_start_coords' && e.newValue) {
+                try {
+                    savedStartCoords = JSON.parse(e.newValue);
+                    document.getElementById('start-coords-info').innerHTML = 
+                        `📍 ${savedStartCoords.lat.toFixed(4)}°, ${savedStartCoords.lng.toFixed(4)}°<br>
+                        <span style="font-size: 10px;">Ready to take off!</span>`;
+                    checkRegistrationValidation();
+                } catch(e) {}
+            }
+        });
+        
+        function checkRegistrationValidation() {
+            const btn = document.getElementById('btn-register');
+            const name = document.getElementById('player-name').value.trim();
+            const isValid = name && savedStartCoords && selectedStyleId && currentConfig;
+            
+            if (isValid) {
+                // Check if coordinates are in allowed region
+                if (currentConfig && currentConfig.allowedStartRegion) {
+                    const region = currentConfig.allowedStartRegion;
+                    if (savedStartCoords.lat >= region.minLat && savedStartCoords.lat <= region.maxLat &&
+                        savedStartCoords.lng >= region.minLng && savedStartCoords.lng <= region.maxLng) {
+                        btn.disabled = false;
+                        document.getElementById('register-message').innerHTML = '';
+                    } else {
+                        btn.disabled = true;
+                        document.getElementById('register-message').innerHTML = 
+                            '<span style="color: #ef4444;">⚠️ Start location outside allowed region (Americas)</span>';
+                    }
+                } else {
+                    btn.disabled = true;
+                }
+            } else {
+                btn.disabled = true;
+                if (!name) {
+                    document.getElementById('register-message').innerHTML = 
+                        '<span style="color: #f87171;">✏️ Enter your pilot name</span>';
+                } else if (!savedStartCoords) {
+                    document.getElementById('register-message').innerHTML = 
+                        '<span style="color: #f87171;">📍 Select start location on the Race Map page</span>';
+                }
+            }
+        }
+        
+        function connectSocket() {
+            socket = io({
+                transports: ['polling'],
+                upgrade: false,
+                reconnection: true
+            });
+            
+            socket.on('connect', () => {
+                document.getElementById('status-text').textContent = 'Connected to race server';
+                document.getElementById('status-text').style.color = '#22c55e';
+                socket.emit('fiesta-auth', {
+                    email: document.getElementById('player-email').value || 'guest@race.com',
+                    username: document.getElementById('player-name').value || 'Guest'
+                });
+            });
+            
+            socket.on('connect_error', (error) => {
+                document.getElementById('status-text').textContent = 'Connection error';
+                document.getElementById('status-text').style.color = '#ef4444';
+            });
+            
+            socket.on('fiesta-race-config', (config) => {
+                currentConfig = config;
+                updateRaceRules(config);
+                checkRegistrationValidation();
+            });
+            
+            socket.on('fiesta-balloon-catalog', (catalog) => {
+                updateBalloonCatalog(catalog);
+            });
+            
+            socket.on('fiesta-all-balloons', (balloons) => {
+                updateParticipantsTable(balloons);
+            });
+            
+            socket.on('fiesta-balloon-created', (balloon) => {
+                updateParticipantsTable(null);
+                if (balloon.username === document.getElementById('player-name').value) {
+                    document.getElementById('register-message').innerHTML = 
+                        '<span style="color: #22c55e;">✅ Registration successful! Go to Race Map to start flying.</span>';
+                    document.getElementById('btn-register').disabled = true;
+                    setTimeout(() => {
+                        document.getElementById('register-message').innerHTML = '';
+                    }, 5000);
+                }
+            });
+            
+            socket.on('fiesta-balloon-updated', () => {
+                updateParticipantsTable(null);
+            });
+            
+            socket.on('fiesta-error', (msg) => {
+                document.getElementById('register-message').innerHTML = 
+                    `<span style="color: #ef4444;">❌ Error: ${msg}</span>`;
+                setTimeout(() => {
+                    document.getElementById('register-message').innerHTML = '';
+                }, 5000);
+            });
+        }
+        
+        function updateRaceRules(config) {
+            if (config.finishCoords) {
+                document.getElementById('rule-finish').innerHTML = 
+                    `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
+            }
+            if (config.startWindowFrom && config.startWindowTo) {
+                document.getElementById('rule-period').innerHTML = 
+                    `${new Date(config.startWindowFrom).toLocaleDateString()} - ${new Date(config.startWindowTo).toLocaleDateString()}`;
+            }
+            if (config.allowedStartRegion) {
+                document.getElementById('rule-region').innerHTML = 
+                    `Lat ${config.allowedStartRegion.minLat}°-${config.allowedStartRegion.maxLat}°, Lng ${config.allowedStartRegion.minLng}°-${config.allowedStartRegion.maxLng}°`;
+            }
+        }
+        
+        function updateBalloonCatalog(catalog) {
+            const grid = document.getElementById('catalog-grid');
+            if (grid && Object.keys(catalog).length > 0) {
+                grid.innerHTML = '';
+                Object.values(catalog).forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'skin-card';
+                    card.dataset.id = item.id;
+                    card.innerHTML = `
+                        <div class="skin-preview">🎈</div>
+                        <div class="skin-name">${item.name}</div>
+                    `;
+                    if (item.id === 'classic') card.classList.add('selected');
+                    card.addEventListener('click', () => {
+                        document.querySelectorAll('.skin-card').forEach(c => c.classList.remove('selected'));
+                        card.classList.add('selected');
+                        selectedStyleId = item.id;
+                        document.getElementById('selected-balloon-info').innerHTML = 
+                            `Selected: <strong>${item.name}</strong>`;
+                        checkRegistrationValidation();
+                    });
+                    grid.appendChild(card);
+                });
+            }
+        }
+        
+        function updateParticipantsTable(balloons) {
+            if (balloons) {
+                window.participantsData = balloons;
+            }
+            
+            const container = document.getElementById('participants-container');
+            if (!window.participantsData || window.participantsData.length === 0) {
+                container.innerHTML = '<div class="empty-participants">No pilots registered yet...</div>';
+                return;
+            }
+            
+            const html = `
+                <table class="participants-table">
+                    <thead>
+                        <tr><th>Pilot</th><th>Balloon</th><th>Race #</th><th>Status</th><th>Speed</th></tr>
+                    </thead>
+                    <tbody>
+                        ${window.participantsData.map(p => `
+                            <tr>
+                                <td><strong>${p.username}</strong></td>
+                                <td>🎈 ${p.balloonStyle?.name || 'Classic'}</td>
+                                <td>#${p.raceNumber}</td>
+                                <td><span class="status-badge status-flying">IN FLIGHT</span></td>
+                                <td>${Math.round(p.speed || 0)} km/h</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            container.innerHTML = html;
+        }
+        
+        document.getElementById('btn-register').addEventListener('click', () => {
+            if (socket && savedStartCoords) {
+                socket.emit('fiesta-start-flight', {
+                    lat: savedStartCoords.lat,
+                    lng: savedStartCoords.lng,
+                    styleId: selectedStyleId
+                });
+            }
+        });
+        
+        document.getElementById('player-name').addEventListener('input', () => {
+            checkRegistrationValidation();
+            if (socket) {
+                socket.emit('fiesta-auth', {
+                    email: document.getElementById('player-email').value || 'guest@race.com',
+                    username: document.getElementById('player-name').value
+                });
+            }
+        });
+        
+        // Initial load
+        loadStartCoords();
+        connectSocket();
+        
+        // Refresh participants every 5 seconds
+        setInterval(() => {
+            if (socket) {
+                socket.emit('fiesta-get-participants');
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
