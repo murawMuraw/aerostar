@@ -73,41 +73,24 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         let map, socket, finishMarker, balloonsMarkers = {}, myBalloonId = null, currentConfig = null;
-        
-               
         function initMap() {
-            // Инициализируем карту
-            map = L.map('map').setView([30, -90], 4);
-            
-            // Настраиваем слои по аналогии с оригинальным проектом aerostar
-            const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
-                maxZoom: 19
-            });
+    map = L.map('map').setView([30, -90], 4);
+    
+    // Делаем спутник ESRI основным слоем, так как к нему нет блокировок DNS
+    const esriSatellite = L.tileLayer('https://arcgisonline.com{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri',
+        maxZoom: 19
+    });
 
-            const esriSatellite = L.tileLayer('https://arcgisonline.com{z}/{y}/{x}', {
-                attribution: 'Tiles © Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-                maxZoom: 19
-            });
+    esriSatellite.addTo(map);
 
-            // Добавляем схему OSM на карту по умолчанию
-            osmStandard.addTo(map);
-
-            // Добавляем контрол переключения слоёв в левый верхний угол
-            L.control.layers({
-                "🗺 Схема OSM": osmStandard,
-                "🛰 Спутник ESRI": esriSatellite
-            }, null, {
-                position: 'topleft',
-                collapsed: true
-            }).addTo(map);
-
-            // Добавляем шкалу масштаба
-            L.control.scale({
-                metric: true,
-                position: 'bottomleft'
-            }).addTo(map);
-        }
+    L.control.scale({
+        metric: true,
+        position: 'bottomleft'
+    }).addTo(map);
+}
+               
+       
         
         function updateFinishWeather(lat, lng) {
             if (!lat || !lng) return;
@@ -190,6 +173,7 @@
             socket.on('fiesta-race-config', (config) => {
                 if (!config) return;
                 currentConfig = config;
+                console.log('Получен конфиг гонки:', config); // Лог для проверки прихода координат
                 if (config.finishCoords && config.finishCoords.lat && config.finishCoords.lng) {
                     document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
                     document.getElementById('race-deadline').innerHTML = config.startWindowTo ? new Date(config.startWindowTo).toLocaleString() : '--';
