@@ -74,11 +74,11 @@
     <script>
         let map, socket, finishMarker, balloonsMarkers = {}, myBalloonId = null, currentConfig = null;
         
-        function initMap() {
-            map = L.map('map').setView([30, -90], 4);
+       function initMap() {
+    map = L.map('map').setView([30, -90], 4);
     
-    // Исправлено: Полный корректный путь к серверу тайлов Esri World Imagery
-        const esriSatellite = L.tileLayer('https://arcgisonline.com{z}/{y}/{x}', {
+    // Исправлено: полный корректный путь к серверу тайлов Esri World Imagery
+    const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles © Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
         maxZoom: 19
     });
@@ -89,9 +89,7 @@
         metric: true,
         position: 'bottomleft'
     }).addTo(map);
-}
-
-       
+}      
        
         
         function updateFinishWeather(lat, lng) {
