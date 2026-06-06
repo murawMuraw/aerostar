@@ -2,6 +2,12 @@
  * ГЛАВНЫЙ ИГРОВОЙ СЕРВЕР «ФИЕСТА» (Порт 3001)
  * Управляет сессиями пилотов, выбором уникальных шаров и бортовых номеров,
  * сокетами трансляции гонки и фоновым движком симуляции.
+ * 
+ * Версия 2.0:
+ * - Удалена зона старта круг
+ * - Окно старта заменено на окно регистрации участников
+ * - Добавлена точная дата и время старта гонки
+ * - Интегрирован реальный сервис ветров
  */
 
 const express = require('express');
@@ -14,6 +20,7 @@ const fs = require('fs');
 const dbModule = require('./database');
 const gameEngine = require('./engine');
 const balloonCatalog = require('./balloonCatalog');
+const windService = require('./windService');
 
 const app = express();
 const server = http.createServer(app);
@@ -40,24 +47,23 @@ const CONFIG_FILE = path.join(__dirname, 'race-config.json');
 // Максимальное количество участников
 const MAX_PARTICIPANTS = 7;
 
+// Интервал симуляции (мс)
+const SIMULATION_INTERVAL = 5000; // 5 секунд
+
 // Данные игры
 let raceConfig = {
     finishCoords: { lat: 48.8566, lng: 2.3522 }, // Париж по умолчанию
-    zoneType: 'rectangle', // 'rectangle' or 'circle'
-    allowedStartRegion: {
-        minLat: 15,
-        maxLat: 60,
-        minLng: -130,
-        maxLng: -30
-    },
-    startZone: null, // For circle: { centerLat, centerLng, radius }
-    startWindowFrom: new Date('2024-06-01'),
-    startWindowTo: new Date('2024-12-31'),
-    maxParticipants: MAX_PARTICIPANTS
+    registrationWindowFrom: new Date('2024-06-01'), // Начало регистрации
+    registrationWindowTo: new Date('2024-12-31'),   // Конец регистрации
+    raceStartDateTime: new Date('2024-12-31T12:00:00'), // Точная дата и время старта гонки
+    maxParticipants: MAX_PARTICIPANTS,
+    raceStarted: false, // Флаг начала гонки
+    raceFinished: false  // Флаг окончания гонки
 };
 
 let balloons = {};
 let nextRaceNumber = 1;
+let simulationIntervals = new Map(); // Хранилище интервалов симуляции для каждого шара
 
 // Загрузка конфигурации из файла
 function loadConfig() {
@@ -67,16 +73,14 @@ function loadConfig() {
             raceConfig = {
                 ...raceConfig,
                 ...saved,
-                startWindowFrom: saved.startWindowFrom ? new Date(saved.startWindowFrom) : raceConfig.startWindowFrom,
-                startWindowTo: saved.startWindowTo ? new Date(saved.startWindowTo) : raceConfig.startWindowTo
+                registrationWindowFrom: saved.registrationWindowFrom ? new Date(saved.registrationWindowFrom) : raceConfig.registrationWindowFrom,
+                registrationWindowTo: saved.registrationWindowTo ? new Date(saved.registrationWindowTo) : raceConfig.registrationWindowTo,
+                raceStartDateTime: saved.raceStartDateTime ? new Date(saved.raceStartDateTime) : raceConfig.raceStartDateTime
             };
             console.log('✅ Loaded race config from file');
-            console.log(`   Zone type: ${raceConfig.zoneType}`);
-            if (raceConfig.zoneType === 'circle') {
-                console.log(`   Circle: center (${raceConfig.startZone?.centerLat}, ${raceConfig.startZone?.centerLng}), radius ${raceConfig.startZone?.radius} km`);
-            } else {
-                console.log(`   Rectangle: ${raceConfig.allowedStartRegion?.minLat}°-${raceConfig.allowedStartRegion?.maxLat}°, ${raceConfig.allowedStartRegion?.minLng}°-${raceConfig.allowedStartRegion?.maxLng}°`);
-            }
+            console.log(`   Registration window: ${raceConfig.registrationWindowFrom.toLocaleString()} - ${raceConfig.registrationWindowTo.toLocaleString()}`);
+            console.log(`   Race start time: ${raceConfig.raceStartDateTime.toLocaleString()}`);
+            console.log(`   Finish location: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
         } catch(e) {
             console.error('Error loading config:', e);
         }
@@ -90,31 +94,161 @@ function loadConfig() {
 function saveConfigToFile() {
     const configToSave = {
         ...raceConfig,
-        startWindowFrom: raceConfig.startWindowFrom.toISOString(),
-        startWindowTo: raceConfig.startWindowTo.toISOString()
+        registrationWindowFrom: raceConfig.registrationWindowFrom.toISOString(),
+        registrationWindowTo: raceConfig.registrationWindowTo.toISOString(),
+        raceStartDateTime: raceConfig.raceStartDateTime.toISOString()
     };
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(configToSave, null, 2));
     console.log('💾 Race config saved to file');
 }
 
-// Проверка, находится ли точка в зоне старта
-function isInStartZone(lat, lng) {
-    if (raceConfig.zoneType === 'circle' && raceConfig.startZone) {
-        const zone = raceConfig.startZone;
-        const R = 6371;
-        const dLat = (lat - zone.centerLat) * Math.PI / 180;
-        const dLng = (lng - zone.centerLng) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(zone.centerLat * Math.PI/180) * Math.cos(lat * Math.PI/180) *
-                  Math.sin(dLng/2) * Math.sin(dLng/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        const distance = R * c;
-        return distance <= zone.radius;
-    } else {
-        const zone = raceConfig.allowedStartRegion;
-        if (!zone) return true;
-        return lat >= zone.minLat && lat <= zone.maxLat && lng >= zone.minLng && lng <= zone.maxLng;
-    }
+// Проверка, открыта ли регистрация
+function isRegistrationOpen() {
+    const now = new Date();
+    return now >= raceConfig.registrationWindowFrom && now <= raceConfig.registrationWindowTo;
+}
+
+// Проверка, началась ли гонка
+function isRaceStarted() {
+    const now = new Date();
+    return now >= raceConfig.raceStartDateTime;
+}
+
+// Функция расчета расстояния между координатами (формула гаверсинуса)
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+function deg2rad(deg) {
+    return deg * (Math.PI/180);
+}
+
+// Функция симуляции движения с использованием реальных данных ветра
+async function startBalloonSimulation(balloonId) {
+    console.log(`🎈 Starting wind simulation for balloon ${balloonId}`);
+    
+    const interval = setInterval(async () => {
+        const balloon = balloons[balloonId];
+        
+        // Проверяем существование шара
+        if (!balloon) {
+            clearInterval(interval);
+            simulationIntervals.delete(balloonId);
+            return;
+        }
+        
+        // Проверяем, началась ли гонка
+        if (!raceConfig.raceStarted && isRaceStarted()) {
+            raceConfig.raceStarted = true;
+            io.emit('fiesta-race-started', { 
+                message: "🏁 ГОНКА НАЧАЛАСЬ! Все шары в движении! 🏁",
+                timestamp: raceConfig.raceStartDateTime
+            });
+            console.log("🏁 Race has started!");
+        }
+        
+        // Если гонка еще не началась - не двигаем шары
+        if (!raceConfig.raceStarted) {
+            return;
+        }
+        
+        // Если гонка уже закончилась - останавливаем симуляцию
+        if (raceConfig.raceFinished) {
+            clearInterval(interval);
+            simulationIntervals.delete(balloonId);
+            return;
+        }
+        
+        try {
+            // Получаем реальные данные ветра для текущей позиции и высоты
+            const wind = await windService.getWindAtPosition(balloon.lat, balloon.lng, balloon.altitude);
+            
+            // Конвертируем скорость из м/с в градусы/секунду
+            // 1 градус широты ≈ 111 км = 111,000 метров
+            // Скорость в градусах в секунду = (скорость в м/с) / 111,000
+            const speedLatPerSecond = wind.speed / 111000;
+            const speedLngPerSecond = wind.speed / (111000 * Math.cos(balloon.lat * Math.PI / 180));
+            
+            // Вычисляем изменение координат за интервал симуляции (в секундах)
+            const intervalSeconds = SIMULATION_INTERVAL / 1000;
+            
+            // Направление ветра: откуда дует (метеорологическое)
+            // Ветер дует ИЗ направления, поэтому для движения нужно использовать противоположное направление
+            const windDirectionRad = wind.direction * Math.PI / 180;
+            
+            // Вычисляем смещение (ветер дует ИЗ direction, значит шар движется ПО направлению direction + 180°)
+            const moveDirectionRad = windDirectionRad + Math.PI;
+            
+            const latChange = Math.cos(moveDirectionRad) * speedLatPerSecond * intervalSeconds;
+            const lngChange = Math.sin(moveDirectionRad) * speedLngPerSecond * intervalSeconds;
+            
+            // Обновляем координаты шара
+            balloon.lat += latChange;
+            balloon.lng += lngChange;
+            
+            // Обновляем скорость для отображения (км/ч для интерфейса)
+            balloon.speed = wind.speed * 3.6; // Конвертируем м/с в км/ч
+            balloon.layerName = wind.layerName;
+            balloon.windDirection = wind.direction;
+            balloon.lastWindUpdate = wind.timestamp;
+            
+            // Добавляем точку в маршрут
+            balloon.path.push({ 
+                lat: balloon.lat, 
+                lng: balloon.lng,
+                altitude: balloon.altitude,
+                timestamp: Date.now()
+            });
+            
+            // Ограничиваем длину пути (последние 200 точек)
+            if (balloon.path.length > 200) {
+                balloon.path = balloon.path.slice(-200);
+            }
+            
+            balloon.lastUpdate = Date.now();
+            
+            // Оповещаем всех об обновлении
+            io.emit('fiesta-balloon-updated', balloon);
+            
+            // Проверяем финиш
+            const distanceToFinish = getDistanceFromLatLonInKm(
+                balloon.lat, balloon.lng,
+                raceConfig.finishCoords.lat, raceConfig.finishCoords.lng
+            );
+            
+            if (distanceToFinish < 50 && !balloon.finished) {
+                balloon.finished = true;
+                balloon.finishTime = Date.now();
+                
+                io.emit('fiesta-message', {
+                    type: 'finish',
+                    message: `🎉 ПОБЕДА! ${balloon.username} достиг финиша в Париже! 🎉`,
+                    balloon: balloon,
+                    finishTime: balloon.finishTime
+                });
+                
+                console.log(`🏆 Balloon ${balloon.raceNumber} (${balloon.username}) finished the race!`);
+                
+                // Останавливаем симуляцию для финишировавшего шара
+                clearInterval(interval);
+                simulationIntervals.delete(balloonId);
+            }
+            
+        } catch (error) {
+            console.error(`Error in simulation for balloon ${balloonId}:`, error);
+            // При ошибке продолжаем симуляцию с предыдущими значениями
+        }
+        
+    }, SIMULATION_INTERVAL);
+    
+    simulationIntervals.set(balloonId, interval);
 }
 
 // Загружаем конфигурацию при старте
@@ -132,7 +266,15 @@ io.on('connection', (socket) => {
     let currentBalloonId = null;
     
     // Отправляем текущую конфигурацию гонки новому клиенту
-    socket.emit('fiesta-race-config', raceConfig);
+    socket.emit('fiesta-race-config', {
+        finishCoords: raceConfig.finishCoords,
+        registrationWindowFrom: raceConfig.registrationWindowFrom,
+        registrationWindowTo: raceConfig.registrationWindowTo,
+        raceStartDateTime: raceConfig.raceStartDateTime,
+        maxParticipants: raceConfig.maxParticipants,
+        raceStarted: raceConfig.raceStarted,
+        raceFinished: raceConfig.raceFinished
+    });
     
     // Отправляем каталог шаров
     socket.emit('fiesta-balloon-catalog', balloonCatalog);
@@ -152,14 +294,24 @@ io.on('connection', (socket) => {
         socket.emit('fiesta-all-balloons', Object.values(balloons));
     });
     
-    // Старт полета
-    socket.on('fiesta-start-flight', (data) => {
+    // Старт полета (регистрация участника)
+    socket.on('fiesta-start-flight', async (data) => {
         if (!currentUser) {
             socket.emit('fiesta-error', 'Authentication required');
             return;
         }
         
-        const { lat, lng, styleId } = data;
+        // Проверка: открыта ли регистрация
+        if (!isRegistrationOpen()) {
+            socket.emit('fiesta-error', 'Registration window is closed. Cannot join the race.');
+            return;
+        }
+        
+        // Проверка: не началась ли уже гонка
+        if (raceConfig.raceStarted) {
+            socket.emit('fiesta-error', 'Race has already started. Cannot join.');
+            return;
+        }
         
         // Проверка количества участников
         const currentParticipants = Object.keys(balloons).length;
@@ -168,18 +320,7 @@ io.on('connection', (socket) => {
             return;
         }
         
-        // Проверка координат старта
-        if (!isInStartZone(lat, lng)) {
-            socket.emit('fiesta-error', 'Start location not in allowed start zone');
-            return;
-        }
-        
-        // Проверка даты старта
-        const now = new Date();
-        if (now < raceConfig.startWindowFrom || now > raceConfig.startWindowTo) {
-            socket.emit('fiesta-error', 'Race start window is closed');
-            return;
-        }
+        const { lat, lng, styleId } = data;
         
         // Создаем новый шар
         const balloonId = Date.now().toString() + socket.id;
@@ -195,13 +336,15 @@ io.on('connection', (socket) => {
             email: currentUser.email,
             lat: lat,
             lng: lng,
-            altitude: 1000,
-            speed: 15 + Math.random() * 10,
-            layerName: 'Surface Layer (0-2km)',
+            altitude: 1000, // Начальная высота 1000 метров
+            speed: 0, // Начинаем с нулевой скорости до старта гонки
+            layerName: 'Ожидание старта',
             balloonStyle: style,
-            path: [{ lat, lng }],
+            path: [{ lat, lng, altitude: 1000, timestamp: Date.now() }],
             socketId: socket.id,
-            lastUpdate: Date.now()
+            lastUpdate: Date.now(),
+            registeredAt: Date.now(),
+            finished: false
         };
         
         balloons[balloonId] = newBalloon;
@@ -213,115 +356,98 @@ io.on('connection', (socket) => {
         // Оповещаем всех о новом шаре
         io.emit('fiesta-balloon-created', newBalloon);
         
-        console.log(`🎈 Balloon created: #${raceNumber} (${currentUser.username}) at ${lat}, ${lng}`);
+        console.log(`🎈 Balloon registered: #${raceNumber} (${currentUser.username}) at ${lat}, ${lng}`);
         console.log(`   Total participants: ${Object.keys(balloons).length}/${MAX_PARTICIPANTS}`);
+        console.log(`   Race starts at: ${raceConfig.raceStartDateTime.toLocaleString()}`);
         
-        // Запускаем симуляцию движения
-        startBalloonSimulation(balloonId);
+        // Запускаем симуляцию движения (она будет ждать старта гонки)
+        await startBalloonSimulation(balloonId);
     });
     
     // Изменение высоты
     socket.on('fiesta-change-altitude', (data) => {
         if (currentBalloonId && balloons[currentBalloonId]) {
             const balloon = balloons[currentBalloonId];
-            balloon.altitude = data.altitude;
+            const newAltitude = Math.min(Math.max(data.altitude, 0), 15000); // Ограничиваем 0-15000 метров
+            balloon.altitude = newAltitude;
             
-            // Меняем скорость и слой в зависимости от высоты
-            if (balloon.altitude < 2000) {
-                balloon.speed = 10 + Math.random() * 10;
-                balloon.layerName = 'Surface Layer (0-2km)';
-            } else if (balloon.altitude < 5000) {
-                balloon.speed = 25 + Math.random() * 15;
-                balloon.layerName = 'Lower Winds (2-5km)';
-            } else if (balloon.altitude < 8000) {
-                balloon.speed = 40 + Math.random() * 20;
-                balloon.layerName = 'Mid Winds (5-8km)';
-            } else {
-                balloon.speed = 60 + Math.random() * 30;
-                balloon.layerName = 'Jet Stream (8km+)';
-            }
+            // Получаем информацию о новом слое для отображения
+            const levelInfo = windService.getPressureLevelInfo(newAltitude);
+            balloon.layerName = levelInfo.name;
             
             io.emit('fiesta-balloon-updated', balloon);
+            console.log(`📈 Balloon ${balloon.raceNumber} changed altitude to ${newAltitude}m (${levelInfo.name})`);
         }
     });
-    
-    // Функция симуляции движения
-    function startBalloonSimulation(balloonId) {
-        const interval = setInterval(() => {
-            const balloon = balloons[balloonId];
-            if (!balloon) {
-                clearInterval(interval);
-                return;
-            }
-            
-            // Движение на основе скорости
-            const latChange = (balloon.speed / 111000) * (Math.random() - 0.5) * 0.3;
-            const lngChange = (balloon.speed / (111000 * Math.cos(balloon.lat * Math.PI / 180))) * (Math.random() - 0.5) * 0.3;
-            
-            balloon.lat += latChange;
-            balloon.lng += lngChange;
-            balloon.path.push({ lat: balloon.lat, lng: balloon.lng });
-            
-            // Ограничиваем длину пути
-            if (balloon.path.length > 100) {
-                balloon.path = balloon.path.slice(-100);
-            }
-            
-            balloon.lastUpdate = Date.now();
-            
-            // Оповещаем всех об обновлении
-            io.emit('fiesta-balloon-updated', balloon);
-            
-            // Проверка финиша
-            const distanceToFinish = getDistanceFromLatLonInKm(
-                balloon.lat, balloon.lng,
-                raceConfig.finishCoords.lat, raceConfig.finishCoords.lng
-            );
-            
-            if (distanceToFinish < 50) {
-                io.emit('fiesta-message', {
-                    type: 'finish',
-                    message: `🎉 Congratulations! ${balloon.username} reached the finish line! 🎉`,
-                    balloon: balloon
-                });
-                clearInterval(interval);
-            }
-        }, 5000);
-    }
     
     // Админ: изменение правил гонки
     socket.on('fiesta-admin-change-rules', (rules) => {
         // Проверка прав администратора
         if (currentUser && currentUser.email === 'aerostar@aerost.art') {
             // Обновляем финиш
-            raceConfig.finishCoords = { 
-                lat: parseFloat(rules.finishCoords.lat), 
-                lng: parseFloat(rules.finishCoords.lng)
-            };
-            
-            // Обновляем зону старта
-            raceConfig.zoneType = rules.zoneType;
-            if (rules.zoneType === 'circle') {
-                raceConfig.startZone = rules.startZone;
-                raceConfig.allowedStartRegion = null;
-            } else {
-                raceConfig.allowedStartRegion = rules.startZone;
-                raceConfig.startZone = null;
+            if (rules.finishCoords) {
+                raceConfig.finishCoords = { 
+                    lat: parseFloat(rules.finishCoords.lat), 
+                    lng: parseFloat(rules.finishCoords.lng)
+                };
             }
             
-            // Обновляем окно старта
-            raceConfig.startWindowFrom = new Date(rules.startWindowFrom);
-            raceConfig.startWindowTo = new Date(rules.startWindowTo);
+            // Обновляем окно регистрации
+            if (rules.registrationWindowFrom) {
+                raceConfig.registrationWindowFrom = new Date(rules.registrationWindowFrom);
+            }
+            if (rules.registrationWindowTo) {
+                raceConfig.registrationWindowTo = new Date(rules.registrationWindowTo);
+            }
+            
+            // Обновляем время старта гонки
+            if (rules.raceStartDateTime) {
+                raceConfig.raceStartDateTime = new Date(rules.raceStartDateTime);
+                raceConfig.raceStarted = false; // Сбрасываем флаг старта при изменении времени
+            }
             
             // Сохраняем в файл
             saveConfigToFile();
             
             // Оповещаем всех об изменении правил
-            io.emit('fiesta-race-config', raceConfig);
+            io.emit('fiesta-race-config', {
+                finishCoords: raceConfig.finishCoords,
+                registrationWindowFrom: raceConfig.registrationWindowFrom,
+                registrationWindowTo: raceConfig.registrationWindowTo,
+                raceStartDateTime: raceConfig.raceStartDateTime,
+                maxParticipants: raceConfig.maxParticipants,
+                raceStarted: raceConfig.raceStarted,
+                raceFinished: raceConfig.raceFinished
+            });
+            
             console.log('🔧 Race config updated by admin');
             console.log(`   New finish: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
+            console.log(`   New race start time: ${raceConfig.raceStartDateTime.toLocaleString()}`);
             
             socket.emit('fiesta-config-saved', { success: true });
+        } else {
+            socket.emit('fiesta-error', 'Admin privileges required');
+        }
+    });
+    
+    // Принудительный старт гонки (админ)
+    socket.on('fiesta-force-race-start', () => {
+        if (currentUser && currentUser.email === 'aerostar@aerost.art') {
+            if (!raceConfig.raceStarted) {
+                raceConfig.raceStarted = true;
+                saveConfigToFile();
+                
+                io.emit('fiesta-race-started', { 
+                    message: "🏁 АДМИНИСТРАТОР ЗАПУСТИЛ ГОНКУ! Всем удачи! 🏁",
+                    timestamp: new Date(),
+                    forced: true
+                });
+                
+                console.log("🏁 Race force-started by admin");
+                socket.emit('fiesta-config-saved', { success: true });
+            } else {
+                socket.emit('fiesta-error', 'Race has already started');
+            }
         } else {
             socket.emit('fiesta-error', 'Admin privileges required');
         }
@@ -331,30 +457,26 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('🔌 Client disconnected:', socket.id);
         if (currentBalloonId && balloons[currentBalloonId]) {
-            const balloon = balloons[currentBalloonId];
-            console.log(`🗑️ Balloon removed: #${balloon.raceNumber} (${balloon.username})`);
-            delete balloons[currentBalloonId];
-            io.emit('fiesta-balloon-removed', currentBalloonId);
-            io.emit('fiesta-all-balloons', Object.values(balloons));
+            // Не удаляем шар, если гонка уже началась
+            if (!raceConfig.raceStarted) {
+                const balloon = balloons[currentBalloonId];
+                console.log(`🗑️ Balloon removed: #${balloon.raceNumber} (${balloon.username}) - registration cancelled`);
+                delete balloons[currentBalloonId];
+                
+                // Останавливаем симуляцию
+                if (simulationIntervals.has(currentBalloonId)) {
+                    clearInterval(simulationIntervals.get(currentBalloonId));
+                    simulationIntervals.delete(currentBalloonId);
+                }
+                
+                io.emit('fiesta-balloon-removed', currentBalloonId);
+                io.emit('fiesta-all-balloons', Object.values(balloons));
+            } else {
+                console.log(`⚠️ Balloon ${currentBalloonId} remains in race (race already started)`);
+            }
         }
     });
 });
-
-// Функция расчета расстояния между координатами
-function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-}
-
-function deg2rad(deg) {
-    return deg * (Math.PI/180);
-}
 
 // Запуск сервера
 server.listen(PORT, '0.0.0.0', () => {
@@ -365,11 +487,9 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`🎈 Gondola page: http://localhost:${PORT}/gondola.html`);
     console.log(`💾 Config file: ${CONFIG_FILE}`);
     console.log(`👥 Max participants: ${MAX_PARTICIPANTS}`);
-    if (raceConfig.zoneType === 'circle') {
-        console.log(`📍 Start zone: Circle radius ${raceConfig.startZone?.radius} km around (${raceConfig.startZone?.centerLat}, ${raceConfig.startZone?.centerLng})`);
-    } else {
-        console.log(`📍 Start zone: Rectangle ${raceConfig.allowedStartRegion?.minLat}°-${raceConfig.allowedStartRegion?.maxLat}°, ${raceConfig.allowedStartRegion?.minLng}°-${raceConfig.allowedStartRegion?.maxLng}°`);
-    }
-    console.log(`🏁 Finish: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
-    console.log(`📅 Race period: ${raceConfig.startWindowFrom.toLocaleDateString()} - ${raceConfig.startWindowTo.toLocaleDateString()}`);
+    console.log(`📅 Registration period: ${raceConfig.registrationWindowFrom.toLocaleString()} - ${raceConfig.registrationWindowTo.toLocaleString()}`);
+    console.log(`🏁 Race start time: ${raceConfig.raceStartDateTime.toLocaleString()}`);
+    console.log(`🎯 Finish location: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
+    console.log(`🌬️ Wind service: ACTIVE (real-time weather data)`);
+    console.log(`⏱️ Simulation interval: ${SIMULATION_INTERVAL/1000} seconds`);
 });
