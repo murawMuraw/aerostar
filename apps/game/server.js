@@ -8,6 +8,7 @@
  * - Окно старта заменено на окно регистрации участников
  * - Добавлена точная дата и время старта гонки
  * - Интегрирован реальный сервис ветров
+ * - Добавлена прямоугольная зона старта (allowedStartRegion)
  */
 
 const express = require('express');
@@ -53,6 +54,12 @@ const SIMULATION_INTERVAL = 5000; // 5 секунд
 // Данные игры
 let raceConfig = {
     finishCoords: { lat: 48.8566, lng: 2.3522 }, // Париж по умолчанию
+    allowedStartRegion: {  // Прямоугольная зона старта
+        minLat: 25,
+        maxLat: 50,
+        minLng: -120,
+        maxLng: -70
+    },
     registrationWindowFrom: new Date('2024-06-01'), // Начало регистрации
     registrationWindowTo: new Date('2024-12-31'),   // Конец регистрации
     raceStartDateTime: new Date('2024-12-31T12:00:00'), // Точная дата и время старта гонки
@@ -73,6 +80,7 @@ function loadConfig() {
             raceConfig = {
                 ...raceConfig,
                 ...saved,
+                allowedStartRegion: saved.allowedStartRegion || raceConfig.allowedStartRegion,
                 registrationWindowFrom: saved.registrationWindowFrom ? new Date(saved.registrationWindowFrom) : raceConfig.registrationWindowFrom,
                 registrationWindowTo: saved.registrationWindowTo ? new Date(saved.registrationWindowTo) : raceConfig.registrationWindowTo,
                 raceStartDateTime: saved.raceStartDateTime ? new Date(saved.raceStartDateTime) : raceConfig.raceStartDateTime
@@ -81,6 +89,9 @@ function loadConfig() {
             console.log(`   Registration window: ${raceConfig.registrationWindowFrom.toLocaleString()} - ${raceConfig.registrationWindowTo.toLocaleString()}`);
             console.log(`   Race start time: ${raceConfig.raceStartDateTime.toLocaleString()}`);
             console.log(`   Finish location: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
+            if (raceConfig.allowedStartRegion) {
+                console.log(`   Start region: ${raceConfig.allowedStartRegion.minLat}°-${raceConfig.allowedStartRegion.maxLat}°, ${raceConfig.allowedStartRegion.minLng}°-${raceConfig.allowedStartRegion.maxLng}°`);
+            }
         } catch(e) {
             console.error('Error loading config:', e);
         }
@@ -93,13 +104,25 @@ function loadConfig() {
 // Сохранение конфигурации в файл
 function saveConfigToFile() {
     const configToSave = {
-        ...raceConfig,
+        finishCoords: raceConfig.finishCoords,
+        allowedStartRegion: raceConfig.allowedStartRegion,
         registrationWindowFrom: raceConfig.registrationWindowFrom.toISOString(),
         registrationWindowTo: raceConfig.registrationWindowTo.toISOString(),
-        raceStartDateTime: raceConfig.raceStartDateTime.toISOString()
+        raceStartDateTime: raceConfig.raceStartDateTime.toISOString(),
+        maxParticipants: raceConfig.maxParticipants,
+        raceStarted: raceConfig.raceStarted,
+        raceFinished: raceConfig.raceFinished
     };
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(configToSave, null, 2));
     console.log('💾 Race config saved to file');
+}
+
+// Проверка, находится ли точка в зоне старта
+function isInStartZone(lat, lng) {
+    if (!raceConfig.allowedStartRegion) return true;
+    const zone = raceConfig.allowedStartRegion;
+    return lat >= zone.minLat && lat <= zone.maxLat && 
+           lng >= zone.minLng && lng <= zone.maxLng;
 }
 
 // Проверка, открыта ли регистрация
@@ -229,7 +252,7 @@ async function startBalloonSimulation(balloonId) {
                 
                 io.emit('fiesta-message', {
                     type: 'finish',
-                    message: `🎉 ПОБЕДА! ${balloon.username} достиг финиша в Париже! 🎉`,
+                    message: `🎉 ПОБЕДА! ${balloon.username} достиг финиша! 🎉`,
                     balloon: balloon,
                     finishTime: balloon.finishTime
                 });
@@ -268,6 +291,7 @@ io.on('connection', (socket) => {
     // Отправляем текущую конфигурацию гонки новому клиенту
     socket.emit('fiesta-race-config', {
         finishCoords: raceConfig.finishCoords,
+        allowedStartRegion: raceConfig.allowedStartRegion,
         registrationWindowFrom: raceConfig.registrationWindowFrom,
         registrationWindowTo: raceConfig.registrationWindowTo,
         raceStartDateTime: raceConfig.raceStartDateTime,
@@ -321,6 +345,12 @@ io.on('connection', (socket) => {
         }
         
         const { lat, lng, styleId } = data;
+        
+        // Проверка координат старта
+        if (!isInStartZone(lat, lng)) {
+            socket.emit('fiesta-error', 'Start location not in allowed start region');
+            return;
+        }
         
         // Создаем новый шар
         const balloonId = Date.now().toString() + socket.id;
@@ -392,6 +422,17 @@ io.on('connection', (socket) => {
                 };
             }
             
+            // Обновляем зону старта (прямоугольник)
+            if (rules.allowedStartRegion) {
+                raceConfig.allowedStartRegion = {
+                    minLat: parseFloat(rules.allowedStartRegion.minLat),
+                    maxLat: parseFloat(rules.allowedStartRegion.maxLat),
+                    minLng: parseFloat(rules.allowedStartRegion.minLng),
+                    maxLng: parseFloat(rules.allowedStartRegion.maxLng)
+                };
+                console.log(`   Updated start region: ${raceConfig.allowedStartRegion.minLat}°-${raceConfig.allowedStartRegion.maxLat}°, ${raceConfig.allowedStartRegion.minLng}°-${raceConfig.allowedStartRegion.maxLng}°`);
+            }
+            
             // Обновляем окно регистрации
             if (rules.registrationWindowFrom) {
                 raceConfig.registrationWindowFrom = new Date(rules.registrationWindowFrom);
@@ -412,6 +453,7 @@ io.on('connection', (socket) => {
             // Оповещаем всех об изменении правил
             io.emit('fiesta-race-config', {
                 finishCoords: raceConfig.finishCoords,
+                allowedStartRegion: raceConfig.allowedStartRegion,
                 registrationWindowFrom: raceConfig.registrationWindowFrom,
                 registrationWindowTo: raceConfig.registrationWindowTo,
                 raceStartDateTime: raceConfig.raceStartDateTime,
@@ -490,6 +532,9 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`📅 Registration period: ${raceConfig.registrationWindowFrom.toLocaleString()} - ${raceConfig.registrationWindowTo.toLocaleString()}`);
     console.log(`🏁 Race start time: ${raceConfig.raceStartDateTime.toLocaleString()}`);
     console.log(`🎯 Finish location: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
+    if (raceConfig.allowedStartRegion) {
+        console.log(`🗺️ Start region: ${raceConfig.allowedStartRegion.minLat}°-${raceConfig.allowedStartRegion.maxLat}°, ${raceConfig.allowedStartRegion.minLng}°-${raceConfig.allowedStartRegion.maxLng}°`);
+    }
     console.log(`🌬️ Wind service: ACTIVE (real-time weather data)`);
     console.log(`⏱️ Simulation interval: ${SIMULATION_INTERVAL/1000} seconds`);
 });
