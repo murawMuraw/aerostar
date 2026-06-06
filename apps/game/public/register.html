@@ -333,13 +333,6 @@
             }
         }
         
-        .region-boundary {
-            stroke: #f87171;
-            stroke-width: 2;
-            stroke-dasharray: 5;
-            fill: rgba(248, 113, 113, 0.1);
-        }
-        
         .finish-marker {
             font-size: 28px;
         }
@@ -619,7 +612,7 @@
         function updateFinishMarker(config) {
             if (config && config.finishCoords && map && mapInitialized) {
                 const coords = config.finishCoords;
-                if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number') {
+                if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number' && !isNaN(coords.lat) && !isNaN(coords.lng)) {
                     if (finishMarker) {
                         finishMarker.setLatLng([coords.lat, coords.lng]);
                     } else {
@@ -630,32 +623,54 @@
                         });
                         finishMarker = L.marker([coords.lat, coords.lng], { icon: finishIcon })
                             .addTo(map)
-                            .bindPopup('<b>🏁 FINISH LINE - Paris</b><br>First to reach within 50km wins!');
+                            .bindPopup('<b>🏁 FINISH LINE</b><br>First to reach within 50km wins!');
                     }
                 }
             }
         }
         
         function updateStartRegion(config) {
+            console.log('Updating start region with config:', config);
+            
             if (config && config.allowedStartRegion && map && mapInitialized) {
                 const region = config.allowedStartRegion;
-                const bounds = [
-                    [region.minLat, region.minLng],
-                    [region.maxLat, region.maxLng]
-                ];
                 
-                if (regionRectangle) {
-                    regionRectangle.setBounds(bounds);
+                // Проверяем, что все координаты валидны
+                if (typeof region.minLat === 'number' && typeof region.maxLat === 'number' &&
+                    typeof region.minLng === 'number' && typeof region.maxLng === 'number' &&
+                    !isNaN(region.minLat) && !isNaN(region.maxLat) && 
+                    !isNaN(region.minLng) && !isNaN(region.maxLng)) {
+                    
+                    const bounds = [
+                        [region.minLat, region.minLng],
+                        [region.maxLat, region.maxLng]
+                    ];
+                    
+                    console.log('Drawing rectangle with bounds:', bounds);
+                    
+                    if (regionRectangle) {
+                        regionRectangle.setBounds(bounds);
+                        console.log('Updated existing rectangle');
+                    } else {
+                        regionRectangle = L.rectangle(bounds, {
+                            color: '#f87171',
+                            weight: 2,
+                            dashArray: '5, 5',
+                            fillColor: '#f87171',
+                            fillOpacity: 0.1
+                        }).addTo(map);
+                        regionRectangle.bindPopup('<b>📍 Allowed Start Region</b><br>Must start within this rectangle');
+                        console.log('Created new rectangle');
+                    }
                 } else {
-                    regionRectangle = L.rectangle(bounds, {
-                        color: '#f87171',
-                        weight: 2,
-                        dashArray: '5, 5',
-                        fillColor: '#f87171',
-                        fillOpacity: 0.1
-                    }).addTo(map);
-                    regionRectangle.bindPopup('<b>🏁 Allowed Start Region</b><br>Must start within this rectangle');
+                    console.warn('Invalid region coordinates:', region);
                 }
+            } else {
+                console.warn('Cannot draw rectangle - missing config or map:', { 
+                    hasConfig: !!config, 
+                    hasAllowedStartRegion: !!(config && config.allowedStartRegion),
+                    mapInitialized: mapInitialized 
+                });
             }
         }
         
@@ -743,6 +758,7 @@
             });
             
             socket.on('fiesta-race-config', (config) => {
+                console.log('Received race config:', config);
                 currentConfig = config;
                 updateRaceRules(config);
                 updateFinishMarker(config);
@@ -807,7 +823,7 @@
             const announcement = document.createElement('div');
             announcement.className = 'announcement-banner';
             announcement.innerHTML = `
-                <div class="announcement-text">📢 <strong>${data.admin || 'Administrator'}</strong>: ${escapeHtml(data.message)}</div>
+                <div class="announcement-text">📢 <strong>${escapeHtml(data.admin || 'Administrator')}</strong>: ${escapeHtml(data.message)}</div>
                 <div class="announcement-time">${new Date(data.timestamp).toLocaleTimeString()}</div>
             `;
             container.prepend(announcement);
@@ -831,7 +847,7 @@
         function updateRaceRules(config) {
             if (config && config.finishCoords) {
                 document.getElementById('rule-finish').innerHTML = 
-                    `${config.finishCoords.lat?.toFixed(2) || '?'}°, ${config.finishCoords.lng?.toFixed(2) || '?'}° (Paris)`;
+                    `${config.finishCoords.lat?.toFixed(2) || '?'}°, ${config.finishCoords.lng?.toFixed(2) || '?'}°`;
             }
             if (config && config.registrationWindowFrom && config.registrationWindowTo) {
                 const fromDate = new Date(config.registrationWindowFrom);
@@ -884,9 +900,6 @@
                 container.innerHTML = '<div class="empty-participants">No pilots registered yet...</div>';
                 return;
             }
-            
-            let statusClass = 'status-registered';
-            let statusText = 'REGISTERED';
             
             const html = `
                 <table class="participants-table">
