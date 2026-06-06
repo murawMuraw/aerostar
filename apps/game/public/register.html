@@ -6,7 +6,7 @@
     <title>Aerostar — Fiesta Race Registration</title>
     
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="lib/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
         * {
@@ -234,9 +234,19 @@
             font-weight: bold;
         }
         
+        .status-registered {
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+        }
+        
         .status-flying {
             background: rgba(34, 197, 94, 0.2);
             color: #22c55e;
+        }
+        
+        .status-finished {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
         }
         
         .empty-participants {
@@ -293,6 +303,23 @@
             margin-top: 6px;
         }
         
+        .info-text {
+            color: #38bdf8;
+            font-size: 11px;
+            margin-top: 6px;
+        }
+        
+        .countdown-timer {
+            background: rgba(0,0,0,0.5);
+            padding: 8px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #fbbf24;
+        }
+        
         @media (max-width: 900px) {
             .content {
                 grid-template-columns: 1fr;
@@ -320,6 +347,38 @@
         .start-marker {
             font-size: 24px;
         }
+        
+        .announcement-banner {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(139, 92, 246, 0.2));
+            border-left: 4px solid #38bdf8;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .announcement-text {
+            color: #e2e8f0;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        .announcement-time {
+            font-size: 10px;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -332,6 +391,9 @@
                 <span id="status-text">Connecting to server...</span>
             </div>
         </div>
+        
+        <!-- Announcements -->
+        <div id="announcements-container"></div>
         
         <!-- Map -->
         <div id="map-container">
@@ -348,13 +410,25 @@
                         <span class="rule-value" id="rule-finish">Loading...</span>
                     </div>
                     <div class="rule-item">
-                        <span class="rule-label">📅 Race Period:</span>
-                        <span class="rule-value" id="rule-period">Loading...</span>
+                        <span class="rule-label">📝 Registration Window:</span>
+                        <span class="rule-value" id="rule-reg-period">Loading...</span>
+                    </div>
+                    <div class="rule-item">
+                        <span class="rule-label">🚀 Race Start Time:</span>
+                        <span class="rule-value" id="rule-start-time">Loading...</span>
                     </div>
                     <div class="rule-item">
                         <span class="rule-label">🌎 Start Region:</span>
                         <span class="rule-value" id="rule-region">Loading...</span>
                     </div>
+                    <div class="rule-item">
+                        <span class="rule-label">👥 Max Participants:</span>
+                        <span class="rule-value" id="rule-max-participants">7</span>
+                    </div>
+                </div>
+                
+                <div id="countdown-display" class="countdown-timer" style="display: none;">
+                    ⏰ Race starts in: <span id="countdown">--:--:--</span>
                 </div>
                 
                 <h3>🎨 Select Your Balloon</h3>
@@ -375,6 +449,12 @@
                 <div id="region-success" class="success-text" style="display: none;">
                     ✅ Start location is within allowed region!
                 </div>
+                <div id="registration-closed" class="warning-text" style="display: none;">
+                    ⚠️ Registration window is closed!
+                </div>
+                <div id="race-started-warning" class="warning-text" style="display: none;">
+                    🚫 Race has already started! Cannot register.
+                </div>
             </div>
             
             <!-- Right Column: Registration Form -->
@@ -382,8 +462,8 @@
                 <h2>📝 Pilot Registration</h2>
                 
                 <div class="form-group">
-                    <label>Pilot Callsign</label>
-                    <input type="text" id="player-name" placeholder="Enter your nickname..." />
+                    <label>Pilot Callsign *</label>
+                    <input type="text" id="player-name" placeholder="Enter your nickname..." maxlength="20" />
                 </div>
                 
                 <div class="form-group">
@@ -398,6 +478,11 @@
                 <button id="btn-register" disabled>🎮 REGISTER FOR RACE</button>
                 
                 <div id="register-message" style="margin-top: 12px; font-size: 12px; text-align: center;"></div>
+                
+                <div class="info-text" style="margin-top: 15px; text-align: center;">
+                    💡 After registration, wait for race start time.<br>
+                    All balloons start moving automatically at the scheduled time!
+                </div>
             </div>
         </div>
         
@@ -410,7 +495,7 @@
         </div>
     </div>
     
-    <script src="lib/leaflet/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     
     <script>
@@ -422,6 +507,7 @@
         let selectedStyleId = 'classic';
         let currentConfig = null;
         let mapInitialized = false;
+        let countdownInterval = null;
         
         // Initialize map
         function initMap() {
@@ -457,6 +543,33 @@
             document.getElementById('start-coords-info').innerHTML = 
                 `📍 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
             
+            // Check if registration is open
+            if (!isRegistrationOpen()) {
+                document.getElementById('registration-closed').style.display = 'block';
+                document.getElementById('region-warning').style.display = 'none';
+                document.getElementById('region-success').style.display = 'none';
+                selectedStartCoords = null;
+                if (startMarker) map.removeLayer(startMarker);
+                startMarker = null;
+                checkRegistrationValidation();
+                return;
+            }
+            
+            // Check if race has started
+            if (currentConfig && currentConfig.raceStarted) {
+                document.getElementById('race-started-warning').style.display = 'block';
+                document.getElementById('registration-closed').style.display = 'none';
+                document.getElementById('region-warning').style.display = 'none';
+                document.getElementById('region-success').style.display = 'none';
+                selectedStartCoords = null;
+                if (startMarker) map.removeLayer(startMarker);
+                startMarker = null;
+                checkRegistrationValidation();
+                return;
+            }
+            
+            document.getElementById('race-started-warning').style.display = 'none';
+            
             // Check if in allowed region
             if (currentConfig && currentConfig.allowedStartRegion) {
                 const region = currentConfig.allowedStartRegion;
@@ -473,6 +586,7 @@
                     
                     document.getElementById('region-warning').style.display = 'none';
                     document.getElementById('region-success').style.display = 'block';
+                    document.getElementById('registration-closed').style.display = 'none';
                     checkRegistrationValidation();
                     
                 } else {
@@ -483,9 +597,23 @@
                     
                     document.getElementById('region-warning').style.display = 'block';
                     document.getElementById('region-success').style.display = 'none';
+                    document.getElementById('registration-closed').style.display = 'none';
                     checkRegistrationValidation();
                 }
             }
+        }
+        
+        function isRegistrationOpen() {
+            if (!currentConfig) return false;
+            const now = new Date();
+            const regFrom = new Date(currentConfig.registrationWindowFrom);
+            const regTo = new Date(currentConfig.registrationWindowTo);
+            return now >= regFrom && now <= regTo;
+        }
+        
+        function isRaceStarted() {
+            if (!currentConfig) return false;
+            return currentConfig.raceStarted === true;
         }
         
         function updateFinishMarker(config) {
@@ -502,7 +630,7 @@
                         });
                         finishMarker = L.marker([coords.lat, coords.lng], { icon: finishIcon })
                             .addTo(map)
-                            .bindPopup('<b>🏁 FINISH LINE</b>');
+                            .bindPopup('<b>🏁 FINISH LINE - Paris</b><br>First to reach within 50km wins!');
                     }
                 }
             }
@@ -526,43 +654,86 @@
                         fillColor: '#f87171',
                         fillOpacity: 0.1
                     }).addTo(map);
-                    regionRectangle.bindPopup('<b>🏁 Allowed Start Region</b><br>Americas');
+                    regionRectangle.bindPopup('<b>🏁 Allowed Start Region</b><br>Must start within this rectangle');
                 }
             }
+        }
+        
+        function startCountdown(raceStartTime) {
+            if (countdownInterval) clearInterval(countdownInterval);
+            
+            const countdownDisplay = document.getElementById('countdown-display');
+            const countdownSpan = document.getElementById('countdown');
+            
+            function updateCountdown() {
+                const now = new Date();
+                const startTime = new Date(raceStartTime);
+                const diff = startTime - now;
+                
+                if (diff <= 0) {
+                    countdownDisplay.style.display = 'none';
+                    if (countdownInterval) clearInterval(countdownInterval);
+                    return;
+                }
+                
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                
+                countdownSpan.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                countdownDisplay.style.display = 'block';
+            }
+            
+            updateCountdown();
+            countdownInterval = setInterval(updateCountdown, 1000);
         }
         
         function checkRegistrationValidation() {
             const btn = document.getElementById('btn-register');
             const name = document.getElementById('player-name').value.trim();
-            const isValid = name && selectedStartCoords && selectedStyleId && currentConfig;
+            const isRegOpen = isRegistrationOpen();
+            const raceStarted = isRaceStarted();
+            
+            let isValid = name && selectedStartCoords && selectedStyleId && currentConfig && isRegOpen && !raceStarted;
             
             if (isValid && selectedStartCoords && currentConfig && currentConfig.allowedStartRegion) {
                 const region = currentConfig.allowedStartRegion;
                 const inRegion = selectedStartCoords.lat >= region.minLat && selectedStartCoords.lat <= region.maxLat &&
                                  selectedStartCoords.lng >= region.minLng && selectedStartCoords.lng <= region.maxLng;
                 
-                if (inRegion) {
-                    btn.disabled = false;
-                    document.getElementById('register-message').innerHTML = '';
-                    return;
-                }
+                if (!inRegion) isValid = false;
             }
-            btn.disabled = true;
+            
+            btn.disabled = !isValid;
+            
+            // Update warning messages
+            if (!isRegOpen && currentConfig) {
+                document.getElementById('registration-closed').style.display = 'block';
+            } else {
+                document.getElementById('registration-closed').style.display = 'none';
+            }
+            
+            if (raceStarted && currentConfig) {
+                document.getElementById('race-started-warning').style.display = 'block';
+            } else {
+                document.getElementById('race-started-warning').style.display = 'none';
+            }
         }
         
         function connectSocket() {
             socket = io({
-                transports: ['polling'],
-                upgrade: false,
+                transports: ['polling', 'websocket'],
+                upgrade: true,
                 reconnection: true
             });
             
             socket.on('connect', () => {
                 document.getElementById('status-text').textContent = 'Connected to race server';
-                document.getElementById('status-text').style.color = '#22c55e';
+                const indicator = document.querySelector('.connected-indicator');
+                if (indicator) indicator.style.background = '#22c55e';
                 socket.emit('fiesta-auth', {
-                    email: 'viewer@race.com',
-                    username: 'Race Viewer'
+                    email: document.getElementById('player-email').value || 'viewer@race.com',
+                    username: document.getElementById('player-name').value || 'Race Viewer'
                 });
             });
             
@@ -576,6 +747,12 @@
                 updateRaceRules(config);
                 updateFinishMarker(config);
                 updateStartRegion(config);
+                
+                if (config.raceStartDateTime) {
+                    startCountdown(config.raceStartDateTime);
+                }
+                
+                checkRegistrationValidation();
             });
             
             socket.on('fiesta-balloon-catalog', (catalog) => {
@@ -590,7 +767,7 @@
                 socket.emit('fiesta-get-participants');
                 if (balloon.username === document.getElementById('player-name').value) {
                     document.getElementById('register-message').innerHTML = 
-                        '✅ Registration successful! You can now start flying.';
+                        '✅ Registration successful! Waiting for race start...';
                     document.getElementById('register-message').style.color = '#22c55e';
                     document.getElementById('btn-register').disabled = true;
                     
@@ -605,6 +782,17 @@
                 }
             });
             
+            socket.on('fiesta-race-started', (data) => {
+                const messageDiv = document.getElementById('register-message');
+                messageDiv.innerHTML = `🏁 ${data.message || 'Race has started! Good luck!'}`;
+                messageDiv.style.color = '#fbbf24';
+                checkRegistrationValidation();
+            });
+            
+            socket.on('fiesta-admin-message', (data) => {
+                displayAnnouncement(data);
+            });
+            
             socket.on('fiesta-error', (msg) => {
                 document.getElementById('register-message').innerHTML = `❌ Error: ${msg}`;
                 document.getElementById('register-message').style.color = '#ef4444';
@@ -614,20 +802,53 @@
             });
         }
         
+        function displayAnnouncement(data) {
+            const container = document.getElementById('announcements-container');
+            const announcement = document.createElement('div');
+            announcement.className = 'announcement-banner';
+            announcement.innerHTML = `
+                <div class="announcement-text">📢 <strong>${data.admin || 'Administrator'}</strong>: ${escapeHtml(data.message)}</div>
+                <div class="announcement-time">${new Date(data.timestamp).toLocaleTimeString()}</div>
+            `;
+            container.prepend(announcement);
+            
+            // Remove old announcements (keep last 5)
+            while (container.children.length > 5) {
+                container.removeChild(container.lastChild);
+            }
+            
+            // Auto-hide after 30 seconds
+            setTimeout(() => {
+                if (announcement.parentNode) {
+                    announcement.style.opacity = '0';
+                    setTimeout(() => {
+                        if (announcement.parentNode) announcement.remove();
+                    }, 500);
+                }
+            }, 30000);
+        }
+        
         function updateRaceRules(config) {
             if (config && config.finishCoords) {
                 document.getElementById('rule-finish').innerHTML = 
-                    `${config.finishCoords.lat?.toFixed(2) || '?'}°, ${config.finishCoords.lng?.toFixed(2) || '?'}°`;
+                    `${config.finishCoords.lat?.toFixed(2) || '?'}°, ${config.finishCoords.lng?.toFixed(2) || '?'}° (Paris)`;
             }
-            if (config && config.startWindowFrom && config.startWindowTo) {
-                const fromDate = new Date(config.startWindowFrom);
-                const toDate = new Date(config.startWindowTo);
-                document.getElementById('rule-period').innerHTML = 
-                    `${fromDate.toLocaleDateString()} - ${toDate.toLocaleDateString()}`;
+            if (config && config.registrationWindowFrom && config.registrationWindowTo) {
+                const fromDate = new Date(config.registrationWindowFrom);
+                const toDate = new Date(config.registrationWindowTo);
+                document.getElementById('rule-reg-period').innerHTML = 
+                    `${fromDate.toLocaleString()} - ${toDate.toLocaleString()}`;
+            }
+            if (config && config.raceStartDateTime) {
+                const startDate = new Date(config.raceStartDateTime);
+                document.getElementById('rule-start-time').innerHTML = startDate.toLocaleString();
             }
             if (config && config.allowedStartRegion) {
                 document.getElementById('rule-region').innerHTML = 
                     `Lat ${config.allowedStartRegion.minLat}°-${config.allowedStartRegion.maxLat}°, Lng ${config.allowedStartRegion.minLng}°-${config.allowedStartRegion.maxLng}°`;
+            }
+            if (config && config.maxParticipants) {
+                document.getElementById('rule-max-participants').innerHTML = config.maxParticipants;
             }
         }
         
@@ -641,7 +862,7 @@
                     card.dataset.id = item.id;
                     card.innerHTML = `
                         <div class="skin-preview">🎈</div>
-                        <div class="skin-name">${item.name}</div>
+                        <div class="skin-name">${escapeHtml(item.name)}</div>
                     `;
                     if (item.id === 'classic') card.classList.add('selected');
                     card.addEventListener('click', () => {
@@ -649,7 +870,7 @@
                         card.classList.add('selected');
                         selectedStyleId = item.id;
                         document.getElementById('selected-balloon-info').innerHTML = 
-                            `Selected: <strong>${item.name}</strong>`;
+                            `Selected: <strong>${escapeHtml(item.name)}</strong>`;
                         checkRegistrationValidation();
                     });
                     grid.appendChild(card);
@@ -664,21 +885,35 @@
                 return;
             }
             
+            let statusClass = 'status-registered';
+            let statusText = 'REGISTERED';
+            
             const html = `
                 <table class="participants-table">
                     <thead>
-                        <tr><th>Pilot</th><th>Balloon</th><th>Race #</th><th>Status</th><th>Speed</th></tr>
+                        <tr><th>Pilot</th><th>Balloon</th><th>Race #</th><th>Status</th><th>Altitude</th></tr>
                     </thead>
                     <tbody>
-                        ${balloons.map(p => `
-                            <tr>
-                                <td><strong>${escapeHtml(p.username)}</strong></td>
-                                <td>🎈 ${escapeHtml(p.balloonStyle?.name || 'Classic')}</td>
-                                <td>#${p.raceNumber}</td>
-                                <td><span class="status-badge status-flying">IN FLIGHT</span></td>
-                                <td>${Math.round(p.speed || 0)} km/h</td>
-                            </tr>
-                        `).join('')}
+                        ${balloons.map(p => {
+                            let status = 'REGISTERED';
+                            let statusClass = 'status-registered';
+                            if (p.finished) {
+                                status = 'FINISHED!';
+                                statusClass = 'status-finished';
+                            } else if (currentConfig && currentConfig.raceStarted) {
+                                status = 'IN FLIGHT';
+                                statusClass = 'status-flying';
+                            }
+                            return `
+                                <tr>
+                                    <td><strong>${escapeHtml(p.username)}</strong></td>
+                                    <td>🎈 ${escapeHtml(p.balloonStyle?.name || 'Classic')}</td>
+                                    <td>#${p.raceNumber}</td>
+                                    <td><span class="status-badge ${statusClass}">${status}</span></td>
+                                    <td>${Math.round(p.altitude || 1000)} m</td>
+                                </tr>
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
             `;
@@ -697,9 +932,15 @@
         
         // Event listeners
         document.getElementById('btn-register').addEventListener('click', () => {
-            if (socket && selectedStartCoords) {
+            if (socket && selectedStartCoords && isRegistrationOpen() && !isRaceStarted()) {
                 const name = document.getElementById('player-name').value.trim();
                 const email = document.getElementById('player-email').value.trim() || `${name}@race.com`;
+                
+                // Update auth with final credentials
+                socket.emit('fiesta-auth', {
+                    email: email,
+                    username: name
+                });
                 
                 socket.emit('fiesta-start-flight', {
                     lat: selectedStartCoords.lat,
@@ -709,11 +950,28 @@
                 
                 document.getElementById('register-message').innerHTML = '⏳ Registering, please wait...';
                 document.getElementById('register-message').style.color = '#38bdf8';
+            } else if (!isRegistrationOpen()) {
+                document.getElementById('register-message').innerHTML = '❌ Registration window is closed!';
+                document.getElementById('register-message').style.color = '#ef4444';
+            } else if (isRaceStarted()) {
+                document.getElementById('register-message').innerHTML = '❌ Race has already started!';
+                document.getElementById('register-message').style.color = '#ef4444';
             }
         });
         
         document.getElementById('player-name').addEventListener('input', () => {
             checkRegistrationValidation();
+            if (socket) {
+                const name = document.getElementById('player-name').value.trim() || 'Guest';
+                const email = document.getElementById('player-email').value.trim() || `${name}@race.com`;
+                socket.emit('fiesta-auth', {
+                    email: email,
+                    username: name
+                });
+            }
+        });
+        
+        document.getElementById('player-email').addEventListener('input', () => {
             if (socket) {
                 const name = document.getElementById('player-name').value.trim() || 'Guest';
                 const email = document.getElementById('player-email').value.trim() || `${name}@race.com`;
@@ -730,8 +988,9 @@
         
         // Refresh participants every 5 seconds
         setInterval(() => {
-            if (socket) {
+            if (socket && socket.connected) {
                 socket.emit('fiesta-get-participants');
+                checkRegistrationValidation();
             }
         }, 5000);
     </script>
