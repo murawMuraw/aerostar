@@ -501,6 +501,7 @@
         let currentConfig = null;
         let mapInitialized = false;
         let countdownInterval = null;
+        let pendingConfig = null; // Храним конфигурацию, полученную до инициализации карты
         
         // Initialize map
         function initMap() {
@@ -517,8 +518,26 @@
                 
                 L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
                 
-                mapInitialized = true;
-                console.log('✅ Map initialized');
+                // Ждем загрузки карты
+                map.whenReady(() => {
+                    console.log('✅ Map fully loaded and ready');
+                    mapInitialized = true;
+                    
+                    // Если есть конфигурация, полученная до инициализации карты, отрисовываем ее
+                    if (pendingConfig) {
+                        console.log('Drawing pending config after map ready');
+                        updateFinishMarker(pendingConfig);
+                        updateStartRegion(pendingConfig);
+                        pendingConfig = null;
+                    }
+                    
+                    // Если currentConfig уже есть, но карта только что инициализирована
+                    if (currentConfig) {
+                        console.log('Drawing current config after map ready');
+                        updateFinishMarker(currentConfig);
+                        updateStartRegion(currentConfig);
+                    }
+                });
                 
                 // Setup map click handler
                 map.on('click', handleMapClick);
@@ -610,9 +629,15 @@
         }
         
         function updateFinishMarker(config) {
-            if (config && config.finishCoords && map && mapInitialized) {
+            if (!mapInitialized) {
+                console.log('Map not ready, saving finish marker for later');
+                return;
+            }
+            
+            if (config && config.finishCoords && map) {
                 const coords = config.finishCoords;
                 if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number' && !isNaN(coords.lat) && !isNaN(coords.lng)) {
+                    console.log('Drawing finish marker at:', coords);
                     if (finishMarker) {
                         finishMarker.setLatLng([coords.lat, coords.lng]);
                     } else {
@@ -631,8 +656,16 @@
         
         function updateStartRegion(config) {
             console.log('Updating start region with config:', config);
+            console.log('Map initialized:', mapInitialized);
+            console.log('Map object exists:', !!map);
             
-            if (config && config.allowedStartRegion && map && mapInitialized) {
+            if (!mapInitialized || !map) {
+                console.log('Map not ready yet, will retry in 500ms');
+                setTimeout(() => updateStartRegion(config), 500);
+                return;
+            }
+            
+            if (config && config.allowedStartRegion) {
                 const region = config.allowedStartRegion;
                 
                 // Проверяем, что все координаты валидны
@@ -648,29 +681,29 @@
                     
                     console.log('Drawing rectangle with bounds:', bounds);
                     
-                    if (regionRectangle) {
-                        regionRectangle.setBounds(bounds);
-                        console.log('Updated existing rectangle');
-                    } else {
-                        regionRectangle = L.rectangle(bounds, {
-                            color: '#f87171',
-                            weight: 2,
-                            dashArray: '5, 5',
-                            fillColor: '#f87171',
-                            fillOpacity: 0.1
-                        }).addTo(map);
-                        regionRectangle.bindPopup('<b>📍 Allowed Start Region</b><br>Must start within this rectangle');
-                        console.log('Created new rectangle');
+                    try {
+                        if (regionRectangle) {
+                            regionRectangle.setBounds(bounds);
+                            console.log('Updated existing rectangle');
+                        } else {
+                            regionRectangle = L.rectangle(bounds, {
+                                color: '#f87171',
+                                weight: 2,
+                                dashArray: '5, 5',
+                                fillColor: '#f87171',
+                                fillOpacity: 0.1
+                            }).addTo(map);
+                            regionRectangle.bindPopup('<b>📍 Allowed Start Region</b><br>Must start within this rectangle');
+                            console.log('Created new rectangle');
+                        }
+                    } catch(e) {
+                        console.error('Error drawing rectangle:', e);
                     }
                 } else {
                     console.warn('Invalid region coordinates:', region);
                 }
             } else {
-                console.warn('Cannot draw rectangle - missing config or map:', { 
-                    hasConfig: !!config, 
-                    hasAllowedStartRegion: !!(config && config.allowedStartRegion),
-                    mapInitialized: mapInitialized 
-                });
+                console.warn('Cannot draw rectangle - missing config or allowedStartRegion');
             }
         }
         
@@ -761,8 +794,15 @@
                 console.log('Received race config:', config);
                 currentConfig = config;
                 updateRaceRules(config);
-                updateFinishMarker(config);
-                updateStartRegion(config);
+                
+                // Если карта уже готова, сразу рисуем, иначе сохраняем для последующей отрисовки
+                if (mapInitialized && map) {
+                    updateFinishMarker(config);
+                    updateStartRegion(config);
+                } else {
+                    console.log('Map not ready yet, saving config for later');
+                    pendingConfig = config;
+                }
                 
                 if (config.raceStartDateTime) {
                     startCountdown(config.raceStartDateTime);
