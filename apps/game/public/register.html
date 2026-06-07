@@ -32,6 +32,7 @@
         #map {
             height: 100%;
             width: 100%;
+            cursor: crosshair; /* Добавлено: показывает, что карта кликабельна */
         }
         
         /* Main container */
@@ -265,6 +266,7 @@
             color: #38bdf8;
             font-family: monospace;
             margin-top: 10px;
+            cursor: pointer;
         }
         
         .connection-status {
@@ -372,13 +374,24 @@
             color: #94a3b8;
             margin-top: 5px;
         }
+        
+        .debug-panel {
+            background: rgba(0,0,0,0.5);
+            border-radius: 8px;
+            padding: 8px;
+            margin-top: 10px;
+            font-size: 10px;
+            font-family: monospace;
+            color: #fbbf24;
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🎈 Fiesta Race Registration</h1>
-            <p>Select start location on map → Choose your balloon → Register</p>
+            <p>📍 КЛИКНИТЕ НА КАРТЕ в пределах красной зоны для выбора старта → Выберите шар → Зарегистрируйтесь</p>
             <div class="connection-status" id="connection-status">
                 <span class="connected-indicator"></span>
                 <span id="status-text">Connecting to server...</span>
@@ -434,7 +447,7 @@
                 
                 <h3>📍 Selected Start Location</h3>
                 <div class="coords-info" id="start-coords-info">
-                    Click on map to select start point
+                    ⚠️ Кликните на карту для выбора точки старта
                 </div>
                 <div id="region-warning" class="warning-text" style="display: none;">
                     ⚠️ Start location outside allowed region!
@@ -448,6 +461,7 @@
                 <div id="race-started-warning" class="warning-text" style="display: none;">
                     🚫 Race has already started! Cannot register.
                 </div>
+                <div id="debug-info" class="debug-panel"></div>
             </div>
             
             <!-- Right Column: Registration Form -->
@@ -473,8 +487,8 @@
                 <div id="register-message" style="margin-top: 12px; font-size: 12px; text-align: center;"></div>
                 
                 <div class="info-text" style="margin-top: 15px; text-align: center;">
-                    💡 After registration, wait for race start time.<br>
-                    All balloons start moving automatically at the scheduled time!
+                    💡 После регистрации дождитесь старта гонки.<br>
+                    Все шары начнут движение автоматически в указанное время!
                 </div>
             </div>
         </div>
@@ -501,13 +515,14 @@
         let currentConfig = null;
         let mapInitialized = false;
         let countdownInterval = null;
-        let pendingConfig = null; // Храним конфигурацию, полученную до инициализации карты
+        let pendingConfig = null;
         
         // Initialize map
         function initMap() {
             if (mapInitialized) return;
             
             try {
+                console.log('🟢 initMap: Creating map...');
                 map = L.map('map').setView([30, -90], 4);
                 
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -518,12 +533,17 @@
                 
                 L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
                 
+                // Прямая привязка обработчика клика
+                map.on('click', function(e) {
+                    console.log('🖱️ MAP CLICK DETECTED at:', e.latlng);
+                    handleMapClick(e);
+                });
+                
                 // Ждем загрузки карты
                 map.whenReady(() => {
                     console.log('✅ Map fully loaded and ready');
                     mapInitialized = true;
                     
-                    // Если есть конфигурация, полученная до инициализации карты, отрисовываем ее
                     if (pendingConfig) {
                         console.log('Drawing pending config after map ready');
                         updateFinishMarker(pendingConfig);
@@ -531,16 +551,12 @@
                         pendingConfig = null;
                     }
                     
-                    // Если currentConfig уже есть, но карта только что инициализирована
                     if (currentConfig) {
                         console.log('Drawing current config after map ready');
                         updateFinishMarker(currentConfig);
                         updateStartRegion(currentConfig);
                     }
                 });
-                
-                // Setup map click handler
-                map.on('click', handleMapClick);
                 
             } catch(e) {
                 console.error('Map init error:', e);
@@ -549,13 +565,17 @@
         }
         
         function handleMapClick(e) {
+            console.log('🖱️ handleMapClick called with:', e);
             const { lat, lng } = e.latlng;
             
-            // Update display regardless of region
-            document.getElementById('start-coords-info').innerHTML = 
-                `📍 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+            console.log(`📍 Click at: ${lat}, ${lng}`);
             
-            // Check if registration is open
+            // Обновляем отображение координат
+            const coordsInfo = document.getElementById('start-coords-info');
+            coordsInfo.innerHTML = `📍 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+            coordsInfo.style.color = '#38bdf8';
+            
+            // Проверяем регистрацию
             if (!isRegistrationOpen()) {
                 document.getElementById('registration-closed').style.display = 'block';
                 document.getElementById('region-warning').style.display = 'none';
@@ -567,7 +587,7 @@
                 return;
             }
             
-            // Check if race has started
+            // Проверяем старт гонки
             if (currentConfig && currentConfig.raceStarted) {
                 document.getElementById('race-started-warning').style.display = 'block';
                 document.getElementById('registration-closed').style.display = 'none';
@@ -581,14 +601,19 @@
             }
             
             document.getElementById('race-started-warning').style.display = 'none';
+            document.getElementById('registration-closed').style.display = 'none';
             
-            // Check if in allowed region
+            // Проверяем зону старта
             if (currentConfig && currentConfig.allowedStartRegion) {
                 const region = currentConfig.allowedStartRegion;
+                console.log('Checking region:', region);
+                console.log(`Lat ${lat} between ${region.minLat} and ${region.maxLat}:`, lat >= region.minLat && lat <= region.maxLat);
+                console.log(`Lng ${lng} between ${region.minLng} and ${region.maxLng}:`, lng >= region.minLng && lng <= region.maxLng);
+                
                 if (lat >= region.minLat && lat <= region.maxLat &&
                     lng >= region.minLng && lng <= region.maxLng) {
                     
-                    // Valid location
+                    console.log('✅ Location is VALID!');
                     selectedStartCoords = { lat, lng };
                     
                     if (startMarker) map.removeLayer(startMarker);
@@ -598,20 +623,22 @@
                     
                     document.getElementById('region-warning').style.display = 'none';
                     document.getElementById('region-success').style.display = 'block';
-                    document.getElementById('registration-closed').style.display = 'none';
                     checkRegistrationValidation();
                     
                 } else {
-                    // Invalid location
+                    console.log('❌ Location is INVALID (outside region)');
                     selectedStartCoords = null;
                     if (startMarker) map.removeLayer(startMarker);
                     startMarker = null;
                     
                     document.getElementById('region-warning').style.display = 'block';
                     document.getElementById('region-success').style.display = 'none';
-                    document.getElementById('registration-closed').style.display = 'none';
                     checkRegistrationValidation();
                 }
+            } else {
+                console.warn('No allowedStartRegion in config yet');
+                document.getElementById('debug-info').innerHTML = '⚠️ Start region not configured yet. Ask admin to set start zone.';
+                document.getElementById('debug-info').style.display = 'block';
             }
         }
         
@@ -629,8 +656,8 @@
         }
         
         function updateFinishMarker(config) {
-            if (!mapInitialized) {
-                console.log('Map not ready, saving finish marker for later');
+            if (!mapInitialized || !map) {
+                console.log('Map not ready for finish marker');
                 return;
             }
             
@@ -655,9 +682,9 @@
         }
         
         function updateStartRegion(config) {
-            console.log('Updating start region with config:', config);
+            console.log('=== updateStartRegion called ===');
             console.log('Map initialized:', mapInitialized);
-            console.log('Map object exists:', !!map);
+            console.log('Map exists:', !!map);
             
             if (!mapInitialized || !map) {
                 console.log('Map not ready yet, will retry in 500ms');
@@ -667,8 +694,8 @@
             
             if (config && config.allowedStartRegion) {
                 const region = config.allowedStartRegion;
+                console.log('Region data:', region);
                 
-                // Проверяем, что все координаты валидны
                 if (typeof region.minLat === 'number' && typeof region.maxLat === 'number' &&
                     typeof region.minLng === 'number' && typeof region.maxLng === 'number' &&
                     !isNaN(region.minLat) && !isNaN(region.maxLat) && 
@@ -693,9 +720,15 @@
                                 fillColor: '#f87171',
                                 fillOpacity: 0.1
                             }).addTo(map);
-                            regionRectangle.bindPopup('<b>📍 Allowed Start Region</b><br>Must start within this rectangle');
+                            regionRectangle.bindPopup('<b>📍 Allowed Start Region</b><br>Кликните в этой зоне для выбора старта');
                             console.log('Created new rectangle');
                         }
+                        
+                        document.getElementById('rule-region').innerHTML = 
+                            `Lat ${region.minLat}°-${region.maxLat}°, Lng ${region.minLng}°-${region.maxLng}°`;
+                        document.getElementById('debug-info').innerHTML = '✅ Start region configured! Click on map within the red rectangle.';
+                        document.getElementById('debug-info').style.display = 'none';
+                        
                     } catch(e) {
                         console.error('Error drawing rectangle:', e);
                     }
@@ -704,6 +737,8 @@
                 }
             } else {
                 console.warn('Cannot draw rectangle - missing config or allowedStartRegion');
+                document.getElementById('debug-info').innerHTML = '⚠️ Start region not configured. Please ask admin to set start zone coordinates.';
+                document.getElementById('debug-info').style.display = 'block';
             }
         }
         
@@ -742,6 +777,8 @@
             const isRegOpen = isRegistrationOpen();
             const raceStarted = isRaceStarted();
             
+            console.log('Checking registration:', { name, selectedStartCoords, isRegOpen, raceStarted });
+            
             let isValid = name && selectedStartCoords && selectedStyleId && currentConfig && isRegOpen && !raceStarted;
             
             if (isValid && selectedStartCoords && currentConfig && currentConfig.allowedStartRegion) {
@@ -753,8 +790,8 @@
             }
             
             btn.disabled = !isValid;
+            console.log('Register button enabled:', !btn.disabled);
             
-            // Update warning messages
             if (!isRegOpen && currentConfig) {
                 document.getElementById('registration-closed').style.display = 'block';
             } else {
@@ -776,6 +813,7 @@
             });
             
             socket.on('connect', () => {
+                console.log('Socket connected');
                 document.getElementById('status-text').textContent = 'Connected to race server';
                 const indicator = document.querySelector('.connected-indicator');
                 if (indicator) indicator.style.background = '#22c55e';
@@ -786,16 +824,17 @@
             });
             
             socket.on('connect_error', (error) => {
+                console.error('Connection error:', error);
                 document.getElementById('status-text').textContent = 'Connection error';
                 document.getElementById('status-text').style.color = '#ef4444';
             });
             
             socket.on('fiesta-race-config', (config) => {
-                console.log('Received race config:', config);
+                console.log('=== Received race config ===');
+                console.log('allowedStartRegion:', config.allowedStartRegion);
                 currentConfig = config;
                 updateRaceRules(config);
                 
-                // Если карта уже готова, сразу рисуем, иначе сохраняем для последующей отрисовки
                 if (mapInitialized && map) {
                     updateFinishMarker(config);
                     updateStartRegion(config);
@@ -827,7 +866,6 @@
                     document.getElementById('register-message').style.color = '#22c55e';
                     document.getElementById('btn-register').disabled = true;
                     
-                    // Save to localStorage for fiesta.html
                     if (selectedStartCoords) {
                         localStorage.setItem('fiesta_start_coords', JSON.stringify(selectedStartCoords));
                     }
@@ -868,12 +906,10 @@
             `;
             container.prepend(announcement);
             
-            // Remove old announcements (keep last 5)
             while (container.children.length > 5) {
                 container.removeChild(container.lastChild);
             }
             
-            // Auto-hide after 30 seconds
             setTimeout(() => {
                 if (announcement.parentNode) {
                     announcement.style.opacity = '0';
@@ -989,7 +1025,6 @@
                 const name = document.getElementById('player-name').value.trim();
                 const email = document.getElementById('player-email').value.trim() || `${name}@race.com`;
                 
-                // Update auth with final credentials
                 socket.emit('fiesta-auth', {
                     email: email,
                     username: name
@@ -1039,7 +1074,6 @@
         initMap();
         connectSocket();
         
-        // Refresh participants every 5 seconds
         setInterval(() => {
             if (socket && socket.connected) {
                 socket.emit('fiesta-get-participants');
