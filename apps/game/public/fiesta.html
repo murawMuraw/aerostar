@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Aerostar — Fiesta Race Map</title>
-    <!-- Локальное подключение стилей Leaflet для защиты от Tracking Prevention -->
-    <link rel="stylesheet" href="/lib/leaflet/leaflet.css" />
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; }
+        
+        /* Control Panel */
         .control-panel {
             position: absolute;
             bottom: 20px;
@@ -18,6 +20,7 @@
             display: flex;
             gap: 10px;
         }
+        
         .btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 12px 24px;
@@ -30,13 +33,19 @@
             border: none;
             cursor: pointer;
             display: inline-block;
+            font-size: 14px;
         }
+        
         .btn:hover { transform: translateY(-2px); }
+        .btn-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        .btn-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        
+        /* Info Panel */
         .info-panel {
             position: absolute;
             top: 20px;
             right: 20px;
-            width: 260px;
+            width: 280px;
             z-index: 2000;
             background: rgba(15,23,42,0.95);
             backdrop-filter: blur(14px);
@@ -45,83 +54,198 @@
             padding: 15px;
             font-size: 12px;
             color: white;
+            pointer-events: none;
         }
+        
         .info-panel h3 { color: #38bdf8; margin-bottom: 10px; font-size: 14px; }
         .info-item { display: flex; justify-content: space-between; margin: 8px 0; }
         .deadline { color: #f87171; font-weight: bold; }
         .weather-item { display: flex; justify-content: space-between; margin: 5px 0; font-size: 11px; }
-        @media (max-width: 768px) { .info-panel { width: 220px; padding: 10px; } .btn { padding: 8px 16px; font-size: 12px; } }
+        
+        /* Altitude Control (только для пилота) */
+        .altitude-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 2000;
+            background: rgba(15,23,42,0.95);
+            backdrop-filter: blur(14px);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 15px;
+            width: 260px;
+            display: none;
+        }
+        
+        .altitude-panel h3 { color: #38bdf8; margin-bottom: 10px; font-size: 14px; }
+        .altitude-slider {
+            width: 100%;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+        .altitude-value {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #fbbf24;
+        }
+        .layer-info {
+            background: rgba(0,0,0,0.5);
+            padding: 8px;
+            border-radius: 10px;
+            margin-top: 10px;
+            font-size: 11px;
+            text-align: center;
+        }
+        
+        /* Role badge */
+        .role-badge {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 2000;
+            background: rgba(15,23,42,0.95);
+            backdrop-filter: blur(14px);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            font-size: 12px;
+            font-weight: bold;
+            pointer-events: none;
+        }
+        .role-pilot { border-left: 3px solid #10b981; }
+        .role-spectator { border-left: 3px solid #f59e0b; }
+        
+        @media (max-width: 768px) { 
+            .info-panel { width: 240px; padding: 10px; } 
+            .btn { padding: 8px 16px; font-size: 12px; }
+            .altitude-panel { width: 220px; padding: 10px; }
+        }
+        
+        .my-balloon-marker { filter: drop-shadow(0 0 4px #10b981); }
+        .balloon-marker { filter: drop-shadow(0 0 2px #38bdf8); }
+        
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 3000;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            border-left: 4px solid #38bdf8;
+            animation: slideIn 0.3s ease-out;
+            max-width: 300px;
+            pointer-events: none;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
     </style>
 </head>
-
 <body>
     <div id="map"></div>
+    
+    <div class="role-badge" id="role-badge">
+        🔄 Connecting...
+    </div>
+    
     <div class="info-panel">
         <h3>🏁 Race Info</h3>
-        <div class="info-item"><span>⏰ Race Ends:</span><span class="deadline" id="race-deadline">--</span></div>
-        <div class="info-item"><span>🏆 Finish:</span><span id="finish-coords">--</span></div>
-        <h3>🌤️ Weather at Finish</h3>
+        <div class="info-item"><span>⏰ Race Start:</span><span id="race-start-time">--</span></div>
+        <div class="info-item"><span>🏁 Race End:</span><span class="deadline" id="race-deadline">--</span></div>
+        <div class="info-item"><span>🏆 Finish Line:</span><span id="finish-coords">--</span></div>
+        <div class="info-item"><span>📊 Status:</span><span id="race-status">Waiting...</span></div>
+        <h3 style="margin-top: 10px;">🌤️ Weather at Finish</h3>
         <div id="finish-weather"><div class="weather-item">Loading...</div></div>
         <div class="info-item" style="margin-top: 10px;"><span>🎈 Active Balloons:</span><span id="balloon-count">0</span></div>
     </div>
+    
+    <div class="altitude-panel" id="altitude-panel">
+        <h3>🎈 Balloon Controls</h3>
+        <div class="info-item"><span>🏷️ Call sign:</span><span id="pilot-name">--</span></div>
+        <div class="info-item"><span>🔢 Race #:</span><span id="race-number">--</span></div>
+        <div class="info-item"><span>📊 Speed:</span><span id="balloon-speed">0 km/h</span></div>
+        <div class="info-item"><span>🧭 Wind dir:</span><span id="wind-direction">--</span></div>
+        <div class="altitude-value" id="altitude-value">1000 m</div>
+        <input type="range" id="altitude-slider" class="altitude-slider" min="0" max="15000" step="100" value="1000">
+        <div class="layer-info" id="layer-info">Surface Layer (0-2km)</div>
+        <div class="info-text" style="margin-top: 10px; font-size: 10px; text-align: center; color: #94a3b8;">
+            💡 Change altitude to catch different wind layers
+        </div>
+    </div>
+    
     <div class="control-panel">
         <a href="gondola.html" class="btn" id="gondola-btn" style="display: none;">🎈 My Gondola</a>
         <a href="register.html" class="btn" id="register-btn">📝 Register</a>
+        <button class="btn btn-danger" id="logout-btn" style="display: none;">🚪 Exit</button>
     </div>
 
-   <script src="/lib/leaflet/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        let map, socket, finishMarker, balloonsMarkers = {}, myBalloonId = null, currentConfig = null;
+        let map, socket, finishMarker, balloonsMarkers = {};
+        let myBalloonId = null;
+        let currentConfig = null;
+        let myRole = 'spectator';
+        let altitudeSlider, altitudeValue, layerInfo;
         
-       function initMap() {
-    map = L.map('map').setView([30, -90], 4);
-    
-    // Исправлено: полный корректный путь к серверу тайлов Esri World Imagery
-    const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles © Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-        maxZoom: 19
-    });
-
-    esriSatellite.addTo(map);
-
-    L.control.scale({
-        metric: true,
-        position: 'bottomleft'
-    }).addTo(map);
-}      
-       
+        // ============================================
+        // ИНИЦИАЛИЗАЦИЯ КАРТЫ
+        // ============================================
+        function initMap() {
+            console.log('🗺️ Initializing map...');
+            map = L.map('map').setView([30, -90], 4);
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+            
+            L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
+            
+            console.log('✅ Map initialized');
+        }
         
+        // ============================================
+        // ОБНОВЛЕНИЕ ПОГОДЫ НА ФИНИШЕ
+        // ============================================
         function updateFinishWeather(lat, lng) {
-    if (!lat || !lng) return;
-    // ИСПРАВЛЕНО: правильный URL с параметрами
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`)
-        .then(r => {
-            if (!r.ok) throw new Error('Ошибка сети при запросе погоды');
-            return r.json();
-        })
-        .then(data => {
-            if (data && data.current_weather) {
-                const w = data.current_weather;
-                document.getElementById('finish-weather').innerHTML = `
-                    <div class="weather-item">🌡️ Temp: ${w.temperature}°C</div>
-                    <div class="weather-item">💨 Wind: ${w.windspeed} m/s</div>
-                    <div class="weather-item">🧭 Dir: ${w.winddirection}°</div>
-                `;
-            } else {
-                document.getElementById('finish-weather').innerHTML = `
-                    <div class="weather-item" style="color: #fbbf24;">⏳ Нет данных погоды</div>
-                `;
-            }
-        })
-        .catch(err => {
-            console.error('Weather fetch error:', err);
-            document.getElementById('finish-weather').innerHTML = `
-                <div class="weather-item" style="color: #f87171;">🌧️ Погода временно недоступна</div>
-            `;
-        });
-}
+            if (!lat || !lng) return;
+            
+            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`)
+                .then(r => {
+                    if (!r.ok) throw new Error('Network error');
+                    return r.json();
+                })
+                .then(data => {
+                    if (data && data.current_weather) {
+                        const w = data.current_weather;
+                        document.getElementById('finish-weather').innerHTML = `
+                            <div class="weather-item">🌡️ Temp: ${w.temperature}°C</div>
+                            <div class="weather-item">💨 Wind: ${w.windspeed} m/s</div>
+                            <div class="weather-item">🧭 Dir: ${w.winddirection}°</div>
+                        `;
+                    } else {
+                        document.getElementById('finish-weather').innerHTML = `
+                            <div class="weather-item" style="color: #fbbf24;">⏳ No weather data</div>
+                        `;
+                    }
+                })
+                .catch(err => {
+                    console.error('Weather fetch error:', err);
+                    document.getElementById('finish-weather').innerHTML = `
+                        <div class="weather-item" style="color: #f87171;">🌧️ Weather unavailable</div>
+                    `;
+                });
+        }
         
+        // ============================================
+        // ОБНОВЛЕНИЕ МАРКЕРОВ ШАРОВ
+        // ============================================
         function clearBalloons() {
             Object.values(balloonsMarkers).forEach(marker => {
                 if (marker && map) map.removeLayer(marker);
@@ -136,16 +260,20 @@
             if (!balloons || !Array.isArray(balloons)) return;
             
             balloons.forEach(b => {
-                if (b && b.lat && b.lng) {
+                if (b && b.lat && b.lng && !isNaN(b.lat) && !isNaN(b.lng)) {
                     const isMyBalloon = myBalloonId === b.id;
                     const icon = L.divIcon({ 
-                        html: `<div style="font-size: 22px; text-align: center;">${isMyBalloon ? '🎈' : '🪁'}</div>`, 
+                        html: `<div style="font-size: ${isMyBalloon ? '26px' : '22px'}; text-align: center;">${isMyBalloon ? '🎈' : '🪁'}</div>`, 
                         iconSize: [28, 28],
                         className: isMyBalloon ? 'my-balloon-marker' : 'balloon-marker'
                     });
+                    
                     try {
                         const marker = L.marker([b.lat, b.lng], { icon }).addTo(map);
-                        marker.bindPopup(`<b>${b.username || '?'}</b><br>#${b.raceNumber || '?'}<br>${Math.round(b.speed || 0)} km/h`);
+                        let popupContent = `<b>${b.username || '?'}</b><br>#${b.raceNumber || '?'}<br>🎯 ${Math.round(b.speed || 0)} km/h`;
+                        if (b.altitude) popupContent += `<br>📈 ${b.altitude}m`;
+                        if (b.windDirection) popupContent += `<br>🧭 ${b.windDirection}°`;
+                        marker.bindPopup(popupContent);
                         balloonsMarkers[b.id] = marker;
                     } catch(e) {
                         console.error('Error creating marker:', e);
@@ -155,106 +283,313 @@
             document.getElementById('balloon-count').innerHTML = Object.keys(balloonsMarkers).length;
         }
         
-        function connect() {
+        // ============================================
+        // ОБНОВЛЕНИЕ ИНТЕРФЕЙСА ПИЛОТА
+        // ============================================
+        function updatePilotUI(balloon) {
+            if (!balloon) return;
+            
+            document.getElementById('pilot-name').innerHTML = balloon.username;
+            document.getElementById('race-number').innerHTML = `#${balloon.raceNumber}`;
+            document.getElementById('balloon-speed').innerHTML = `${Math.round(balloon.speed || 0)} km/h`;
+            document.getElementById('wind-direction').innerHTML = balloon.windDirection ? `${balloon.windDirection}°` : '--';
+            document.getElementById('altitude-value').innerHTML = `${balloon.altitude || 1000} m`;
+            document.getElementById('layer-info').innerHTML = balloon.layerName || 'Surface Layer (0-2km)';
+            
+            if (altitudeSlider) {
+                altitudeSlider.value = balloon.altitude || 1000;
+            }
+        }
+        
+        // ============================================
+        // ПОКАЗ УВЕДОМЛЕНИЯ
+        // ============================================
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.style.borderLeftColor = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#38bdf8';
+            notification.innerHTML = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 500);
+            }, 5000);
+        }
+        
+        // ============================================
+        // ПОДКЛЮЧЕНИЕ К СОКЕТАМ
+        // ============================================
+        function connectSocket() {
             socket = io({
-                transports: ['polling'],
-                upgrade: false,
+                transports: ['polling', 'websocket'],
+                upgrade: true,
                 reconnection: true
             });
             
             socket.on('connect', () => {
                 console.log('✅ Connected to race server');
-                socket.emit('fiesta-auth', { 
-                    email: localStorage.getItem('fiesta_email') || 'viewer@race.com', 
-                    username: localStorage.getItem('fiesta_name') || 'Viewer' 
-                });
+                
+                // Пытаемся восстановить ID пилота из localStorage
+                const savedPilotId = localStorage.getItem('aerostar_pilot_id');
+                const savedPilotName = localStorage.getItem('aerostar_pilot_name');
+                
+                if (savedPilotId) {
+                    console.log('🎖️ Restoring pilot session:', savedPilotId.substring(0, 8) + '...');
+                    socket.emit('fiesta-auth', { pilotId: savedPilotId });
+                } else {
+                    console.log('👁️ Connecting as spectator');
+                    socket.emit('fiesta-auth', { 
+                        isSpectator: true, 
+                        username: savedPilotName || 'Spectator_' + Math.floor(Math.random() * 1000)
+                    });
+                }
             });
             
             socket.on('connect_error', (error) => {
                 console.error('Connection error:', error);
+                document.getElementById('role-badge').innerHTML = '❌ Connection error';
+                document.getElementById('role-badge').style.borderLeftColor = '#ef4444';
             });
             
-            socket.on('fiesta-race-config', (config) => {
-                 console.log('🔍 Получен конфиг:', config); // <-- Должен выводиться в консоль
-                if (!config) return;
-                currentConfig = config;
-                console.log('Получен конфиг гонки:', config); // Лог для проверки прихода координат
-                if (config.finishCoords && config.finishCoords.lat && config.finishCoords.lng) {
-                    document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
-                    document.getElementById('race-deadline').innerHTML = config.startWindowTo ? new Date(config.startWindowTo).toLocaleString() : '--';
-                    
-                    if (finishMarker && map) map.removeLayer(finishMarker);
-                    
-                    const finishIcon = L.divIcon({ 
-                        html: '<div style="font-size: 26px; text-align: center; line-height: 32px;">🏁</div>', 
-                        iconSize: [32, 32],
-                        className: '' 
-                    });
-                    
-                    finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
-                    finishMarker.bindPopup('🏁 FINISH LINE');
-                    
-                    // Фокусируем камеру на точку финиша
-                    map.setView([config.finishCoords.lat, config.finishCoords.lng], 6);
-                    map.invalidateSize();
-                    updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
-                }else {
-        // Добавьте для отладки:
-        console.warn('Нет координат финиша в конфиге:', config);
-    }
-            });
-            
-            socket.on('fiesta-my-state', (balloon) => {
-                if (balloon && balloon.id) {
-                    myBalloonId = balloon.id;
-                    localStorage.setItem('fiesta_name', balloon.username);
+            // ============================================
+            // АУТЕНТИФИКАЦИЯ УСПЕШНА
+            // ============================================
+            socket.on('fiesta-auth-success', (data) => {
+                console.log('🔐 Auth success:', data);
+                myRole = data.role;
+                
+                if (data.role === 'pilot') {
+                    myBalloonId = data.balloon.id;
+                    document.getElementById('role-badge').innerHTML = '🎖️ PILOT MODE';
+                    document.getElementById('role-badge').className = 'role-badge role-pilot';
+                    document.getElementById('altitude-panel').style.display = 'block';
                     document.getElementById('gondola-btn').style.display = 'block';
                     document.getElementById('register-btn').style.display = 'none';
-                    console.log('My balloon ID:', myBalloonId);
+                    document.getElementById('logout-btn').style.display = 'block';
+                    
+                    updatePilotUI(data.balloon);
+                    showNotification(`✅ Welcome back, ${data.balloon.username}! You are controlling your balloon.`, 'success');
+                } else {
+                    document.getElementById('role-badge').innerHTML = '👁️ SPECTATOR MODE';
+                    document.getElementById('role-badge').className = 'role-badge role-spectator';
+                    document.getElementById('altitude-panel').style.display = 'none';
+                    document.getElementById('gondola-btn').style.display = 'none';
+                    document.getElementById('logout-btn').style.display = 'block';
+                    showNotification('👋 You are in spectator mode. Find "Register" button to join the race!', 'info');
                 }
             });
             
+            // ============================================
+            // ПОЛУЧЕНИЕ КОНФИГУРАЦИИ
+            // ============================================
+            socket.on('fiesta-race-config', (config) => {
+                console.log('📡 Race config received:', config);
+                if (!config) return;
+                currentConfig = config;
+                
+                if (config.finishCoords && config.finishCoords.lat && config.finishCoords.lng) {
+                    document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
+                    
+                    if (config.raceStartDateTime) {
+                        const startTime = new Date(config.raceStartDateTime);
+                        document.getElementById('race-start-time').innerHTML = startTime.toLocaleString();
+                        
+                        if (config.raceDurationHours) {
+                            const endTime = new Date(startTime);
+                            endTime.setHours(endTime.getHours() + config.raceDurationHours);
+                            document.getElementById('race-deadline').innerHTML = endTime.toLocaleString();
+                        }
+                    }
+                    
+                    if (config.raceStarted) {
+                        document.getElementById('race-status').innerHTML = '🏁 RACE IN PROGRESS';
+                        document.getElementById('race-status').style.color = '#10b981';
+                    } else if (config.raceFinished) {
+                        document.getElementById('race-status').innerHTML = '🏆 RACE FINISHED';
+                        document.getElementById('race-status').style.color = '#ef4444';
+                    } else {
+                        document.getElementById('race-status').innerHTML = '⏳ WAITING FOR START';
+                        document.getElementById('race-status').style.color = '#fbbf24';
+                    }
+                    
+                    // Обновляем маркер финиша
+                    if (finishMarker && map) map.removeLayer(finishMarker);
+                    const finishIcon = L.divIcon({ 
+                        html: '<div style="font-size: 28px; text-align: center;">🏁</div>', 
+                        iconSize: [32, 32]
+                    });
+                    finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
+                    finishMarker.bindPopup('<b>🏁 FINISH LINE</b><br>First to reach within 50km wins!');
+                    
+                    updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
+                }
+            });
+            
+            // ============================================
+            // ОБНОВЛЕНИЕ ШАРОВ
+            // ============================================
             socket.on('fiesta-all-balloons', (balloons) => {
                 if (balloons && Array.isArray(balloons)) {
                     updateBalloons(balloons);
+                    
+                    // Если мы пилот, обновляем свои данные
+                    if (myRole === 'pilot' && myBalloonId) {
+                        const myBalloon = balloons.find(b => b.id === myBalloonId);
+                        if (myBalloon) {
+                            updatePilotUI(myBalloon);
+                        }
+                    }
+                }
+            });
+            
+            socket.on('fiesta-balloon-updated', (balloon) => {
+                // Обновляем отдельный шар без полной перерисовки
+                if (balloon && map && balloonsMarkers[balloon.id]) {
+                    balloonsMarkers[balloon.id].setLatLng([balloon.lat, balloon.lng]);
+                    if (myRole === 'pilot' && myBalloonId === balloon.id) {
+                        updatePilotUI(balloon);
+                    }
+                } else {
+                    socket.emit('fiesta-get-participants');
                 }
             });
             
             socket.on('fiesta-balloon-created', () => {
                 socket.emit('fiesta-get-participants');
-            });
-            
-            socket.on('fiesta-balloon-updated', () => {
-                socket.emit('fiesta-get-participants');
+                showNotification('🎈 New pilot joined the race!', 'info');
             });
             
             socket.on('fiesta-balloon-removed', () => {
                 socket.emit('fiesta-get-participants');
             });
             
+            // ============================================
+            // СОБЫТИЯ ГОНКИ
+            // ============================================
+            socket.on('fiesta-race-started', (data) => {
+                document.getElementById('race-status').innerHTML = '🏁 RACE IN PROGRESS';
+                document.getElementById('race-status').style.color = '#10b981';
+                showNotification(data.message || '🏁 Race has started! Good luck!', 'success');
+            });
+            
+            socket.on('fiesta-race-finished', (data) => {
+                document.getElementById('race-status').innerHTML = '🏆 RACE FINISHED';
+                document.getElementById('race-status').style.color = '#ef4444';
+                showNotification(data.message || '🏆 Race has finished!', 'info');
+            });
+            
+            socket.on('fiesta-message', (data) => {
+                if (data.type === 'finish') {
+                    showNotification(data.message, 'success');
+                }
+            });
+            
+            socket.on('fiesta-admin-message', (data) => {
+                showNotification(`📢 ADMIN: ${data.message}`, 'info');
+            });
+            
+            socket.on('fiesta-pilot-disconnected', (data) => {
+                showNotification(`⚠️ Pilot ${data.username} disconnected, but balloon continues flying`, 'info');
+            });
+            
+            socket.on('fiesta-warning', (msg) => {
+                showNotification(msg, 'error');
+            });
+            
             socket.on('fiesta-error', (msg) => {
                 console.error('Server error:', msg);
+                showNotification(`❌ Error: ${msg}`, 'error');
             });
         }
         
-        // Надежная инициализация после полной загрузки всех библиотек и скриптов
-        window.addEventListener('load', () => {
-            if (typeof L !== 'undefined') {
-                initMap();
+        // ============================================
+        // УПРАВЛЕНИЕ ВЫСОТОЙ
+        // ============================================
+        function initAltitudeControl() {
+            altitudeSlider = document.getElementById('altitude-slider');
+            altitudeValue = document.getElementById('altitude-value');
+            layerInfo = document.getElementById('layer-info');
+            
+            if (!altitudeSlider) return;
+            
+            altitudeSlider.addEventListener('input', (e) => {
+                const altitude = parseInt(e.target.value);
+                altitudeValue.innerHTML = `${altitude} m`;
+                
+                // Обновляем информацию о слое
+                if (altitude < 2000) {
+                    layerInfo.innerHTML = 'Surface Layer (0-2km) - Slow winds';
+                } else if (altitude < 5000) {
+                    layerInfo.innerHTML = 'Lower Winds (2-5km) - Moderate winds';
+                } else if (altitude < 8000) {
+                    layerInfo.innerHTML = 'Mid Winds (5-8km) - Strong winds';
+                } else {
+                    layerInfo.innerHTML = 'Jet Stream (8km+) - Very fast winds';
+                }
+            });
+            
+            altitudeSlider.addEventListener('change', (e) => {
+                const altitude = parseInt(e.target.value);
+                if (socket && myRole === 'pilot') {
+                    socket.emit('fiesta-change-altitude', { altitude: altitude });
+                    showNotification(`📈 Changing altitude to ${altitude}m`, 'info');
+                }
+            });
+        }
+        
+        // ============================================
+        // ВЫХОД ИЗ СИСТЕМЫ
+        // ============================================
+        function logout() {
+            if (confirm('Are you sure you want to exit?\n\n' + 
+                       (myRole === 'pilot' ? 'Your balloon will continue flying without you!' : 'You will be disconnected.'))) {
+                // Очищаем localStorage только если пользователь явно вышел
+                if (myRole === 'pilot') {
+                    // Не удаляем pilotId, чтобы можно было восстановить сессию
+                    showNotification('You left the pilot seat. Your balloon continues flying.', 'info');
+                } else {
+                    localStorage.removeItem('aerostar_pilot_id');
+                }
+                
+                if (socket) socket.disconnect();
                 setTimeout(() => {
-                    connect();
+                    window.location.href = 'register.html';
                 }, 500);
-            } else {
-                console.error('Ошибка: Локальная библиотека Leaflet не загружена. Проверьте теги подключения.');
             }
+        }
+        
+        // ============================================
+        // ЗАПУСК
+        // ============================================
+        window.addEventListener('load', () => {
+            console.log('📄 Page loaded, initializing...');
+            initMap();
+            initAltitudeControl();
+            connectSocket();
+            
+            // Обновление статистики каждые 5 секунд
+            setInterval(() => {
+                if (socket && socket.connected) {
+                    socket.emit('fiesta-get-participants');
+                }
+            }, 5000);
+            
+            // Обновление погоды каждую минуту
+            setInterval(() => {
+                if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng) {
+                    updateFinishWeather(currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
+                }
+            }, 60000);
         });
         
-        // Периодическое обновление погоды
-        setInterval(() => {
-            if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng) {
-                updateFinishWeather(currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
+        // Кнопка выхода
+        document.addEventListener('DOMContentLoaded', () => {
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', logout);
             }
-        }, 60000);
+        });
     </script>
 </body>
 </html>
