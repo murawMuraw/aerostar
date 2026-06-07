@@ -135,15 +135,18 @@
         <div id="placeName" style="font-weight: bold; color: #333; margin-bottom: 8px;"></div>
         <div id="placeLink" style="margin-top: 5px;"></div>
     </div>
-   <!-- Buttons Container -->
-<div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; text-align: center; display: flex; flex-direction: column; gap: 12px;">
+</div>
+
+<!-- Buttons Container outside info-panel -->
+<div style="position: fixed; bottom: 20px; left: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 12px; max-width: 300px; margin: 0 auto;">
     <!-- LIVE AEROSTAR Button -->
     <a href="/watch.html" class="live-button" 
        style="background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%); 
-              color: white; padding: 12px 24px; 
+              color: white; padding: 14px 24px; 
               text-decoration: none; border-radius: 50px; 
               font-size: 16px; font-weight: bold; 
-              display: inline-block; 
+              text-align: center;
+              display: block; 
               transition: transform 0.3s, box-shadow 0.3s;
               box-shadow: 0 4px 15px rgba(0,0,0,0.2);"
        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.3)';"
@@ -154,10 +157,11 @@
     <!-- Game Fiesta Button -->
     <a href="http://91.149.179.79:3001/fiesta.html" target="_blank" 
        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-              color: white; padding: 12px 24px; 
+              color: white; padding: 14px 24px; 
               text-decoration: none; border-radius: 50px; 
               font-size: 16px; font-weight: bold; 
-              display: inline-block; 
+              text-align: center;
+              display: block; 
               transition: transform 0.3s, box-shadow 0.3s;
               box-shadow: 0 4px 15px rgba(0,0,0,0.2);"
        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.3)';"
@@ -165,7 +169,7 @@
         🎮 Game Fiesta
     </a>
 </div>
-</div>
+
 
 <div class="hint" id="hint">👆 Click on the map to set a start location</div>
 <div class="loading" id="loading">Loading Map... 🗺️</div>
