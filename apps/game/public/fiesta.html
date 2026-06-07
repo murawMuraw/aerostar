@@ -116,10 +116,28 @@
         .role-pilot { border-left: 3px solid #10b981; }
         .role-spectator { border-left: 3px solid #f59e0b; }
         
+        /* Layer Toggle Button */
+        .layer-toggle {
+            position: absolute;
+            bottom: 20px;
+            right: 180px;
+            z-index: 2000;
+            background: rgba(15,23,42,0.9);
+            backdrop-filter: blur(14px);
+            border-radius: 30px;
+            padding: 8px 16px;
+            font-size: 12px;
+            cursor: pointer;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            font-weight: bold;
+        }
+        
         @media (max-width: 768px) { 
             .info-panel { width: 240px; padding: 10px; } 
             .btn { padding: 8px 16px; font-size: 12px; }
             .altitude-panel { width: 220px; padding: 10px; }
+            .layer-toggle { right: 150px; padding: 6px 12px; font-size: 10px; }
         }
         
         .my-balloon-marker { filter: drop-shadow(0 0 4px #10b981); }
@@ -178,9 +196,13 @@
     </div>
     
     <div class="control-panel">
-        <a href="gondola.html" class="btn" id="gondola-btn" style="display: none;">🎈 My Gondola</a>
-        <a href="register.html" class="btn" id="register-btn">📝 Register</a>
-        <button class="btn btn-danger" id="logout-btn" style="display: none;">🚪 Exit</button>
+        <button class="btn" id="control-btn">🎈 Control My Balloon</button>
+        <a href="register.html" class="btn" id="register-btn" style="display: none;">📝 Register</a>
+        <button class="btn btn-danger" id="logout-btn">🚪 Exit</button>
+    </div>
+    
+    <div class="layer-toggle" id="layer-toggle">
+        🛰️ Switch to Satellite
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -191,6 +213,19 @@
         let currentConfig = null;
         let myRole = 'spectator';
         let altitudeSlider, altitudeValue, layerInfo;
+        let currentTileLayer;
+        
+        // Tile layers
+        const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        });
+        
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+            maxZoom: 19
+        });
         
         // ============================================
         // ИНИЦИАЛИЗАЦИЯ КАРТЫ
@@ -199,15 +234,39 @@
             console.log('🗺️ Initializing map...');
             map = L.map('map').setView([30, -90], 4);
             
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
-                subdomains: 'abcd',
-                maxZoom: 19
-            }).addTo(map);
+            // Добавляем слой по умолчанию (улицы)
+            currentTileLayer = streetLayer;
+            currentTileLayer.addTo(map);
             
             L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
             
             console.log('✅ Map initialized');
+        }
+        
+        // ============================================
+        // ПЕРЕКЛЮЧЕНИЕ СЛОЕВ КАРТЫ
+        // ============================================
+        function toggleLayer() {
+            map.removeLayer(currentTileLayer);
+            if (currentTileLayer === streetLayer) {
+                currentTileLayer = satelliteLayer;
+                document.getElementById('layer-toggle').innerHTML = '🗺️ Switch to Streets';
+            } else {
+                currentTileLayer = streetLayer;
+                document.getElementById('layer-toggle').innerHTML = '🛰️ Switch to Satellite';
+            }
+            currentTileLayer.addTo(map);
+        }
+        
+        // ============================================
+        // ФОКУС НА ФИНИШЕ
+        // ============================================
+        function focusOnFinish() {
+            if (currentConfig && currentConfig.finishCoords && map) {
+                const { lat, lng } = currentConfig.finishCoords;
+                map.setView([lat, lng], 6);
+                console.log(`📍 Map focused on finish: ${lat}, ${lng}`);
+            }
         }
         
         // ============================================
@@ -364,9 +423,8 @@
                     document.getElementById('role-badge').innerHTML = '🎖️ PILOT MODE';
                     document.getElementById('role-badge').className = 'role-badge role-pilot';
                     document.getElementById('altitude-panel').style.display = 'block';
-                    document.getElementById('gondola-btn').style.display = 'block';
+                    document.getElementById('control-btn').style.display = 'none';
                     document.getElementById('register-btn').style.display = 'none';
-                    document.getElementById('logout-btn').style.display = 'block';
                     
                     updatePilotUI(data.balloon);
                     showNotification(`✅ Welcome back, ${data.balloon.username}! You are controlling your balloon.`, 'success');
@@ -374,9 +432,9 @@
                     document.getElementById('role-badge').innerHTML = '👁️ SPECTATOR MODE';
                     document.getElementById('role-badge').className = 'role-badge role-spectator';
                     document.getElementById('altitude-panel').style.display = 'none';
-                    document.getElementById('gondola-btn').style.display = 'none';
-                    document.getElementById('logout-btn').style.display = 'block';
-                    showNotification('👋 You are in spectator mode. Find "Register" button to join the race!', 'info');
+                    document.getElementById('control-btn').style.display = 'block';
+                    document.getElementById('register-btn').style.display = 'block';
+                    showNotification('👋 You are in spectator mode. Click "Control My Balloon" to join the race!', 'info');
                 }
             });
             
@@ -423,6 +481,9 @@
                     finishMarker.bindPopup('<b>🏁 FINISH LINE</b><br>First to reach within 50km wins!');
                     
                     updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
+                    
+                    // Фокусируем карту на финише
+                    focusOnFinish();
                 }
             });
             
@@ -433,7 +494,6 @@
                 if (balloons && Array.isArray(balloons)) {
                     updateBalloons(balloons);
                     
-                    // Если мы пилот, обновляем свои данные
                     if (myRole === 'pilot' && myBalloonId) {
                         const myBalloon = balloons.find(b => b.id === myBalloonId);
                         if (myBalloon) {
@@ -444,7 +504,6 @@
             });
             
             socket.on('fiesta-balloon-updated', (balloon) => {
-                // Обновляем отдельный шар без полной перерисовки
                 if (balloon && map && balloonsMarkers[balloon.id]) {
                     balloonsMarkers[balloon.id].setLatLng([balloon.lat, balloon.lng]);
                     if (myRole === 'pilot' && myBalloonId === balloon.id) {
@@ -517,7 +576,6 @@
                 const altitude = parseInt(e.target.value);
                 altitudeValue.innerHTML = `${altitude} m`;
                 
-                // Обновляем информацию о слое
                 if (altitude < 2000) {
                     layerInfo.innerHTML = 'Surface Layer (0-2km) - Slow winds';
                 } else if (altitude < 5000) {
@@ -539,23 +597,20 @@
         }
         
         // ============================================
-        // ВЫХОД ИЗ СИСТЕМЫ
+        // УПРАВЛЕНИЕ ШАРОМ (ДЛЯ ЗРИТЕЛЕЙ)
         // ============================================
-        function logout() {
-            if (confirm('Are you sure you want to exit?\n\n' + 
-                       (myRole === 'pilot' ? 'Your balloon will continue flying without you!' : 'You will be disconnected.'))) {
-                // Очищаем localStorage только если пользователь явно вышел
-                if (myRole === 'pilot') {
-                    // Не удаляем pilotId, чтобы можно было восстановить сессию
-                    showNotification('You left the pilot seat. Your balloon continues flying.', 'info');
-                } else {
-                    localStorage.removeItem('aerostar_pilot_id');
-                }
-                
-                if (socket) socket.disconnect();
-                setTimeout(() => {
-                    window.location.href = 'register.html';
-                }, 500);
+        function takeControl() {
+            if (myRole === 'spectator') {
+                window.location.href = 'register.html';
+            }
+        }
+        
+        // ============================================
+        // ВЫХОД
+        // ============================================
+        function exit() {
+            if (confirm('Are you sure you want to exit?\n\nYou will be redirected to the Aerostar website.')) {
+                window.location.href = 'https://aerost.art/';
             }
         }
         
@@ -567,6 +622,11 @@
             initMap();
             initAltitudeControl();
             connectSocket();
+            
+            // Кнопки управления
+            document.getElementById('control-btn').addEventListener('click', takeControl);
+            document.getElementById('logout-btn').addEventListener('click', exit);
+            document.getElementById('layer-toggle').addEventListener('click', toggleLayer);
             
             // Обновление статистики каждые 5 секунд
             setInterval(() => {
@@ -581,14 +641,6 @@
                     updateFinishWeather(currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
                 }
             }, 60000);
-        });
-        
-        // Кнопка выхода
-        document.addEventListener('DOMContentLoaded', () => {
-            const logoutBtn = document.getElementById('logout-btn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', logout);
-            }
         });
     </script>
 </body>
