@@ -849,6 +849,31 @@
                     setTimeout(() => { window.location.href = 'fiesta.html'; }, 2000);
                 }
             });
+
+            // ВНУТРИ функции connectSocket(), вместе с другими socket.on()
+    socket.on('fiesta-registration-complete', (data) => {
+    console.log('Registration complete:', data);
+    
+    if (data.success) {
+        // Сохраняем ID пилота в localStorage для использования в fiesta.html
+        localStorage.setItem('aerostar_pilot_id', data.pilotId);
+        localStorage.setItem('aerostar_pilot_name', data.balloon.username);
+        localStorage.setItem('aerostar_race_number', data.balloon.raceNumber);
+        
+        document.getElementById('register-message').innerHTML = 
+            '✅ Registration successful! Redirecting to race...';
+        document.getElementById('register-message').style.color = '#22c55e';
+        
+        // Перенаправляем на страницу гонки через 1.5 секунды
+        setTimeout(() => {
+            window.location.href = 'fiesta.html';
+        }, 1500);
+    } else {
+        document.getElementById('register-message').innerHTML = 
+            '❌ Registration failed: ' + (data.message || 'Unknown error');
+        document.getElementById('register-message').style.color = '#ef4444';
+    }
+});
             
             socket.on('fiesta-admin-message', (data) => {
                 displayAnnouncement(data);
