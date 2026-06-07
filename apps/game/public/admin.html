@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -172,12 +173,12 @@
             </div>
             
             <div class="admin-card">
-                <h2>📍 Finish Line (Paris)</h2>
+                <h2>📍 Finish Line</h2> <!-- Убрано упоминание Парижа -->
                 <div class="coord-group">
                     <div class="form-group"><label>Latitude</label><input type="text" id="finish-lat" placeholder="48.8566" /></div>
                     <div class="form-group"><label>Longitude</label><input type="text" id="finish-lng" placeholder="2.3522" /></div>
                 </div>
-                <div class="info-text">🏁 Цель гонки - первым достичь финиша в Париже (радиус 50 км)</div>
+                <div class="info-text">🏁 Цель гонки - первым достичь финиша (радиус 50 км)</div>
             </div>
             
             <div class="admin-card">
@@ -207,17 +208,25 @@
             </div>
             
             <div class="admin-card">
-                <h2>🏁 Race Start Time</h2>
+                <h2>🏁 Race Schedule</h2>
                 <div class="form-group">
                     <label>Exact Race Start Date & Time</label>
                     <input type="datetime-local" id="race-start-time" />
                 </div>
-                <div class="info-text">🚀 В это время все зарегистрированные шары начнут движение. Гонка стартует автоматически!</div>
+                <!-- ДОБАВЛЕНО: Поле для длительности гонки -->
+                <div class="form-group">
+                    <label>Race Duration (hours)</label>
+                    <input type="number" id="race-duration" min="1" max="168" step="1" value="24" />
+                    <div class="info-text">⏰ Через сколько часов после старта автоматически завершить гонку (1-168 часов).</div>
+                </div>
+                <div class="info-text">🚀 В указанное время все шары начнут движение. Гонка стартует автоматически!</div>
             </div>
             
             <div class="button-group">
                 <button id="save-config" class="btn-success">💾 Save Race Configuration</button>
                 <button id="force-start" class="btn-danger">🏁 Force Race Start</button>
+                <!-- ДОБАВЛЕНО: Кнопка принудительного завершения гонки -->
+                <button id="force-finish" class="btn-danger" style="background:#b91c1c;">🏆 Force Race Finish</button>
             </div>
             
             <div class="admin-card">
@@ -291,10 +300,18 @@
                 startStatus = '🚦 Race should have started! Waiting for trigger...';
             }
             
-            // Отображение стартовой зоны
             let startZoneText = 'Not configured';
             if (config.allowedStartRegion) {
                 startZoneText = `Rectangle: ${config.allowedStartRegion.minLat}°-${config.allowedStartRegion.maxLat}°N, ${Math.abs(config.allowedStartRegion.minLng)}°-${Math.abs(config.allowedStartRegion.maxLng)}°${config.allowedStartRegion.minLng < 0 ? 'W' : 'E'}`;
+            }
+            
+            // ДОБАВЛЕНО: Отображение длительности гонки
+            const durationHours = config.raceDurationHours || 24;
+            let finishTimeText = 'Not set';
+            if (config.raceStarted && config.raceStartDateTime) {
+                const finishTime = new Date(config.raceStartDateTime);
+                finishTime.setHours(finishTime.getHours() + durationHours);
+                finishTimeText = formatDate(finishTime);
             }
             
             document.getElementById('current-config').innerHTML = `
@@ -302,6 +319,8 @@
                 <strong>🗺️ Start Zone:</strong> ${startZoneText}<br>
                 <strong>📝 Registration Window:</strong> ${formatDate(config.registrationWindowFrom)} - ${formatDate(config.registrationWindowTo)}<br>
                 <strong>🚀 Race Start Time:</strong> ${formatDate(config.raceStartDateTime)}<br>
+                <strong>⏰ Race Duration:</strong> ${durationHours} hours<br>
+                <strong>🏁 Auto-Finish Time:</strong> ${finishTimeText}<br>
                 <strong>📊 Race Status:</strong> ${startStatus}<br>
                 <strong>👥 Max Participants:</strong> ${config.maxParticipants || 7}<br>
                 <strong>🌬️ Wind Model:</strong> Real-time GFS data (Open-Meteo API)<br>
@@ -345,25 +364,21 @@
             socket.on('fiesta-race-config', (config) => {
                 updateCurrentConfig(config);
                 
-                // Заполняем форму текущими значениями
                 document.getElementById('finish-lat').value = config.finishCoords?.lat || '';
                 document.getElementById('finish-lng').value = config.finishCoords?.lng || '';
                 
-                // Start zone (rectangle)
                 if (config.allowedStartRegion) {
                     document.getElementById('min-lat').value = config.allowedStartRegion.minLat || '';
                     document.getElementById('max-lat').value = config.allowedStartRegion.maxLat || '';
                     document.getElementById('min-lng').value = config.allowedStartRegion.minLng || '';
                     document.getElementById('max-lng').value = config.allowedStartRegion.maxLng || '';
                 } else {
-                    // Оставляем поля пустыми, без значений по умолчанию
                     document.getElementById('min-lat').value = '';
                     document.getElementById('max-lat').value = '';
                     document.getElementById('min-lng').value = '';
                     document.getElementById('max-lng').value = '';
                 }
                 
-                // Registration window
                 if (config.registrationWindowFrom) {
                     const regFrom = new Date(config.registrationWindowFrom);
                     document.getElementById('reg-from').value = regFrom.toISOString().slice(0, 16);
@@ -373,10 +388,15 @@
                     document.getElementById('reg-to').value = regTo.toISOString().slice(0, 16);
                 }
                 
-                // Race start time
                 if (config.raceStartDateTime) {
                     const startTime = new Date(config.raceStartDateTime);
                     document.getElementById('race-start-time').value = startTime.toISOString().slice(0, 16);
+                }
+                
+                // ДОБАВЛЕНО: Заполнение поля длительности гонки
+                const durationInput = document.getElementById('race-duration');
+                if (durationInput && config.raceDurationHours) {
+                    durationInput.value = config.raceDurationHours;
                 }
             });
             
@@ -412,8 +432,14 @@
                 socket.emit('fiesta-get-participants');
             });
             
+            // ДОБАВЛЕНО: Обработчик принудительного завершения гонки
+            socket.on('fiesta-race-finished', (data) => {
+                alert(data.message || '🏆 Race has been finished!');
+                updateRaceStats();
+                socket.emit('fiesta-get-participants');
+            });
+            
             socket.on('fiesta-admin-message', (data) => {
-                // Это событие приходит от сервера, когда админ отправляет сообщение
                 console.log('Admin message received:', data);
             });
             
@@ -422,7 +448,6 @@
                 alert('Error: ' + error);
             });
             
-            // Запрашиваем начальные данные
             setTimeout(() => {
                 updateRaceStats();
             }, 1000);
@@ -436,7 +461,6 @@
             location.reload();
         });
         
-        // Счетчик символов для сообщения
         const messageTextarea = document.getElementById('admin-message');
         const charCountSpan = document.getElementById('char-count');
         
@@ -449,7 +473,6 @@
             }
         });
         
-        // Отправка объявления
         document.getElementById('send-announcement').addEventListener('click', () => {
             if (!socket) {
                 alert('Not connected to server');
@@ -484,7 +507,6 @@
                 return;
             }
             
-            // Проверяем, что поля зоны старта не пустые
             const minLat = document.getElementById('min-lat').value;
             const maxLat = document.getElementById('max-lat').value;
             const minLng = document.getElementById('min-lng').value;
@@ -495,12 +517,18 @@
                 return;
             }
             
+            // ДОБАВЛЕНО: Получение длительности гонки
+            const raceDurationHours = parseInt(document.getElementById('race-duration').value, 10);
+            if (isNaN(raceDurationHours) || raceDurationHours < 1) {
+                alert('Please enter a valid race duration (minimum 1 hour)');
+                return;
+            }
+            
             const config = {
                 finishCoords: {
                     lat: parseFloat(document.getElementById('finish-lat').value),
                     lng: parseFloat(document.getElementById('finish-lng').value)
                 },
-                // Rectangle start zone
                 allowedStartRegion: {
                     minLat: parseFloat(minLat),
                     maxLat: parseFloat(maxLat),
@@ -509,10 +537,10 @@
                 },
                 registrationWindowFrom: document.getElementById('reg-from').value,
                 registrationWindowTo: document.getElementById('reg-to').value,
-                raceStartDateTime: document.getElementById('race-start-time').value
+                raceStartDateTime: document.getElementById('race-start-time').value,
+                raceDurationHours: raceDurationHours // ДОБАВЛЕНО
             };
             
-            // Validation
             if (isNaN(config.finishCoords.lat) || isNaN(config.finishCoords.lng)) {
                 alert('Please enter valid finish coordinates');
                 return;
@@ -534,7 +562,6 @@
                 return;
             }
             
-            // Validate coordinates
             if (config.allowedStartRegion.minLat >= config.allowedStartRegion.maxLat) {
                 alert('Min latitude must be less than max latitude');
                 return;
@@ -560,11 +587,23 @@
             }
         });
         
+        // ДОБАВЛЕНО: Обработчик принудительного завершения гонки
+        document.getElementById('force-finish').addEventListener('click', () => {
+            if (!socket) {
+                alert('Not connected to server');
+                return;
+            }
+            
+            if (confirm('🏆 ARE YOU SURE?\n\nForce finishing the race will stop all balloons and end the competition.\nThis cannot be undone!\n\nContinue?')) {
+                socket.emit('fiesta-force-race-finish');
+                alert('🏆 Force finish command sent!');
+            }
+        });
+        
         document.getElementById('admin-password').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') login();
         });
         
-        // Автоматическое обновление статистики каждые 10 секунд
         setInterval(() => {
             if (socket && socket.connected) {
                 updateRaceStats();
