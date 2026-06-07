@@ -21,7 +21,6 @@
             min-height: 100vh;
         }
         
-        /* Map container */
         #map-container {
             position: relative;
             height: 50vh;
@@ -32,17 +31,15 @@
         #map {
             height: 100%;
             width: 100%;
-            cursor: crosshair; /* Добавлено: показывает, что карта кликабельна */
+            cursor: crosshair;
         }
         
-        /* Main container */
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
         
-        /* Header */
         .header {
             text-align: center;
             margin-bottom: 20px;
@@ -59,7 +56,6 @@
             font-size: 14px;
         }
         
-        /* Content below map */
         .content {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -67,7 +63,6 @@
             margin-top: 20px;
         }
         
-        /* Cards */
         .card {
             background: rgba(15, 23, 42, 0.95);
             backdrop-filter: blur(10px);
@@ -91,7 +86,6 @@
             margin: 15px 0 10px 0;
         }
         
-        /* Race rules */
         .rule-item {
             display: flex;
             justify-content: space-between;
@@ -109,7 +103,6 @@
             font-weight: bold;
         }
         
-        /* Balloon catalog */
         .catalog-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -147,7 +140,6 @@
             font-weight: 600;
         }
         
-        /* Form */
         .form-group {
             margin-bottom: 18px;
         }
@@ -168,7 +160,6 @@
             border-radius: 10px;
             color: white;
             font-size: 14px;
-            box-sizing: border-box;
         }
         
         input:focus {
@@ -200,7 +191,6 @@
             cursor: not-allowed;
         }
         
-        /* Participants table */
         .participants-table {
             width: 100%;
             margin-top: 15px;
@@ -266,7 +256,6 @@
             color: #38bdf8;
             font-family: monospace;
             margin-top: 10px;
-            cursor: pointer;
         }
         
         .connection-status {
@@ -374,17 +363,6 @@
             color: #94a3b8;
             margin-top: 5px;
         }
-        
-        .debug-panel {
-            background: rgba(0,0,0,0.5);
-            border-radius: 8px;
-            padding: 8px;
-            margin-top: 10px;
-            font-size: 10px;
-            font-family: monospace;
-            color: #fbbf24;
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -447,7 +425,7 @@
                 
                 <h3>📍 Selected Start Location</h3>
                 <div class="coords-info" id="start-coords-info">
-                    ⚠️ Кликните на карту для выбора точки старта
+                    ⚠️ Кликните на карту в красной зоне
                 </div>
                 <div id="region-warning" class="warning-text" style="display: none;">
                     ⚠️ Start location outside allowed region!
@@ -461,7 +439,6 @@
                 <div id="race-started-warning" class="warning-text" style="display: none;">
                     🚫 Race has already started! Cannot register.
                 </div>
-                <div id="debug-info" class="debug-panel"></div>
             </div>
             
             <!-- Right Column: Registration Form -->
@@ -506,6 +483,9 @@
     <script src="/socket.io/socket.io.js"></script>
     
     <script>
+        // ============================================
+        // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+        // ============================================
         let map, socket;
         let selectedStartCoords = null;
         let startMarker = null;
@@ -515,133 +495,108 @@
         let currentConfig = null;
         let mapInitialized = false;
         let countdownInterval = null;
-        let pendingConfig = null;
         
-        // Initialize map
+        // ============================================
+        // ИНИЦИАЛИЗАЦИЯ КАРТЫ
+        // ============================================
         function initMap() {
             if (mapInitialized) return;
             
-            try {
-                console.log('🟢 initMap: Creating map...');
-                map = L.map('map').setView([30, -90], 4);
-                
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
-                    subdomains: 'abcd',
-                    maxZoom: 19
-                }).addTo(map);
-                
-                L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
-                
-                // Прямая привязка обработчика клика
-                map.on('click', function(e) {
-                    console.log('🖱️ MAP CLICK DETECTED at:', e.latlng);
-                    handleMapClick(e);
-                });
-                
-                // Ждем загрузки карты
-                map.whenReady(() => {
-                    console.log('✅ Map fully loaded and ready');
-                    mapInitialized = true;
-                    
-                    if (pendingConfig) {
-                        console.log('Drawing pending config after map ready');
-                        updateFinishMarker(pendingConfig);
-                        updateStartRegion(pendingConfig);
-                        pendingConfig = null;
-                    }
-                    
-                    if (currentConfig) {
-                        console.log('Drawing current config after map ready');
-                        updateFinishMarker(currentConfig);
-                        updateStartRegion(currentConfig);
-                    }
-                });
-                
-            } catch(e) {
-                console.error('Map init error:', e);
-                setTimeout(initMap, 1000);
-            }
-        }
-        
-        function handleMapClick(e) {
-            console.log('🖱️ handleMapClick called with:', e);
-            const { lat, lng } = e.latlng;
+            console.log('🟢 initMap: Creating map...');
+            map = L.map('map').setView([30, -90], 4);
             
-            console.log(`📍 Click at: ${lat}, ${lng}`);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
             
-            // Обновляем отображение координат
-            const coordsInfo = document.getElementById('start-coords-info');
-            coordsInfo.innerHTML = `📍 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
-            coordsInfo.style.color = '#38bdf8';
+            L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
             
-            // Проверяем регистрацию
-            if (!isRegistrationOpen()) {
-                document.getElementById('registration-closed').style.display = 'block';
-                document.getElementById('region-warning').style.display = 'none';
-                document.getElementById('region-success').style.display = 'none';
-                selectedStartCoords = null;
-                if (startMarker) map.removeLayer(startMarker);
-                startMarker = null;
-                checkRegistrationValidation();
-                return;
-            }
-            
-            // Проверяем старт гонки
-            if (currentConfig && currentConfig.raceStarted) {
-                document.getElementById('race-started-warning').style.display = 'block';
-                document.getElementById('registration-closed').style.display = 'none';
-                document.getElementById('region-warning').style.display = 'none';
-                document.getElementById('region-success').style.display = 'none';
-                selectedStartCoords = null;
-                if (startMarker) map.removeLayer(startMarker);
-                startMarker = null;
-                checkRegistrationValidation();
-                return;
-            }
-            
-            document.getElementById('race-started-warning').style.display = 'none';
-            document.getElementById('registration-closed').style.display = 'none';
-            
-            // Проверяем зону старта
-            if (currentConfig && currentConfig.allowedStartRegion) {
-                const region = currentConfig.allowedStartRegion;
-                console.log('Checking region:', region);
-                console.log(`Lat ${lat} between ${region.minLat} and ${region.maxLat}:`, lat >= region.minLat && lat <= region.maxLat);
-                console.log(`Lng ${lng} between ${region.minLng} and ${region.maxLng}:`, lng >= region.minLng && lng <= region.maxLng);
+            // ПРЯМОЙ ОБРАБОТЧИК КЛИКА ПО КАРТЕ
+            map.on('click', function(e) {
+                console.log('🖱️ MAP CLICK DETECTED at:', e.latlng);
+                const { lat, lng } = e.latlng;
                 
-                if (lat >= region.minLat && lat <= region.maxLat &&
-                    lng >= region.minLng && lng <= region.maxLng) {
-                    
-                    console.log('✅ Location is VALID!');
-                    selectedStartCoords = { lat, lng };
-                    
-                    if (startMarker) map.removeLayer(startMarker);
-                    startMarker = L.marker([lat, lng], {
-                        icon: L.divIcon({ html: '🎈', iconSize: [24, 24], className: 'start-marker' })
-                    }).addTo(map);
-                    
+                // Обновляем отображение координат
+                document.getElementById('start-coords-info').innerHTML = `📍 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+                
+                // Проверяем открыта ли регистрация
+                if (!isRegistrationOpen()) {
+                    document.getElementById('registration-closed').style.display = 'block';
                     document.getElementById('region-warning').style.display = 'none';
-                    document.getElementById('region-success').style.display = 'block';
-                    checkRegistrationValidation();
-                    
-                } else {
-                    console.log('❌ Location is INVALID (outside region)');
+                    document.getElementById('region-success').style.display = 'none';
                     selectedStartCoords = null;
                     if (startMarker) map.removeLayer(startMarker);
                     startMarker = null;
-                    
-                    document.getElementById('region-warning').style.display = 'block';
-                    document.getElementById('region-success').style.display = 'none';
                     checkRegistrationValidation();
+                    return;
                 }
-            } else {
-                console.warn('No allowedStartRegion in config yet');
-                document.getElementById('debug-info').innerHTML = '⚠️ Start region not configured yet. Ask admin to set start zone.';
-                document.getElementById('debug-info').style.display = 'block';
-            }
+                
+                // Проверяем не началась ли гонка
+                if (currentConfig && currentConfig.raceStarted) {
+                    document.getElementById('race-started-warning').style.display = 'block';
+                    document.getElementById('registration-closed').style.display = 'none';
+                    document.getElementById('region-warning').style.display = 'none';
+                    document.getElementById('region-success').style.display = 'none';
+                    selectedStartCoords = null;
+                    if (startMarker) map.removeLayer(startMarker);
+                    startMarker = null;
+                    checkRegistrationValidation();
+                    return;
+                }
+                
+                document.getElementById('race-started-warning').style.display = 'none';
+                document.getElementById('registration-closed').style.display = 'none';
+                
+                // Проверяем находится ли точка в разрешенной зоне
+                if (currentConfig && currentConfig.allowedStartRegion) {
+                    const region = currentConfig.allowedStartRegion;
+                    
+                    if (lat >= region.minLat && lat <= region.maxLat &&
+                        lng >= region.minLng && lng <= region.maxLng) {
+                        
+                        console.log('✅ Location VALID - within start region');
+                        selectedStartCoords = { lat, lng };
+                        
+                        if (startMarker) map.removeLayer(startMarker);
+                        startMarker = L.marker([lat, lng], {
+                            icon: L.divIcon({ html: '🎈', iconSize: [24, 24], className: 'start-marker' })
+                        }).addTo(map);
+                        
+                        document.getElementById('region-warning').style.display = 'none';
+                        document.getElementById('region-success').style.display = 'block';
+                        checkRegistrationValidation();
+                        
+                    } else {
+                        console.log('❌ Location INVALID - outside start region');
+                        selectedStartCoords = null;
+                        if (startMarker) map.removeLayer(startMarker);
+                        startMarker = null;
+                        
+                        document.getElementById('region-warning').style.display = 'block';
+                        document.getElementById('region-success').style.display = 'none';
+                        checkRegistrationValidation();
+                    }
+                } else {
+                    console.warn('No allowedStartRegion in config yet');
+                }
+            });
+            
+            map.whenReady(() => {
+                console.log('✅ Map fully loaded and ready');
+                mapInitialized = true;
+                
+                if (currentConfig) {
+                    updateFinishMarker(currentConfig);
+                    updateStartRegion(currentConfig);
+                }
+            });
         }
         
+        // ============================================
+        // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+        // ============================================
         function isRegistrationOpen() {
             if (!currentConfig) return false;
             const now = new Date();
@@ -656,89 +611,47 @@
         }
         
         function updateFinishMarker(config) {
-            if (!mapInitialized || !map) {
-                console.log('Map not ready for finish marker');
-                return;
-            }
+            if (!mapInitialized || !map) return;
             
-            if (config && config.finishCoords && map) {
+            if (config && config.finishCoords) {
                 const coords = config.finishCoords;
-                if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number' && !isNaN(coords.lat) && !isNaN(coords.lng)) {
-                    console.log('Drawing finish marker at:', coords);
+                if (coords && typeof coords.lat === 'number' && !isNaN(coords.lat)) {
                     if (finishMarker) {
                         finishMarker.setLatLng([coords.lat, coords.lng]);
                     } else {
-                        const finishIcon = L.divIcon({ 
-                            html: '🏁', 
-                            iconSize: [32, 32], 
-                            className: 'finish-marker'
-                        });
-                        finishMarker = L.marker([coords.lat, coords.lng], { icon: finishIcon })
-                            .addTo(map)
-                            .bindPopup('<b>🏁 FINISH LINE</b><br>First to reach within 50km wins!');
+                        finishMarker = L.marker([coords.lat, coords.lng], {
+                            icon: L.divIcon({ html: '🏁', iconSize: [32, 32], className: 'finish-marker' })
+                        }).addTo(map).bindPopup('<b>🏁 FINISH LINE</b><br>First to reach within 50km wins!');
                     }
                 }
             }
         }
         
         function updateStartRegion(config) {
-            console.log('=== updateStartRegion called ===');
-            console.log('Map initialized:', mapInitialized);
-            console.log('Map exists:', !!map);
-            
             if (!mapInitialized || !map) {
-                console.log('Map not ready yet, will retry in 500ms');
                 setTimeout(() => updateStartRegion(config), 500);
                 return;
             }
             
             if (config && config.allowedStartRegion) {
                 const region = config.allowedStartRegion;
-                console.log('Region data:', region);
                 
-                if (typeof region.minLat === 'number' && typeof region.maxLat === 'number' &&
-                    typeof region.minLng === 'number' && typeof region.maxLng === 'number' &&
-                    !isNaN(region.minLat) && !isNaN(region.maxLat) && 
-                    !isNaN(region.minLng) && !isNaN(region.maxLng)) {
+                if (typeof region.minLat === 'number' && !isNaN(region.minLat)) {
+                    const bounds = [[region.minLat, region.minLng], [region.maxLat, region.maxLng]];
                     
-                    const bounds = [
-                        [region.minLat, region.minLng],
-                        [region.maxLat, region.maxLng]
-                    ];
-                    
-                    console.log('Drawing rectangle with bounds:', bounds);
-                    
-                    try {
-                        if (regionRectangle) {
-                            regionRectangle.setBounds(bounds);
-                            console.log('Updated existing rectangle');
-                        } else {
-                            regionRectangle = L.rectangle(bounds, {
-                                color: '#f87171',
-                                weight: 2,
-                                dashArray: '5, 5',
-                                fillColor: '#f87171',
-                                fillOpacity: 0.1
-                            }).addTo(map);
-                            regionRectangle.bindPopup('<b>📍 Allowed Start Region</b><br>Кликните в этой зоне для выбора старта');
-                            console.log('Created new rectangle');
-                        }
-                        
-                        document.getElementById('rule-region').innerHTML = 
-                            `Lat ${region.minLat}°-${region.maxLat}°, Lng ${region.minLng}°-${region.maxLng}°`;
-                        document.getElementById('debug-info').innerHTML = '✅ Start region configured! Click on map within the red rectangle.';
-                        document.getElementById('debug-info').style.display = 'none';
-                        
-                    } catch(e) {
-                        console.error('Error drawing rectangle:', e);
+                    if (regionRectangle) {
+                        regionRectangle.setBounds(bounds);
+                    } else {
+                        regionRectangle = L.rectangle(bounds, {
+                            color: '#f87171',
+                            weight: 2,
+                            dashArray: '5, 5',
+                            fillColor: '#f87171',
+                            fillOpacity: 0.1
+                        }).addTo(map).bindPopup('<b>📍 Allowed Start Region</b><br>Кликните в этой зоне для выбора старта');
                     }
-                } else {
-                    console.warn('Invalid region coordinates:', region);
+                    console.log('✅ Start region drawn on map');
                 }
-            } else {
-                console.warn('Cannot draw rectangle - missing config or allowedStartRegion');
-                document.getElementById('debug-info').innerHTML = '⚠️ Start region not configured. Please ask admin to set start zone coordinates.';
-                document.getElementById('debug-info').style.display = 'block';
             }
         }
         
@@ -762,7 +675,6 @@
                 const hours = Math.floor(diff / (1000 * 60 * 60));
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                 const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                
                 countdownSpan.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                 countdownDisplay.style.display = 'block';
             }
@@ -777,123 +689,17 @@
             const isRegOpen = isRegistrationOpen();
             const raceStarted = isRaceStarted();
             
-            console.log('Checking registration:', { name, selectedStartCoords, isRegOpen, raceStarted });
-            
             let isValid = name && selectedStartCoords && selectedStyleId && currentConfig && isRegOpen && !raceStarted;
             
             if (isValid && selectedStartCoords && currentConfig && currentConfig.allowedStartRegion) {
                 const region = currentConfig.allowedStartRegion;
                 const inRegion = selectedStartCoords.lat >= region.minLat && selectedStartCoords.lat <= region.maxLat &&
                                  selectedStartCoords.lng >= region.minLng && selectedStartCoords.lng <= region.maxLng;
-                
                 if (!inRegion) isValid = false;
             }
             
             btn.disabled = !isValid;
-            console.log('Register button enabled:', !btn.disabled);
-            
-            if (!isRegOpen && currentConfig) {
-                document.getElementById('registration-closed').style.display = 'block';
-            } else {
-                document.getElementById('registration-closed').style.display = 'none';
-            }
-            
-            if (raceStarted && currentConfig) {
-                document.getElementById('race-started-warning').style.display = 'block';
-            } else {
-                document.getElementById('race-started-warning').style.display = 'none';
-            }
-        }
-        
-        function connectSocket() {
-            socket = io({
-                transports: ['polling', 'websocket'],
-                upgrade: true,
-                reconnection: true
-            });
-            
-            socket.on('connect', () => {
-                console.log('Socket connected');
-                document.getElementById('status-text').textContent = 'Connected to race server';
-                const indicator = document.querySelector('.connected-indicator');
-                if (indicator) indicator.style.background = '#22c55e';
-                socket.emit('fiesta-auth', {
-                    email: document.getElementById('player-email').value || 'viewer@race.com',
-                    username: document.getElementById('player-name').value || 'Race Viewer'
-                });
-            });
-            
-            socket.on('connect_error', (error) => {
-                console.error('Connection error:', error);
-                document.getElementById('status-text').textContent = 'Connection error';
-                document.getElementById('status-text').style.color = '#ef4444';
-            });
-            
-            socket.on('fiesta-race-config', (config) => {
-                console.log('=== Received race config ===');
-                console.log('allowedStartRegion:', config.allowedStartRegion);
-                currentConfig = config;
-                updateRaceRules(config);
-                
-                if (mapInitialized && map) {
-                    updateFinishMarker(config);
-                    updateStartRegion(config);
-                } else {
-                    console.log('Map not ready yet, saving config for later');
-                    pendingConfig = config;
-                }
-                
-                if (config.raceStartDateTime) {
-                    startCountdown(config.raceStartDateTime);
-                }
-                
-                checkRegistrationValidation();
-            });
-            
-            socket.on('fiesta-balloon-catalog', (catalog) => {
-                updateBalloonCatalog(catalog);
-            });
-            
-            socket.on('fiesta-all-balloons', (balloons) => {
-                updateParticipantsTable(balloons);
-            });
-            
-            socket.on('fiesta-balloon-created', (balloon) => {
-                socket.emit('fiesta-get-participants');
-                if (balloon.username === document.getElementById('player-name').value) {
-                    document.getElementById('register-message').innerHTML = 
-                        '✅ Registration successful! Waiting for race start...';
-                    document.getElementById('register-message').style.color = '#22c55e';
-                    document.getElementById('btn-register').disabled = true;
-                    
-                    if (selectedStartCoords) {
-                        localStorage.setItem('fiesta_start_coords', JSON.stringify(selectedStartCoords));
-                    }
-                    
-                    setTimeout(() => {
-                        window.location.href = 'fiesta.html';
-                    }, 2000);
-                }
-            });
-            
-            socket.on('fiesta-race-started', (data) => {
-                const messageDiv = document.getElementById('register-message');
-                messageDiv.innerHTML = `🏁 ${data.message || 'Race has started! Good luck!'}`;
-                messageDiv.style.color = '#fbbf24';
-                checkRegistrationValidation();
-            });
-            
-            socket.on('fiesta-admin-message', (data) => {
-                displayAnnouncement(data);
-            });
-            
-            socket.on('fiesta-error', (msg) => {
-                document.getElementById('register-message').innerHTML = `❌ Error: ${msg}`;
-                document.getElementById('register-message').style.color = '#ef4444';
-                setTimeout(() => {
-                    document.getElementById('register-message').innerHTML = '';
-                }, 5000);
-            });
+            console.log('Registration valid:', isValid, 'coords:', selectedStartCoords);
         }
         
         function displayAnnouncement(data) {
@@ -920,95 +726,6 @@
             }, 30000);
         }
         
-        function updateRaceRules(config) {
-            if (config && config.finishCoords) {
-                document.getElementById('rule-finish').innerHTML = 
-                    `${config.finishCoords.lat?.toFixed(2) || '?'}°, ${config.finishCoords.lng?.toFixed(2) || '?'}°`;
-            }
-            if (config && config.registrationWindowFrom && config.registrationWindowTo) {
-                const fromDate = new Date(config.registrationWindowFrom);
-                const toDate = new Date(config.registrationWindowTo);
-                document.getElementById('rule-reg-period').innerHTML = 
-                    `${fromDate.toLocaleString()} - ${toDate.toLocaleString()}`;
-            }
-            if (config && config.raceStartDateTime) {
-                const startDate = new Date(config.raceStartDateTime);
-                document.getElementById('rule-start-time').innerHTML = startDate.toLocaleString();
-            }
-            if (config && config.allowedStartRegion) {
-                document.getElementById('rule-region').innerHTML = 
-                    `Lat ${config.allowedStartRegion.minLat}°-${config.allowedStartRegion.maxLat}°, Lng ${config.allowedStartRegion.minLng}°-${config.allowedStartRegion.maxLng}°`;
-            }
-            if (config && config.maxParticipants) {
-                document.getElementById('rule-max-participants').innerHTML = config.maxParticipants;
-            }
-        }
-        
-        function updateBalloonCatalog(catalog) {
-            const grid = document.getElementById('catalog-grid');
-            if (grid && catalog && Object.keys(catalog).length > 0) {
-                grid.innerHTML = '';
-                Object.values(catalog).forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'skin-card';
-                    card.dataset.id = item.id;
-                    card.innerHTML = `
-                        <div class="skin-preview">🎈</div>
-                        <div class="skin-name">${escapeHtml(item.name)}</div>
-                    `;
-                    if (item.id === 'classic') card.classList.add('selected');
-                    card.addEventListener('click', () => {
-                        document.querySelectorAll('.skin-card').forEach(c => c.classList.remove('selected'));
-                        card.classList.add('selected');
-                        selectedStyleId = item.id;
-                        document.getElementById('selected-balloon-info').innerHTML = 
-                            `Selected: <strong>${escapeHtml(item.name)}</strong>`;
-                        checkRegistrationValidation();
-                    });
-                    grid.appendChild(card);
-                });
-            }
-        }
-        
-        function updateParticipantsTable(balloons) {
-            const container = document.getElementById('participants-container');
-            if (!balloons || balloons.length === 0) {
-                container.innerHTML = '<div class="empty-participants">No pilots registered yet...</div>';
-                return;
-            }
-            
-            const html = `
-                <table class="participants-table">
-                    <thead>
-                        <tr><th>Pilot</th><th>Balloon</th><th>Race #</th><th>Status</th><th>Altitude</th></tr>
-                    </thead>
-                    <tbody>
-                        ${balloons.map(p => {
-                            let status = 'REGISTERED';
-                            let statusClass = 'status-registered';
-                            if (p.finished) {
-                                status = 'FINISHED!';
-                                statusClass = 'status-finished';
-                            } else if (currentConfig && currentConfig.raceStarted) {
-                                status = 'IN FLIGHT';
-                                statusClass = 'status-flying';
-                            }
-                            return `
-                                <tr>
-                                    <td><strong>${escapeHtml(p.username)}</strong></td>
-                                    <td>🎈 ${escapeHtml(p.balloonStyle?.name || 'Classic')}</td>
-                                    <td>#${p.raceNumber}</td>
-                                    <td><span class="status-badge ${statusClass}">${status}</span></td>
-                                    <td>${Math.round(p.altitude || 1000)} m</td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-            `;
-            container.innerHTML = html;
-        }
-        
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/[&<>]/g, function(m) {
@@ -1019,31 +736,145 @@
             });
         }
         
-        // Event listeners
+        // ============================================
+        // ПОДКЛЮЧЕНИЕ К СОКЕТАМ
+        // ============================================
+        function connectSocket() {
+            socket = io({ transports: ['polling', 'websocket'], upgrade: true });
+            
+            socket.on('connect', () => {
+                console.log('✅ Socket connected');
+                document.getElementById('status-text').textContent = 'Connected to race server';
+                const indicator = document.querySelector('.connected-indicator');
+                if (indicator) indicator.style.background = '#22c55e';
+                socket.emit('fiesta-auth', {
+                    email: document.getElementById('player-email').value || 'viewer@race.com',
+                    username: document.getElementById('player-name').value || 'Race Viewer'
+                });
+            });
+            
+            socket.on('connect_error', (error) => {
+                console.error('Connection error:', error);
+                document.getElementById('status-text').textContent = 'Connection error';
+                document.getElementById('status-text').style.color = '#ef4444';
+            });
+            
+            socket.on('fiesta-race-config', (config) => {
+                console.log('=== Received race config ===');
+                console.log('allowedStartRegion:', config.allowedStartRegion);
+                currentConfig = config;
+                
+                // Обновляем отображение правил
+                if (config.finishCoords) {
+                    document.getElementById('rule-finish').innerHTML = `${config.finishCoords.lat?.toFixed(2)}°, ${config.finishCoords.lng?.toFixed(2)}°`;
+                }
+                if (config.registrationWindowFrom && config.registrationWindowTo) {
+                    const fromDate = new Date(config.registrationWindowFrom);
+                    const toDate = new Date(config.registrationWindowTo);
+                    document.getElementById('rule-reg-period').innerHTML = `${fromDate.toLocaleString()} - ${toDate.toLocaleString()}`;
+                }
+                if (config.raceStartDateTime) {
+                    document.getElementById('rule-start-time').innerHTML = new Date(config.raceStartDateTime).toLocaleString();
+                    startCountdown(config.raceStartDateTime);
+                }
+                if (config.allowedStartRegion) {
+                    document.getElementById('rule-region').innerHTML = `Lat ${config.allowedStartRegion.minLat}°-${config.allowedStartRegion.maxLat}°, Lng ${config.allowedStartRegion.minLng}°-${config.allowedStartRegion.maxLng}°`;
+                }
+                if (config.maxParticipants) {
+                    document.getElementById('rule-max-participants').innerHTML = config.maxParticipants;
+                }
+                
+                // Отрисовываем на карте
+                if (mapInitialized) {
+                    updateFinishMarker(config);
+                    updateStartRegion(config);
+                }
+                
+                checkRegistrationValidation();
+            });
+            
+            socket.on('fiesta-balloon-catalog', (catalog) => {
+                const grid = document.getElementById('catalog-grid');
+                if (grid && catalog) {
+                    grid.innerHTML = '';
+                    Object.values(catalog).forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'skin-card';
+                        card.dataset.id = item.id;
+                        card.innerHTML = `<div class="skin-preview">🎈</div><div class="skin-name">${escapeHtml(item.name)}</div>`;
+                        if (item.id === 'classic') card.classList.add('selected');
+                        card.addEventListener('click', () => {
+                            document.querySelectorAll('.skin-card').forEach(c => c.classList.remove('selected'));
+                            card.classList.add('selected');
+                            selectedStyleId = item.id;
+                            document.getElementById('selected-balloon-info').innerHTML = `Selected: <strong>${escapeHtml(item.name)}</strong>`;
+                            checkRegistrationValidation();
+                        });
+                        grid.appendChild(card);
+                    });
+                }
+            });
+            
+            socket.on('fiesta-all-balloons', (balloons) => {
+                const container = document.getElementById('participants-container');
+                if (!balloons || balloons.length === 0) {
+                    container.innerHTML = '<div class="empty-participants">No pilots registered yet...</div>';
+                    return;
+                }
+                
+                let html = '<table class="participants-table"><thead><tr><th>Pilot</th><th>Balloon</th><th>Race #</th><th>Status</th><th>Altitude</th></tr></thead><tbody>';
+                balloons.forEach(p => {
+                    let status = 'REGISTERED';
+                    let statusClass = 'status-registered';
+                    if (p.finished) {
+                        status = 'FINISHED!';
+                        statusClass = 'status-finished';
+                    } else if (currentConfig && currentConfig.raceStarted) {
+                        status = 'IN FLIGHT';
+                        statusClass = 'status-flying';
+                    }
+                    html += `<tr><td><strong>${escapeHtml(p.username)}</strong></td><td>🎈 ${escapeHtml(p.balloonStyle?.name || 'Classic')}</td><td>#${p.raceNumber}</td><td><span class="status-badge ${statusClass}">${status}</span></td><td>${Math.round(p.altitude || 1000)} m</td></tr>`;
+                });
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            });
+            
+            socket.on('fiesta-balloon-created', (balloon) => {
+                if (balloon.username === document.getElementById('player-name').value) {
+                    document.getElementById('register-message').innerHTML = '✅ Registration successful! Waiting for race start...';
+                    document.getElementById('register-message').style.color = '#22c55e';
+                    document.getElementById('btn-register').disabled = true;
+                    if (selectedStartCoords) localStorage.setItem('fiesta_start_coords', JSON.stringify(selectedStartCoords));
+                    setTimeout(() => { window.location.href = 'fiesta.html'; }, 2000);
+                }
+            });
+            
+            socket.on('fiesta-admin-message', (data) => {
+                displayAnnouncement(data);
+            });
+            
+            socket.on('fiesta-error', (msg) => {
+                document.getElementById('register-message').innerHTML = `❌ Error: ${msg}`;
+                document.getElementById('register-message').style.color = '#ef4444';
+                setTimeout(() => { document.getElementById('register-message').innerHTML = ''; }, 5000);
+            });
+        }
+        
+        // ============================================
+        // ОБРАБОТЧИКИ СОБЫТИЙ DOM
+        // ============================================
         document.getElementById('btn-register').addEventListener('click', () => {
             if (socket && selectedStartCoords && isRegistrationOpen() && !isRaceStarted()) {
                 const name = document.getElementById('player-name').value.trim();
                 const email = document.getElementById('player-email').value.trim() || `${name}@race.com`;
-                
-                socket.emit('fiesta-auth', {
-                    email: email,
-                    username: name
-                });
-                
+                socket.emit('fiesta-auth', { email, username: name });
                 socket.emit('fiesta-start-flight', {
                     lat: selectedStartCoords.lat,
                     lng: selectedStartCoords.lng,
                     styleId: selectedStyleId
                 });
-                
                 document.getElementById('register-message').innerHTML = '⏳ Registering, please wait...';
                 document.getElementById('register-message').style.color = '#38bdf8';
-            } else if (!isRegistrationOpen()) {
-                document.getElementById('register-message').innerHTML = '❌ Registration window is closed!';
-                document.getElementById('register-message').style.color = '#ef4444';
-            } else if (isRaceStarted()) {
-                document.getElementById('register-message').innerHTML = '❌ Race has already started!';
-                document.getElementById('register-message').style.color = '#ef4444';
             }
         });
         
@@ -1052,10 +883,7 @@
             if (socket) {
                 const name = document.getElementById('player-name').value.trim() || 'Guest';
                 const email = document.getElementById('player-email').value.trim() || `${name}@race.com`;
-                socket.emit('fiesta-auth', {
-                    email: email,
-                    username: name
-                });
+                socket.emit('fiesta-auth', { email, username: name });
             }
         });
         
@@ -1063,23 +891,23 @@
             if (socket) {
                 const name = document.getElementById('player-name').value.trim() || 'Guest';
                 const email = document.getElementById('player-email').value.trim() || `${name}@race.com`;
-                socket.emit('fiesta-auth', {
-                    email: email,
-                    username: name
-                });
+                socket.emit('fiesta-auth', { email, username: name });
             }
         });
         
-        // Initialize
-        initMap();
-        connectSocket();
-        
+        // Автоматическое обновление статистики каждые 5 секунд
         setInterval(() => {
-            if (socket && socket.connected) {
-                socket.emit('fiesta-get-participants');
-                checkRegistrationValidation();
-            }
+            if (socket && socket.connected) socket.emit('fiesta-get-participants');
         }, 5000);
+        
+        // ============================================
+        // ЗАПУСК ИНИЦИАЛИЗАЦИИ ПОСЛЕ ЗАГРУЗКИ СТРАНИЦЫ
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 DOM полностью загружен, инициализация...');
+            initMap();
+            connectSocket();
+        });
     </script>
 </body>
 </html>
