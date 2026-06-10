@@ -64,10 +64,7 @@
         
         /* Altitude Control (только для пилота) */
         .altitude-panel {
-            .altitude-panel .info-item {
-                color: #ffffff!important; /* Белый цвет для основного текста */
-                }
-            position: absolute;
+             position: absolute;
             bottom: 20px;
             left: 20px;
             z-index: 2000;
@@ -79,6 +76,10 @@
             width: 260px;
             display: none;
             box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+         /* Выносим стили текста отдельно (вне фигурных скобок .altitude-panel) */
+        .altitude-panel .info-item {
+            color: #ffffff !important; /* Белый цвет для основного текста */
         }
         
         .altitude-panel h3 { color: #ff9800; margin-bottom: 10px; font-size: 14px; }
