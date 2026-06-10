@@ -2,7 +2,7 @@
 
 // Создание карты (глобальная переменная)
 window.map = L.map('map', { 
-    center: [51.28, 0.01], 
+    center: [51.28, 1.00], 
     zoom: 8, 
     zoomControl: true 
 });
