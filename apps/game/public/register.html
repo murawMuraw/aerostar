@@ -152,6 +152,10 @@
             font-weight: 500;
         }
         
+        .required {
+            color: #f87171;
+        }
+        
         input {
             width: 100%;
             padding: 12px;
@@ -165,6 +169,10 @@
         input:focus {
             outline: none;
             border-color: #38bdf8;
+        }
+        
+        input::placeholder {
+            color: rgba(255,255,255,0.3);
         }
         
         button {
@@ -311,6 +319,21 @@
             color: #fbbf24;
         }
         
+        .password-strength {
+            height: 3px;
+            background: #334155;
+            border-radius: 2px;
+            margin-top: 5px;
+            transition: all 0.3s;
+        }
+        
+        .password-strength-bar {
+            height: 100%;
+            width: 0%;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+        
         @media (max-width: 900px) {
             .content {
                 grid-template-columns: 1fr;
@@ -363,6 +386,20 @@
             color: #94a3b8;
             margin-top: 5px;
         }
+        
+        .login-hint {
+            background: rgba(56, 189, 248, 0.1);
+            border-radius: 8px;
+            padding: 8px;
+            margin-top: 10px;
+            font-size: 11px;
+            text-align: center;
+            color: #94a3b8;
+        }
+        
+        .login-hint strong {
+            color: #38bdf8;
+        }
     </style>
 </head>
 <body>
@@ -407,7 +444,7 @@
                     </div>
                     <div class="rule-item">
                         <span class="rule-label">👥 Max Participants:</span>
-                        <span class="rule-value" id="rule-max-participants">7</span>
+                        <span class="rule-value" id="rule-max-participants">10</span>
                     </div>
                 </div>
                 
@@ -439,6 +476,11 @@
                 <div id="race-started-warning" class="warning-text" style="display: none;">
                     🚫 Race has already started! Cannot register.
                 </div>
+                
+                <div class="login-hint">
+                    💡 После регистрации вы сможете войти используя:<br>
+                    <strong>Callsign</strong> + <strong>Пароль</strong>
+                </div>
             </div>
             
             <!-- Right Column: Registration Form -->
@@ -446,13 +488,24 @@
                 <h2>📝 Pilot Registration</h2>
                 
                 <div class="form-group">
-                    <label>Pilot Callsign *</label>
-                    <input type="text" id="player-name" placeholder="Enter your nickname..." maxlength="20" />
+                    <label>Pilot Callsign <span class="required">*</span></label>
+                    <input type="text" id="player-name" placeholder="Enter your nickname..." maxlength="20" autocomplete="off" />
+                    <div class="info-text" style="font-size: 10px;">⚠️ This will be your login username</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Password <span class="required">*</span> (min 4 characters)</label>
+                    <input type="password" id="player-password" placeholder="Create a password..." maxlength="20" />
+                    <div class="password-strength" id="password-strength">
+                        <div class="password-strength-bar" id="password-strength-bar"></div>
+                    </div>
+                    <div class="info-text" style="font-size: 10px;" id="password-hint">Use 4+ characters for your password</div>
                 </div>
                 
                 <div class="form-group">
                     <label>Email (optional)</label>
-                    <input type="email" id="player-email" placeholder="your@email.com" />
+                    <input type="email" id="player-email" placeholder="your@email.com (optional)" />
+                    <div class="info-text" style="font-size: 10px;">Only for notifications, not used for login</div>
                 </div>
                 
                 <div id="selected-balloon-info" style="margin-bottom: 12px; font-size: 12px; color: #38bdf8; text-align: center;">
@@ -466,6 +519,12 @@
                 <div class="info-text" style="margin-top: 15px; text-align: center;">
                     💡 После регистрации дождитесь старта гонки.<br>
                     Все шары начнут движение автоматически в указанное время!
+                </div>
+                
+                <hr style="margin: 15px 0; border-color: rgba(255,255,255,0.1);">
+                
+                <div style="text-align: center;">
+                    <a href="fiesta.html" style="color: #38bdf8; text-decoration: none; font-size: 12px;">← Already registered? Go to Race</a>
                 </div>
             </div>
         </div>
@@ -497,6 +556,53 @@
         let countdownInterval = null;
         
         // ============================================
+        // ПРОВЕРКА СИЛЫ ПАРОЛЯ
+        // ============================================
+        function checkPasswordStrength() {
+            const password = document.getElementById('player-password').value;
+            const bar = document.getElementById('password-strength-bar');
+            const hint = document.getElementById('password-hint');
+            
+            if (!password) {
+                bar.style.width = '0%';
+                bar.style.background = '#334155';
+                hint.innerHTML = 'Use 4+ characters for your password';
+                hint.style.color = '#94a3b8';
+                return 0;
+            }
+            
+            let strength = 0;
+            let color = '';
+            let message = '';
+            
+            if (password.length >= 4) strength = 25;
+            if (password.length >= 6) strength = 50;
+            if (password.length >= 8) strength = 75;
+            if (password.length >= 10 && /[0-9]/.test(password) && /[a-z]/.test(password)) strength = 100;
+            
+            if (strength <= 25) {
+                color = '#ef4444';
+                message = 'Weak password';
+            } else if (strength <= 50) {
+                color = '#f59e0b';
+                message = 'Fair password';
+            } else if (strength <= 75) {
+                color = '#38bdf8';
+                message = 'Good password';
+            } else {
+                color = '#22c55e';
+                message = 'Strong password!';
+            }
+            
+            bar.style.width = strength + '%';
+            bar.style.background = color;
+            hint.innerHTML = message;
+            hint.style.color = color;
+            
+            return strength;
+        }
+        
+        // ============================================
         // ИНИЦИАЛИЗАЦИЯ КАРТЫ
         // ============================================
         function initMap() {
@@ -513,15 +619,13 @@
             
             L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
             
-            // ПРЯМОЙ ОБРАБОТЧИК КЛИКА ПО КАРТЕ
+            // Обработчик клика по карте
             map.on('click', function(e) {
-                console.log('🖱️ MAP CLICK DETECTED at:', e.latlng);
+                console.log('🖱️ MAP CLICK at:', e.latlng);
                 const { lat, lng } = e.latlng;
                 
-                // Обновляем отображение координат
                 document.getElementById('start-coords-info').innerHTML = `📍 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
                 
-                // Проверяем открыта ли регистрация
                 if (!isRegistrationOpen()) {
                     document.getElementById('registration-closed').style.display = 'block';
                     document.getElementById('region-warning').style.display = 'none';
@@ -533,7 +637,6 @@
                     return;
                 }
                 
-                // Проверяем не началась ли гонка
                 if (currentConfig && currentConfig.raceStarted) {
                     document.getElementById('race-started-warning').style.display = 'block';
                     document.getElementById('registration-closed').style.display = 'none';
@@ -549,14 +652,13 @@
                 document.getElementById('race-started-warning').style.display = 'none';
                 document.getElementById('registration-closed').style.display = 'none';
                 
-                // Проверяем находится ли точка в разрешенной зоне
                 if (currentConfig && currentConfig.allowedStartRegion) {
                     const region = currentConfig.allowedStartRegion;
                     
                     if (lat >= region.minLat && lat <= region.maxLat &&
                         lng >= region.minLng && lng <= region.maxLng) {
                         
-                        console.log('✅ Location VALID - within start region');
+                        console.log('✅ Location VALID');
                         selectedStartCoords = { lat, lng };
                         
                         if (startMarker) map.removeLayer(startMarker);
@@ -569,7 +671,7 @@
                         checkRegistrationValidation();
                         
                     } else {
-                        console.log('❌ Location INVALID - outside start region');
+                        console.log('❌ Location INVALID');
                         selectedStartCoords = null;
                         if (startMarker) map.removeLayer(startMarker);
                         startMarker = null;
@@ -578,13 +680,11 @@
                         document.getElementById('region-success').style.display = 'none';
                         checkRegistrationValidation();
                     }
-                } else {
-                    console.warn('No allowedStartRegion in config yet');
                 }
             });
             
             map.whenReady(() => {
-                console.log('✅ Map fully loaded and ready');
+                console.log('✅ Map fully loaded');
                 mapInitialized = true;
                 
                 if (currentConfig) {
@@ -651,7 +751,6 @@
                             interactive: false
                         }).addTo(map).bindPopup('<b>📍 Allowed Start Region</b><br>Кликните в этой зоне для выбора старта');
                     }
-                    console.log('✅ Start region drawn on map');
                 }
             }
         }
@@ -687,10 +786,11 @@
         function checkRegistrationValidation() {
             const btn = document.getElementById('btn-register');
             const name = document.getElementById('player-name').value.trim();
+            const password = document.getElementById('player-password').value;
             const isRegOpen = isRegistrationOpen();
             const raceStarted = isRaceStarted();
             
-            let isValid = name && selectedStartCoords && selectedStyleId && currentConfig && isRegOpen && !raceStarted;
+            let isValid = name && password && password.length >= 4 && selectedStartCoords && selectedStyleId && currentConfig && isRegOpen && !raceStarted;
             
             if (isValid && selectedStartCoords && currentConfig && currentConfig.allowedStartRegion) {
                 const region = currentConfig.allowedStartRegion;
@@ -700,7 +800,7 @@
             }
             
             btn.disabled = !isValid;
-            console.log('Registration valid:', isValid, 'coords:', selectedStartCoords);
+            console.log('Registration valid:', isValid);
         }
         
         function displayAnnouncement(data) {
@@ -708,7 +808,7 @@
             const announcement = document.createElement('div');
             announcement.className = 'announcement-banner';
             announcement.innerHTML = `
-                <div class="announcement-text">📢 <strong>${escapeHtml(data.admin || 'Administrator')}</strong>: ${escapeHtml(data.message)}</div>
+                <div class="announcement-text">📢 <strong>${escapeHtml(data.admin || 'System')}</strong>: ${escapeHtml(data.message)}</div>
                 <div class="announcement-time">${new Date(data.timestamp).toLocaleTimeString()}</div>
             `;
             container.prepend(announcement);
@@ -748,10 +848,6 @@
                 document.getElementById('status-text').textContent = 'Connected to race server';
                 const indicator = document.querySelector('.connected-indicator');
                 if (indicator) indicator.style.background = '#22c55e';
-                socket.emit('fiesta-auth', {
-                    email: document.getElementById('player-email').value || 'viewer@race.com',
-                    username: document.getElementById('player-name').value || 'Race Viewer'
-                });
             });
             
             socket.on('connect_error', (error) => {
@@ -761,11 +857,9 @@
             });
             
             socket.on('fiesta-race-config', (config) => {
-                console.log('=== Received race config ===');
-                console.log('allowedStartRegion:', config.allowedStartRegion);
+                console.log('Race config received');
                 currentConfig = config;
                 
-                // Обновляем отображение правил
                 if (config.finishCoords) {
                     document.getElementById('rule-finish').innerHTML = `${config.finishCoords.lat?.toFixed(2)}°, ${config.finishCoords.lng?.toFixed(2)}°`;
                 }
@@ -785,7 +879,6 @@
                     document.getElementById('rule-max-participants').innerHTML = config.maxParticipants;
                 }
                 
-                // Отрисовываем на карте
                 if (mapInitialized) {
                     updateFinishMarker(config);
                     updateStartRegion(config);
@@ -840,101 +933,102 @@
                 container.innerHTML = html;
             });
             
-            socket.on('fiesta-balloon-created', (balloon) => {
-                if (balloon.username === document.getElementById('player-name').value) {
-                    document.getElementById('register-message').innerHTML = '✅ Registration successful! Waiting for race start...';
+            socket.on('fiesta-registration-complete', (data) => {
+                console.log('Registration complete:', data);
+                
+                if (data.success) {
+                    localStorage.setItem('aerostar_pilot_id', data.pilotId);
+                    localStorage.setItem('aerostar_pilot_name', data.balloon.username);
+                    localStorage.setItem('aerostar_race_number', data.balloon.raceNumber);
+                    
+                    document.getElementById('register-message').innerHTML = 
+                        '✅ Registration successful! Redirecting to race...';
                     document.getElementById('register-message').style.color = '#22c55e';
-                    document.getElementById('btn-register').disabled = true;
-                    if (selectedStartCoords) localStorage.setItem('fiesta_start_coords', JSON.stringify(selectedStartCoords));
-                    setTimeout(() => { window.location.href = 'fiesta.html'; }, 2000);
+                    document.getElementById('register-message').style.fontWeight = 'bold';
+                    
+                    const btn = document.getElementById('btn-register');
+                    if (btn) btn.disabled = true;
+                    
+                    setTimeout(() => {
+                        window.location.href = 'fiesta.html';
+                    }, 1500);
+                } else {
+                    document.getElementById('register-message').innerHTML = '❌ ' + data.message;
+                    document.getElementById('register-message').style.color = '#ef4444';
+                    document.getElementById('register-message').style.fontWeight = 'bold';
+                    
+                    const btn = document.getElementById('btn-register');
+                    if (btn) btn.disabled = false;
+                    
+                    setTimeout(() => {
+                        if (document.getElementById('register-message').innerHTML.includes(data.message)) {
+                            document.getElementById('register-message').innerHTML = '';
+                        }
+                    }, 5000);
                 }
             });
-
-            // ВНУТРИ функции connectSocket(), вместе с другими socket.on()
- 
-           socket.on('fiesta-registration-complete', (data) => {
-    console.log('Registration complete response:', data);
-    
-    if (data.success) {
-        // Сохраняем данные пилота
-        localStorage.setItem('aerostar_pilot_id', data.pilotId);
-        localStorage.setItem('aerostar_pilot_name', data.balloon.username);
-        localStorage.setItem('aerostar_race_number', data.balloon.raceNumber);
-        
-        document.getElementById('register-message').innerHTML = 
-            '✅ Registration successful! Redirecting to race...';
-        document.getElementById('register-message').style.color = '#22c55e';
-        document.getElementById('register-message').style.fontWeight = 'bold';
-        
-        // Отключаем кнопку, чтобы избежать повторной отправки
-        const btn = document.getElementById('btn-register');
-        if (btn) btn.disabled = true;
-        
-        // Перенаправляем на страницу гонки через 1.5 секунды
-        setTimeout(() => {
-            window.location.href = '/fiesta.html';
-        }, 1500);
-    } else {
-        // Выводим текст ошибки от сервера
-        const errorMsg = data.message || 'Registration failed. Please try again.';
-        document.getElementById('register-message').innerHTML = '❌ ' + errorMsg;
-        document.getElementById('register-message').style.color = '#ef4444';
-        document.getElementById('register-message').style.fontWeight = 'bold';
-        
-        // Включаем кнопку обратно, чтобы можно было попробовать снова
-        const btn = document.getElementById('btn-register');
-        if (btn) btn.disabled = false;
-        
-        // Очищаем сообщение через 5 секунд
-        setTimeout(() => {
-            if (document.getElementById('register-message').innerHTML.includes(errorMsg)) {
-                document.getElementById('register-message').innerHTML = '';
-            }
-        }, 5000);
-    }
-});
-        
-        socket.on('fiesta-admin-message', (data) => {
-            if (typeof displayAnnouncement === 'function') {
+            
+            socket.on('fiesta-admin-message', (data) => {
                 displayAnnouncement(data);
-            }
-        });
-        
-               socket.on('fiesta-error', (msg) => {
-            document.getElementById('register-message').innerHTML = `❌ Error: ${msg}`;
-            document.getElementById('register-message').style.color = '#ef4444';
-            setTimeout(() => { document.getElementById('register-message').innerHTML = ''; }, 5000);
-        });
+            });
+            
+            socket.on('fiesta-error', (msg) => {
+                document.getElementById('register-message').innerHTML = `❌ Error: ${msg}`;
+                document.getElementById('register-message').style.color = '#ef4444';
+                setTimeout(() => { 
+                    if (document.getElementById('register-message').innerHTML.includes(msg)) {
+                        document.getElementById('register-message').innerHTML = '';
+                    }
+                }, 5000);
+            });
         }
+        
         // ============================================
         // DOM EVENT HANDLERS
         // ============================================
         document.getElementById('btn-register').addEventListener('click', () => {
             if (socket && selectedStartCoords && isRegistrationOpen() && !isRaceStarted()) {
                 const name = document.getElementById('player-name').value.trim();
-                const email = document.getElementById('player-email').value.trim() || `${name}@race.com`;
+                const password = document.getElementById('player-password').value;
+                const email = document.getElementById('player-email').value.trim() || '';
                 
-                // Передаем правильное поле balloonColor (вместо styleId) для сверки уникальности текстур на сервере
+                if (!name) {
+                    document.getElementById('register-message').innerHTML = '❌ Please enter a callsign';
+                    document.getElementById('register-message').style.color = '#ef4444';
+                    return;
+                }
+                
+                if (!password || password.length < 4) {
+                    document.getElementById('register-message').innerHTML = '❌ Password must be at least 4 characters';
+                    document.getElementById('register-message').style.color = '#ef4444';
+                    return;
+                }
+                
                 socket.emit('fiesta-start-flight', {
                     username: name,
+                    password: password,
                     email: email,
-                    balloonColor: typeof selectedStyleId !== 'undefined' ? selectedStyleId : 'default',
+                    balloonColor: selectedStyleId,
                     lat: selectedStartCoords.lat,
                     lng: selectedStartCoords.lng
                 });
                 
                 document.getElementById('register-message').innerHTML = '⏳ Registering, please wait...';
                 document.getElementById('register-message').style.color = '#38bdf8';
+                document.getElementById('register-message').style.fontWeight = 'bold';
             }
         });
         
         document.getElementById('player-name').addEventListener('input', () => {
-            if (typeof checkRegistrationValidation === 'function') {
-                checkRegistrationValidation();
-            }
+            checkRegistrationValidation();
         });
         
-        // Automatic stats update every 5 seconds
+        document.getElementById('player-password').addEventListener('input', () => {
+            checkPasswordStrength();
+            checkRegistrationValidation();
+        });
+        
+        // Автоматическое обновление списка участников
         setInterval(() => {
             if (socket && socket.connected) {
                 socket.emit('fiesta-get-participants');
@@ -945,9 +1039,9 @@
         // INITIALIZATION ON PAGE LOAD
         // ============================================
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('📄 DOM fully loaded, initializing...');
-            if (typeof initMap === 'function') initMap();
-            if (typeof connectSocket === 'function') connectSocket();
+            console.log('📄 DOM fully loaded');
+            initMap();
+            connectSocket();
         });
     </script>
 </body>
