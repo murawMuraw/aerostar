@@ -289,61 +289,32 @@ io.on('connection', (socket) => {
     socket.emit('fiesta-balloon-catalog', balloonCatalog);
     socket.emit('fiesta-all-balloons', Object.values(balloons));
     
-    // ============================================
-    // АУТЕНТИФИКАЦИЯ (ВХОД ПИЛОТА ПО ID)
-    // ============================================
-    socket.on('fiesta-auth', (authData) => {
-        console.log('🔐 Auth attempt:', authData);
-        
-        // Если это пилот с pilotId
-        if (authData.pilotId && balloons[authData.pilotId]) {
-            const balloon = balloons[authData.pilotId];
-            
-            // Проверяем, что пилот не занят другим сокетом (опционально)
-            if (balloon.socketId && balloon.socketId !== socket.id) {
-                console.log(`⚠️ Pilot ${balloon.username} already connected from another socket`);
-                // Отключаем старый сокет (опционально)
-                const oldSocket = io.sockets.sockets.get(balloon.socketId);
-                if (oldSocket) {
-                    oldSocket.emit('fiesta-warning', 'You were disconnected because another session started');
-                }
-            }
-            
-            // Обновляем данные сокета
+   
+   // ============================================
+// АУТЕНТИФИКАЦИЯ (ВХОД ПИЛОТА ПО ЛОГИНУ И ПАРОЛЮ ИЛИ ЗРИТЕЛЯ)
+// ============================================
+socket.on('fiesta-auth', (authData) => {
+    // 1. Поиск пилота по username и сверка пароля (используем email)
+    if (!authData.isSpectator && authData.username) {
+        const balloon = Object.values(balloons).find(b => 
+            b.username.toLowerCase() === authData.username.trim().toLowerCase()
+        );
+
+        if (balloon && balloon.email === authData.password) {
+            // Успешная авторизация, привязка сокета
             balloon.socketId = socket.id;
-            balloon.pilotConnected = true;
-            balloon.lastSeen = Date.now();
-            
-            currentPilotId = authData.pilotId;
-            socketToPilot.set(socket.id, currentPilotId);
-            
-            // Добавляем пилота в комнату его шара (для личных сообщений)
-            socket.join(`pilot-${currentPilotId}`);
-            // Добавляем в общую комнату гонки
-            socket.join('race-room');
-            
-            // Отправляем пилоту его состояние
-            socket.emit('fiesta-auth-success', {
-                role: 'pilot',
-                balloon: balloon,
-                message: `✅ Добро пожаловать, ${balloon.username}! Ваш шар #${balloon.raceNumber} готов к гонке.`
-            });
-            
-            console.log(`✈️ Pilot ${balloon.username} (${balloon.raceNumber}) authenticated and joined race-room`);
-        } 
-        // Иначе это зритель
-        else {
-            socket.join('race-room');
-            socket.emit('fiesta-auth-success', {
-                role: 'spectator',
-                message: '👀 Вы вошли как зритель. Вы можете наблюдать за гонкой, но не можете управлять шаром.'
-            });
-            console.log(`👁️ Spectator ${socket.id} joined race-room`);
+            // ... (дальнейшая логика авторизации)
+            socket.emit('fiesta-auth-success', { role: 'pilot', pilotId: balloon.id });
+        } else {
+            socket.emit('fiesta-auth-error', { message: 'Ошибка авторизации' });
         }
-        
-        // Отправляем актуальный список участников
-        socket.emit('fiesta-all-balloons', Object.values(balloons));
-    });
+    } else {
+        // Вход зрителя
+        socket.join('race-room');
+        socket.emit('fiesta-auth-success', { role: 'spectator' });
+    }
+});
+
     
     // ============================================
     // РЕГИСТРАЦИЯ НОВОГО ПИЛОТА
