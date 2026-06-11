@@ -317,16 +317,17 @@ socket.on('fiesta-auth', (authData) => {
 
     
         // =========================================================================
-    // РЕГИСТРАЦИЯ И СТАРТ НОВОГО АЭРОНАВТА (МАКСИМУМ 7 УЧАСТНИКОВ)
+    // РЕГИСТРАЦИЯ И СТАРТ НОВОГО АЭРОНАВТА (МАКСИМУМ 10 УЧАСТНИКОВ)
     // =========================================================================
     socket.on('fiesta-start-flight', (data) => {
         console.log('📝 Received registration attempt:', data);
 
-        // 1. Проверяем лимит участников (максимум 7)
-        const currentPilotsCount = Object.keys(balloons).length;
+        // 1. Проверяем лимит участников (максимум 10)
+       const currentPilotsCount = Object.keys(balloons).length;
         if (currentPilotsCount >= 10) {
             console.log('❌ Registration rejected: limit of 10 players reached.');
-            socket.emit('fiesta-registration-error', { 
+            socket.emit('fiesta-registration-complete', { 
+                success: false,
                 message: 'Registration is closed. The maximum limit of 10 aeronauts has been reached.' 
             });
             return;
@@ -338,33 +339,38 @@ socket.on('fiesta-auth', (authData) => {
         );
         if (nameExists) {
             console.log(`❌ Registration rejected: Name "${data.username}" is already taken.`);
-            socket.emit('fiesta-registration-error', { 
+            socket.emit('fiesta-registration-complete', { 
+                success: false,
                 message: 'This aeronaut name is already registered. Please choose another name.' 
             });
             return;
         }
 
         // 3. Проверяем уникальность выбранного шара (Balloon Style / Color)
-        const balloonExists = Object.values(balloons).some(
+       const balloonExists = Object.values(balloons).some(
             b => b.balloonColor === data.balloonColor
         );
         if (balloonExists) {
             console.log(`❌ Registration rejected: Balloon texture "${data.balloonColor}" is already selected.`);
-            socket.emit('fiesta-registration-error', { 
-                message: 'This balloon design is already taken by another aeronaut. Please select a different balloon.' 
+            socket.emit('fiesta-registration-complete', { 
+                success: false,
+                message: 'This balloon design is already taken. Please select a different balloon.' 
             });
             return;
         }
 
         // 4. Если все проверки пройдены успешно — создаем пилота (оригинальная логика)
-        const pilotId = 'pilot_' + Math.random().toString(36).substr(2, 9);
+       
+       const pilotId = 'pilot_' + Math.random().toString(36).substr(2, 9);
+        const raceNumber = currentPilotsCount + 1; // Порядковый номер гонки
         
         balloons[pilotId] = {
             id: pilotId,
             socketId: socket.id,
             username: data.username.trim(),
-            email: data.email, // Используется как пароль для входа в Гондолу
+            email: data.email, // Used as password to Enter Gondola
             balloonColor: data.balloonColor,
+            raceNumber: raceNumber,
             lat: currentConfig.startCoords.lat,
             lng: currentConfig.startCoords.lng,
             altitude: 0,
@@ -377,14 +383,16 @@ socket.on('fiesta-auth', (authData) => {
 
         console.log(`🎉 Success! Aeronaut registered. ID: ${pilotId}`);
         
-        // Отправляем успешный статус и ID пилота для сохранения
-        socket.emit('fiesta-start-success', { pilotId: pilotId, username: data.username });
+        // Отправляем ответ в вашей структуре (data.balloon.username и т.д.)
+        socket.emit('fiesta-registration-complete', { 
+            success: true, 
+            pilotId: pilotId,
+            balloon: balloons[pilotId]
+        });
         
-        // Обновляем карту для всех участников
+        // Sync layout with all browsers
         io.emit('fiesta-all-balloons', balloons);
     });
-
-    
     // ============================================
     // УПРАВЛЕНИЕ ШАРОМ (только для пилота)
     // ============================================
