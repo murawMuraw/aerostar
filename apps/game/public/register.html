@@ -874,7 +874,7 @@
                 document.getElementById('register-message').innerHTML = '❌ ' + data.message;
                 document.getElementById('register-message').style.color = '#ef4444';
 
-                // Если регистрация закрыта из-за лимита 7 человек, блокируем кнопку на форме
+                // Если регистрация закрыта из-за лимита 10 человек, блокируем кнопку на форме
                 if (data.message.includes('closed')) {
                     const submitBtn = document.querySelector('button[type="submit"]') || document.getElementById('start-btn');
                     if (submitBtn) {
@@ -892,59 +892,54 @@
             }
         });
         
-        socket.on('fiesta-error', (msg) => {
+               socket.on('fiesta-error', (msg) => {
             document.getElementById('register-message').innerHTML = `❌ Error: ${msg}`;
             document.getElementById('register-message').style.color = '#ef4444';
             setTimeout(() => { document.getElementById('register-message').innerHTML = ''; }, 5000);
         });
     
         // ============================================
-        // ОБРАБОТЧИКИ СОБЫТИЙ DOM
+        // DOM EVENT HANDLERS
         // ============================================
         document.getElementById('btn-register').addEventListener('click', () => {
             if (socket && selectedStartCoords && isRegistrationOpen() && !isRaceStarted()) {
                 const name = document.getElementById('player-name').value.trim();
                 const email = document.getElementById('player-email').value.trim() || `${name}@race.com`;
-                socket.emit('fiesta-auth', { email, username: name });
+                
+                // Передаем правильное поле balloonColor (вместо styleId) для сверки уникальности текстур на сервере
                 socket.emit('fiesta-start-flight', {
+                    username: name,
+                    email: email,
+                    balloonColor: typeof selectedStyleId !== 'undefined' ? selectedStyleId : 'default',
                     lat: selectedStartCoords.lat,
-                    lng: selectedStartCoords.lng,
-                    styleId: selectedStyleId
+                    lng: selectedStartCoords.lng
                 });
+                
                 document.getElementById('register-message').innerHTML = '⏳ Registering, please wait...';
                 document.getElementById('register-message').style.color = '#38bdf8';
             }
         });
         
         document.getElementById('player-name').addEventListener('input', () => {
-            checkRegistrationValidation();
-            if (socket) {
-                const name = document.getElementById('player-name').value.trim() || 'Guest';
-                const email = document.getElementById('player-email').value.trim() || `${name}@race.com`;
-                socket.emit('fiesta-auth', { email, username: name });
+            if (typeof checkRegistrationValidation === 'function') {
+                checkRegistrationValidation();
             }
         });
         
-        document.getElementById('player-email').addEventListener('input', () => {
-            if (socket) {
-                const name = document.getElementById('player-name').value.trim() || 'Guest';
-                const email = document.getElementById('player-email').value.trim() || `${name}@race.com`;
-                socket.emit('fiesta-auth', { email, username: name });
-            }
-        });
-        
-        // Автоматическое обновление статистики каждые 5 секунд
+        // Automatic stats update every 5 seconds
         setInterval(() => {
-            if (socket && socket.connected) socket.emit('fiesta-get-participants');
+            if (socket && socket.connected) {
+                socket.emit('fiesta-get-participants');
+            }
         }, 5000);
         
         // ============================================
-        // ЗАПУСК ИНИЦИАЛИЗАЦИИ ПОСЛЕ ЗАГРУЗКИ СТРАНИЦЫ
+        // INITIALIZATION ON PAGE LOAD
         // ============================================
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('📄 DOM полностью загружен, инициализация...');
-            initMap();
-            connectSocket();
+            console.log('📄 DOM fully loaded, initializing...');
+            if (typeof initMap === 'function') initMap();
+            if (typeof connectSocket === 'function') connectSocket();
         });
     </script>
 </body>
