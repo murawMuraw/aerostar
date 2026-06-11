@@ -705,16 +705,48 @@
         // ============================================
         // ЗАПУСК
         // ============================================
-        window.addEventListener('load', () => {
+            window.addEventListener('load', () => {
             console.log('📄 Page loaded, initializing...');
             initMap();
             initAltitudeControl();
             connectSocket();
             
-            document.getElementById('control-btn').addEventListener('click', takeControl);
-            document.getElementById('logout-btn').addEventListener('click', exit);
-            document.getElementById('layer-toggle').addEventListener('click', toggleLayer);
+            // Безопасный обработчик для кнопки EXIT (logout-btn или exit-btn)
+            const exitBtn = document.getElementById('logout-btn') || document.getElementById('exit-btn');
+            if (exitBtn) {
+                exitBtn.addEventListener('click', () => {
+                    if (confirm('Вы уверены, что хотите выйти из фиесты?')) {
+                        console.log('🚪 Exiting fiesta, clearing session...');
+                        localStorage.removeItem('aerostar_pilot_id');
+                        localStorage.removeItem('aerostar_pilot_name');
+                        window.location.href = '/';
+                    }
+                });
+            }
+
+            // Безопасный обработчик переключателя карты (селектора или кнопки)
+            const layerToggle = document.getElementById('layer-toggle') || document.getElementById('map-type');
+            if (layerToggle) {
+                // Если это выпадающий список (select)
+                if (layerToggle.tagName === 'SELECT') {
+                    layerToggle.addEventListener('change', (e) => {
+                        const type = e.target.value;
+                        if (typeof currentLayer !== 'undefined' && typeof satelliteLayer !== 'undefined' && typeof osmLayer !== 'undefined') {
+                            currentLayer.remove();
+                            currentLayer = (type === 'satellite') ? satelliteLayer.addTo(map) : osmLayer.addTo(map);
+                        }
+                    });
+                } else {
+                    // Если это обычная кнопка-переключатель
+                    layerToggle.addEventListener('click', () => {
+                        if (typeof toggleLayer === 'function') toggleLayer();
+                    });
+                }
+            }
             
+            // Кнопка управления (control-btn) больше не нужна, так как пульт включается автоматически.
+            // Мы убрали её обработчик, чтобы он не вызывал ошибок.
+
             setInterval(() => {
                 if (socket && socket.connected) {
                     socket.emit('fiesta-get-participants');
@@ -727,6 +759,7 @@
                 }
             }, 60000);
         });
+
     </script>
 </body>
 </html>
