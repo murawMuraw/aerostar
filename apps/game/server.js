@@ -316,83 +316,74 @@ socket.on('fiesta-auth', (authData) => {
 });
 
     
-    // ============================================
-    // РЕГИСТРАЦИЯ НОВОГО ПИЛОТА
-    // ============================================
-    socket.on('fiesta-start-flight', async (data) => {
-        if (!isRegistrationOpen()) {
-            socket.emit('fiesta-error', 'Registration window is closed');
+        // =========================================================================
+    // РЕГИСТРАЦИЯ И СТАРТ НОВОГО АЭРОНАВТА (МАКСИМУМ 7 УЧАСТНИКОВ)
+    // =========================================================================
+    socket.on('fiesta-start-flight', (data) => {
+        console.log('📝 Received registration attempt:', data);
+
+        // 1. Проверяем лимит участников (максимум 7)
+        const currentPilotsCount = Object.keys(balloons).length;
+        if (currentPilotsCount >= 10) {
+            console.log('❌ Registration rejected: limit of 10 players reached.');
+            socket.emit('fiesta-registration-error', { 
+                message: 'Registration is closed. The maximum limit of 10 aeronauts has been reached.' 
+            });
             return;
         }
-        
-        if (raceConfig.raceStarted) {
-            socket.emit('fiesta-error', 'Race has already started');
+
+        // 2. Проверяем уникальность имени пилота (Username)
+        const nameExists = Object.values(balloons).some(
+            b => b.username.toLowerCase() === data.username.trim().toLowerCase()
+        );
+        if (nameExists) {
+            console.log(`❌ Registration rejected: Name "${data.username}" is already taken.`);
+            socket.emit('fiesta-registration-error', { 
+                message: 'This aeronaut name is already registered. Please choose another name.' 
+            });
             return;
         }
-        
-        if (Object.keys(balloons).length >= MAX_PARTICIPANTS) {
-            socket.emit('fiesta-error', `Maximum ${MAX_PARTICIPANTS} participants reached`);
+
+        // 3. Проверяем уникальность выбранного шара (Balloon Style / Color)
+        const balloonExists = Object.values(balloons).some(
+            b => b.balloonColor === data.balloonColor
+        );
+        if (balloonExists) {
+            console.log(`❌ Registration rejected: Balloon texture "${data.balloonColor}" is already selected.`);
+            socket.emit('fiesta-registration-error', { 
+                message: 'This balloon design is already taken by another aeronaut. Please select a different balloon.' 
+            });
             return;
         }
+
+        // 4. Если все проверки пройдены успешно — создаем пилота (оригинальная логика)
+        const pilotId = 'pilot_' + Math.random().toString(36).substr(2, 9);
         
-        const { lat, lng, styleId, username, email } = data;
-        
-        if (!isInStartZone(lat, lng)) {
-            socket.emit('fiesta-error', 'Start location not in allowed start region');
-            return;
-        }
-        
-        // Генерируем уникальный ID пилота
-        const pilotId = crypto.randomBytes(16).toString('hex');
-        const raceNumber = nextRaceNumber++;
-        
-        const style = balloonCatalog[styleId] || balloonCatalog.classic;
-        
-        const newBalloon = {
+        balloons[pilotId] = {
             id: pilotId,
-            _id: pilotId,
-            raceNumber: raceNumber,
-            username: username,
-            email: email || `${username}@race.local`,
-            lat: lat,
-            lng: lng,
-            altitude: 1000,
-            speed: 0,
-            layerName: 'Ожидание старта',
-            balloonStyle: style,
-            path: [{ lat, lng, altitude: 1000, timestamp: Date.now() }],
             socketId: socket.id,
-            lastUpdate: Date.now(),
-            registeredAt: Date.now(),
-            finished: false,
-            pilotConnected: true,
-            pilotId: pilotId  // Сохраняем ID для идентификации
+            username: data.username.trim(),
+            email: data.email, // Используется как пароль для входа в Гондолу
+            balloonColor: data.balloonColor,
+            lat: currentConfig.startCoords.lat,
+            lng: currentConfig.startCoords.lng,
+            altitude: 0,
+            verticalSpeed: 0,
+            fuel: 100,
+            ballast: 4,
+            isFinished: false,
+            trajectory: [[currentConfig.startCoords.lat, currentConfig.startCoords.lng]]
         };
+
+        console.log(`🎉 Success! Aeronaut registered. ID: ${pilotId}`);
         
-        balloons[pilotId] = newBalloon;
-        currentPilotId = pilotId;
-        socketToPilot.set(socket.id, pilotId);
+        // Отправляем успешный статус и ID пилота для сохранения
+        socket.emit('fiesta-start-success', { pilotId: pilotId, username: data.username });
         
-        // Добавляем в комнаты
-        socket.join('race-room');
-        socket.join(`pilot-${pilotId}`);
-        
-        // Отправляем пилоту его ID для сохранения в localStorage
-        socket.emit('fiesta-registration-complete', {
-            success: true,
-            pilotId: pilotId,
-            balloon: newBalloon,
-            message: `✅ Регистрация успешна! Ваш ID пилота сохранен.`
-        });
-        
-        // Оповещаем всех в комнате гонки о новом шаре
-        io.to('race-room').emit('fiesta-balloon-created', newBalloon);
-        
-        console.log(`🎈 NEW PILOT REGISTERED: #${raceNumber} (${username}) ID: ${pilotId.substring(0, 8)}...`);
-        console.log(`   Total participants: ${Object.keys(balloons).length}/${MAX_PARTICIPANTS}`);
-        
-        await startBalloonSimulation(pilotId);
+        // Обновляем карту для всех участников
+        io.emit('fiesta-all-balloons', balloons);
     });
+
     
     // ============================================
     // УПРАВЛЕНИЕ ШАРОМ (только для пилота)
