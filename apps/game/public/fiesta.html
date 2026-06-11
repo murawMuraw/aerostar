@@ -209,17 +209,35 @@
 </head>
 <body>
     <div id="map"></div>
-<!-- Модальное окно выбора роли (вставьте после <div id="map">) -->
-<div id="role-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); z-index: 9999; display: flex; align-items: center; justify-content: center;">
-    <div style="background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 40px; width: 360px; text-align: center;">
-        <h2 style="color: #38bdf8; margin-bottom: 25px;">Войти как:</h2>
-        <div style="display: flex; flex-direction: column; gap: 15px;">
-            <button id="choose-spectator-btn" style="width: 100%; padding: 10px; cursor: pointer;">👁 Зритель</button>
-            <button id="choose-pilot-btn" style="width: 100%; padding: 10px; cursor: pointer;">🎈 Участник</button>
-            <a href="register.html" style="color: #fff; text-decoration: none;">📝 Зарегистрироваться</a>
+<!-- Модальное окно выбора роли и авторизации -->
+<div id="role-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+    <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 30px; width: 340px; text-align: center; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); font-family: inherit; color: white;">
+        <h3 style="color: #38bdf8; margin-bottom: 20px; font-size: 18px; letter-spacing: 0.5px;">Войти как:</h3>
+        
+        <!-- Главный экран выбора роли -->
+        <div id="modal-role-selection" style="display: flex; flex-direction: column; gap: 12px;">
+            <button id="choose-spectator-btn" class="btn" style="width: 100%;">👁️ Зритель</button>
+            <button id="choose-pilot-btn" class="btn btn-success" style="width: 100%;">🎈 Участник</button>
+            <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 8px 0;">
+            <a href="register.html" class="btn" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); text-align: center; width: 100%;">📝 Зарегистрироваться</a>
+        </div>
+
+        <!-- Форма авторизации пилота (скрыта по умолчанию) -->
+        <div id="modal-pilot-login" style="display: none; flex-direction: column; gap: 12px; text-align: left;">
+            <div style="margin-bottom: 5px;">
+                <label style="font-size: 12px; color: #94a3b8; display: block; margin-bottom: 4px;">Логин (Email / Имя пилота):</label>
+                <input type="text" id="login-username" style="width: 100%; padding: 10px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white; box-sizing: border-box;">
+            </div>
+            <div style="margin-bottom: 10px;">
+                <label style="font-size: 12px; color: #94a3b8; display: block; margin-bottom: 4px;">Пароль:</label>
+                <input type="password" id="login-password" style="width: 100%; padding: 10px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white; box-sizing: border-box;">
+            </div>
+            <button id="submit-login-btn" class="btn btn-success" style="width: 100%;">Войти в кабину</button>
+            <button id="back-to-roles-btn" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 13px; text-align: center; margin-top: 5px; width: 100%;">← Назад</button>
         </div>
     </div>
 </div>
+
 
   
     
@@ -249,8 +267,6 @@
     </div>
     
     <div class="control-panel">
-        <button class="btn" id="control-btn">🎈 Control My Balloon</button>
-        <a href="register.html" class="btn" id="register-btn" style="display: none;">📝 Register</a>
         <button class="btn btn-danger" id="logout-btn">🚪 Exit</button>
     </div>
     
@@ -423,40 +439,60 @@
                 upgrade: true,
                 reconnection: true
             });
-            
-                              socket.on('connect', () => {
+            socket.on('connect', () => {
                 console.log('✅ Connected to race server');
                 
-                const savedPilotId = localStorage.getItem('aerostar_pilot_id');
-                const savedPilotName = localStorage.getItem('aerostar_pilot_name');
                 const modal = document.getElementById('role-modal');
+                const roleSelection = document.getElementById('modal-role-selection');
+                const pilotLogin = document.getElementById('modal-pilot-login');
 
-                // Показываем окно выбора роли принудительно
+                // Принудительно сбрасываем состояние окна при новом коннекте
                 if (modal) modal.style.display = 'flex';
+                if (roleSelection) roleSelection.style.display = 'flex';
+                if (pilotLogin) pilotLogin.style.display = 'none';
 
-               
-                // Слушатель кнопки Зритель
+                // 1. Вход как Зритель
                 document.getElementById('choose-spectator-btn').onclick = () => {
                     console.log('👁️ Connecting as spectator');
                     socket.emit('fiesta-auth', { 
                         isSpectator: true, 
-                        username: savedPilotName || 'Spectator_' + Math.floor(Math.random() * 1000)
+                        username: 'Spectator_' + Math.floor(Math.random() * 1000)
                     });
                 };
 
-                // Слушатель кнопки Участник
+                // 2. Клик на кнопку "Участник" — переключаем на форму ввода пароля
                 document.getElementById('choose-pilot-btn').onclick = () => {
-                    if (savedPilotId) {
-                        socket.emit('fiesta-auth', { pilotId: savedPilotId });
-                    } else {
-                        alert('У вас нет сохраненной сессии пилота. Пожалуйста, зарегистрируйтесь.');
-                        window.location.href = 'register.html';
+                    roleSelection.style.display = 'none';
+                    pilotLogin.style.display = 'flex';
+                };
+
+                // Возврат назад к выбору ролей
+                document.getElementById('back-to-roles-btn').onclick = () => {
+                    pilotLogin.style.display = 'none';
+                    roleSelection.style.display = 'flex';
+                };
+
+                // 3. Отправка данных авторизации пилота на сервер
+                document.getElementById('submit-login-btn').onclick = () => {
+                    const username = document.getElementById('login-username').value.trim();
+                    const password = document.getElementById('login-password').value;
+
+                    if (!username || !password) {
+                        alert('Пожалуйста, заполните все поля!');
+                        return;
                     }
+
+                    console.log('🎈 Attempting pilot login for:', username);
+                    // Отправляем логин и пароль на бэкенд. Бэкенд должен уметь проверять пару login/password
+                    socket.emit('fiesta-auth', { 
+                        isSpectator: false,
+                        username: username,
+                        password: password 
+                    });
                 };
             });
 
-               
-
+                             
             
             socket.on('connect_error', (error) => {
                 console.error('Connection error:', error);
