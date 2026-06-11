@@ -852,39 +852,47 @@
 
             // ВНУТРИ функции connectSocket(), вместе с другими socket.on()
  
-            socket.on('fiesta-registration-complete', (data) => {
-            console.log('Registration complete:', data);
-            
-            if (data.success) {
-                // Сохраняем сессию в localStorage
-                localStorage.setItem('aerostar_pilot_id', data.pilotId);
-                localStorage.setItem('aerostar_pilot_name', data.balloon.username);
-                localStorage.setItem('aerostar_race_number', data.balloon.raceNumber);
-                
-                document.getElementById('register-message').innerHTML = 
-                    '✅ Registration successful! Redirecting to race...';
-                document.getElementById('register-message').style.color = '#22c55e';
-                
-                // Перенаправляем на страницу гонки через 1.5 секунды
-                setTimeout(() => {
-                    window.location.href = 'fiesta.html';
-                }, 1500);
-            } else {
-                // Выводим текст ошибки от сервера на английском языке
-                document.getElementById('register-message').innerHTML = '❌ ' + data.message;
-                document.getElementById('register-message').style.color = '#ef4444';
-
-                // Если регистрация закрыта из-за лимита 10 человек, блокируем кнопку на форме
-                if (data.message.includes('closed')) {
-                    const submitBtn = document.querySelector('button[type="submit"]') || document.getElementById('start-btn');
-                    if (submitBtn) {
-                        submitBtn.disabled = true;
-                        submitBtn.innerText = 'Registration Closed';
-                        submitBtn.style.background = '#475569';
-                    }
-                }
+           socket.on('fiesta-registration-complete', (data) => {
+    console.log('Registration complete response:', data);
+    
+    if (data.success) {
+        // Сохраняем данные пилота
+        localStorage.setItem('aerostar_pilot_id', data.pilotId);
+        localStorage.setItem('aerostar_pilot_name', data.balloon.username);
+        localStorage.setItem('aerostar_race_number', data.balloon.raceNumber);
+        
+        document.getElementById('register-message').innerHTML = 
+            '✅ Registration successful! Redirecting to race...';
+        document.getElementById('register-message').style.color = '#22c55e';
+        document.getElementById('register-message').style.fontWeight = 'bold';
+        
+        // Отключаем кнопку, чтобы избежать повторной отправки
+        const btn = document.getElementById('btn-register');
+        if (btn) btn.disabled = true;
+        
+        // Перенаправляем на страницу гонки через 1.5 секунды
+        setTimeout(() => {
+            window.location.href = '/fiesta.html';
+        }, 1500);
+    } else {
+        // Выводим текст ошибки от сервера
+        const errorMsg = data.message || 'Registration failed. Please try again.';
+        document.getElementById('register-message').innerHTML = '❌ ' + errorMsg;
+        document.getElementById('register-message').style.color = '#ef4444';
+        document.getElementById('register-message').style.fontWeight = 'bold';
+        
+        // Включаем кнопку обратно, чтобы можно было попробовать снова
+        const btn = document.getElementById('btn-register');
+        if (btn) btn.disabled = false;
+        
+        // Очищаем сообщение через 5 секунд
+        setTimeout(() => {
+            if (document.getElementById('register-message').innerHTML.includes(errorMsg)) {
+                document.getElementById('register-message').innerHTML = '';
             }
-        });
+        }, 5000);
+    }
+});
         
         socket.on('fiesta-admin-message', (data) => {
             if (typeof displayAnnouncement === 'function') {
