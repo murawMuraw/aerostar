@@ -221,11 +221,7 @@
     </div>
 </div>
 
-    
-    
-    <div class="role-badge" id="role-badge">
-        🔄 Connecting...
-    </div>
+  
     
     <div class="info-panel">
         <h3>🏁 Race Info</h3>
@@ -438,14 +434,7 @@
                 // Показываем окно выбора роли принудительно
                 if (modal) modal.style.display = 'flex';
 
-                // Если пилот уже авторизован ранее, можем сразу пустить его (опционально)
-                // Если хотите, чтобы ДАЖЕ пилоты выбирали роль вручную, удалите if ниже:
-                if (savedPilotId) {
-                    console.log('🎖️ Auto-restoring pilot session');
-                    socket.emit('fiesta-auth', { pilotId: savedPilotId });
-                    return;
-                }
-
+               
                 // Слушатель кнопки Зритель
                 document.getElementById('choose-spectator-btn').onclick = () => {
                     console.log('👁️ Connecting as spectator');
