@@ -1,6 +1,6 @@
 /**
  * ГЛАВНЫЙ ИГРОВОЙ СЕРВЕР «ФИЕСТА» (Порт 3001)
- * Версия 3.0 - с поддержкой комнат и идентификации пилотов
+ * Версия 3.0 - с поддержкой комнат и хэшированием паролей
  */
 
 const express = require('express');
@@ -8,6 +8,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcrypt'); // ← ДОБАВЛЯЕМ BCrypt
 
 // Подключаем модули
 const balloonCatalog = require('./balloonCatalog');
@@ -30,6 +31,7 @@ const PORT = 3001;
 const CONFIG_FILE = path.join(__dirname, 'race-config.json');
 const MAX_PARTICIPANTS = 10;
 const SIMULATION_INTERVAL = 5000;
+const SALT_ROUNDS = 10; // ← Сложность хэширования (10-12 рекомендуемо)
 
 // Данные игры
 let raceConfig = {
@@ -300,9 +302,9 @@ io.on('connection', (socket) => {
     socket.emit('fiesta-all-balloons', Object.values(balloons));
     
     // ============================================
-    // РЕГИСТРАЦИЯ НОВОГО ПИЛОТА
+    // РЕГИСТРАЦИЯ НОВОГО ПИЛОТА (С ХЭШИРОВАНИЕМ ПАРОЛЯ)
     // ============================================
-    socket.on('fiesta-start-flight', (data) => {
+    socket.on('fiesta-start-flight', async (data) => {  // ← ДОБАВЛЯЕМ async
         console.log('📝 Registration attempt:', { ...data, password: '***' });
 
         // 1. Проверяем лимит участников
@@ -383,7 +385,11 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // 8. Создаем пилота
+        // 8. ХЭШИРУЕМ ПАРОЛЬ (ВОТ ЗДЕСЬ!)
+        const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS);
+        console.log(`🔐 Password hashed for ${data.username}`);
+
+        // 9. Создаем пилота с хэшированным паролем
         const pilotId = 'pilot_' + Math.random().toString(36).substr(2, 9);
         const raceNumber = currentPilotsCount + 1;
         const selectedBalloon = balloonCatalog[data.balloonColor] || balloonCatalog.classic;
@@ -392,7 +398,7 @@ io.on('connection', (socket) => {
             id: pilotId,
             socketId: socket.id,
             username: data.username.trim(),
-            password: data.password,      // ← СОХРАНЯЕМ ПАРОЛЬ
+            password: hashedPassword,  // ← СОХРАНЯЕМ ХЭШ, а не plain текст!
             email: data.email || '',
             balloonColor: data.balloonColor,
             balloonStyle: selectedBalloon,
@@ -413,7 +419,7 @@ io.on('connection', (socket) => {
             lastSeen: Date.now()
         };
 
-        console.log(`✅ New pilot: ${data.username} (Race #${raceNumber})`);
+        console.log(`✅ New pilot: ${data.username} (Race #${raceNumber}) - Password hashed`);
         
         socket.join('race-room');
         socketToPilot.set(socket.id, pilotId);
@@ -433,9 +439,9 @@ io.on('connection', (socket) => {
     });
     
     // ============================================
-    // АУТЕНТИФИКАЦИЯ (ВХОД ПИЛОТА ПО ИМЕНИ И ПАРОЛЮ)
+    // АУТЕНТИФИКАЦИЯ (С ПРОВЕРКОЙ ХЭША ПАРОЛЯ)
     // ============================================
-    socket.on('fiesta-auth', (authData) => {
+    socket.on('fiesta-auth', async (authData) => {  // ← ДОБАВЛЯЕМ async
         console.log('🔐 Auth attempt:', { ...authData, password: '***' });
         
         // Вход зрителя
@@ -462,8 +468,18 @@ io.on('connection', (socket) => {
             b.username.toLowerCase() === authData.username.trim().toLowerCase()
         );
         
-        // Проверяем пароль (НЕ email!)
-        if (balloon && balloon.password === authData.password) {
+        if (!balloon) {
+            socket.emit('fiesta-auth-error', { 
+                message: 'Invalid callsign or password' 
+            });
+            console.log(`❌ Auth failed: user ${authData.username} not found`);
+            return;
+        }
+        
+        // ВОТ ЗДЕСЬ! СРАВНИВАЕМ ВВЕДЕННЫЙ ПАРОЛЬ С ХЭШЕМ
+        const isValid = await bcrypt.compare(authData.password, balloon.password);
+        
+        if (isValid) {
             // Успешная авторизация
             balloon.socketId = socket.id;
             balloon.pilotConnected = true;
@@ -477,7 +493,7 @@ io.on('connection', (socket) => {
                 balloon: balloon
             });
             
-            console.log(`✅ Pilot ${balloon.username} authenticated`);
+            console.log(`✅ Pilot ${balloon.username} authenticated successfully`);
             
             // Оповещаем всех об обновлении статуса пилота
             io.to('race-room').emit('fiesta-balloon-updated', balloon);
@@ -485,8 +501,40 @@ io.on('connection', (socket) => {
             socket.emit('fiesta-auth-error', { 
                 message: 'Invalid callsign or password' 
             });
-            console.log(`❌ Auth failed for ${authData.username}`);
+            console.log(`❌ Auth failed for ${authData.username} - wrong password`);
         }
+    });
+    
+    // ============================================
+    // СМЕНА ПАРОЛЯ (С ХЭШИРОВАНИЕМ)
+    // ============================================
+    socket.on('fiesta-change-password', async (data) => {  // ← ДОБАВЛЯЕМ async
+        if (!socket.currentPilotId || !balloons[socket.currentPilotId]) {
+            socket.emit('fiesta-error', 'Not authenticated');
+            return;
+        }
+        
+        const balloon = balloons[socket.currentPilotId];
+        
+        // Проверяем старый пароль
+        const isValid = await bcrypt.compare(data.oldPassword, balloon.password);
+        
+        if (!isValid) {
+            socket.emit('fiesta-error', 'Current password is incorrect');
+            return;
+        }
+        
+        if (!data.newPassword || data.newPassword.length < 4) {
+            socket.emit('fiesta-error', 'New password must be at least 4 characters');
+            return;
+        }
+        
+        // Хэшируем новый пароль
+        const hashedNewPassword = await bcrypt.hash(data.newPassword, SALT_ROUNDS);
+        balloon.password = hashedNewPassword;
+        
+        socket.emit('fiesta-password-changed', { success: true });
+        console.log(`🔐 Password changed for ${balloon.username}`);
     });
     
     // ============================================
@@ -507,32 +555,6 @@ io.on('connection', (socket) => {
         
         io.to('race-room').emit('fiesta-balloon-updated', balloon);
         console.log(`📈 ${balloon.username} altitude → ${newAltitude}m`);
-    });
-    
-    // ============================================
-    // СМЕНА ПАРОЛЯ (опционально)
-    // ============================================
-    socket.on('fiesta-change-password', (data) => {
-        if (!socket.currentPilotId || !balloons[socket.currentPilotId]) {
-            socket.emit('fiesta-error', 'Not authenticated');
-            return;
-        }
-        
-        const balloon = balloons[socket.currentPilotId];
-        
-        if (balloon.password !== data.oldPassword) {
-            socket.emit('fiesta-error', 'Current password is incorrect');
-            return;
-        }
-        
-        if (!data.newPassword || data.newPassword.length < 4) {
-            socket.emit('fiesta-error', 'New password must be at least 4 characters');
-            return;
-        }
-        
-        balloon.password = data.newPassword;
-        socket.emit('fiesta-password-changed', { success: true });
-        console.log(`🔐 Password changed for ${balloon.username}`);
     });
     
     // ============================================
@@ -708,5 +730,6 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`👥 Max participants: ${MAX_PARTICIPANTS}`);
     console.log(`🏁 Race start: ${raceConfig.raceStartDateTime.toLocaleString()}`);
     console.log(`🎯 Finish: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
+    console.log(`🔐 Password hashing: ACTIVE (bcrypt, rounds=${SALT_ROUNDS})`);
     console.log(`📊 Registered pilots: ${Object.keys(balloons).length}/${MAX_PARTICIPANTS}\n`);
 });
