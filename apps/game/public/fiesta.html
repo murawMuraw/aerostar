@@ -3,15 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Aerostar — Fiesta Race Map</title>
+    <title>Aerostar — Fiesta Balloon Race</title>
+    
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; }
-        #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         
-        /* Control Panel */
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0f172a;
+            overflow: hidden;
+        }
+        
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+        }
+        
+        /* Role Badge */
+        .role-badge {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 2000;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(14px);
+            border-radius: 40px;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            pointer-events: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .role-pilot { 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .role-spectator { 
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        
+        /* Info Panel */
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            z-index: 2000;
+            background: rgba(15,23,42,0.95);
+            backdrop-filter: blur(14px);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 15px;
+            font-size: 12px;
+            color: white;
+            pointer-events: auto;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .info-panel h3 {
+            color: #38bdf8;
+            margin-bottom: 10px;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+        }
+        
+        .deadline {
+            color: #f87171;
+            font-weight: bold;
+        }
+        
+        .weather-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 11px;
+        }
+        
+        /* Altitude Panel (только для пилота) */
+        .altitude-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 2000;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(14px);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 15px;
+            width: 280px;
+            display: none;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        .altitude-panel h3 {
+            color: #ff9800;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .altitude-slider {
+            width: 100%;
+            margin: 10px 0;
+            cursor: pointer;
+            background: #ff9800;
+            height: 4px;
+            border-radius: 5px;
+        }
+        
+        .altitude-value {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #ff9800;
+        }
+        
+        .layer-info {
+            background: rgba(0,0,0,0.5);
+            padding: 8px;
+            border-radius: 10px;
+            margin-top: 10px;
+            font-size: 11px;
+            text-align: center;
+            color: #ccc;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 11px;
+        }
+        
+        /* Control Buttons */
         .control-panel {
             position: absolute;
             bottom: 20px;
@@ -32,113 +179,18 @@
             transition: transform 0.3s;
             border: none;
             cursor: pointer;
-            display: inline-block;
             font-size: 14px;
         }
         
         .btn:hover { transform: translateY(-2px); }
         .btn-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
         .btn-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .btn-warning { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
         
-        /* Info Panel */
-        .info-panel {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 280px;
-            z-index: 2000;
-            background: rgba(15,23,42,0.95);
-            backdrop-filter: blur(14px);
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
-            padding: 15px;
-            font-size: 12px;
-            color: white;
-            pointer-events: none;
-        }
-        
-        .info-panel h3 { color: #38bdf8; margin-bottom: 10px; font-size: 14px; }
-        .info-item { display: flex; justify-content: space-between; margin: 8px 0; }
-        .deadline { color: #f87171; font-weight: bold; }
-        .weather-item { display: flex; justify-content: space-between; margin: 5px 0; font-size: 11px; }
-        
-        /* Altitude Control (только для пилота) */
-        .altitude-panel {
-             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            z-index: 2000;
-            background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(14px);
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.2);
-            padding: 15px;
-            width: 260px;
-            display: none;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-        }
-         /* Выносим стили текста отдельно (вне фигурных скобок .altitude-panel) */
-        .altitude-panel .info-item {
-            color: #ffffff !important; /* Белый цвет для основного текста */
-        }
-        
-        .altitude-panel h3 { color: #ff9800; margin-bottom: 10px; font-size: 14px; }
-        .altitude-slider {
-            width: 100%;
-            margin: 10px 0;
-            cursor: pointer;
-            background: #ff9800;
-            height: 4px;
-            border-radius: 5px;
-        }
-        .altitude-value {
-            text-align: center;
-            font-size: 18px;
-            font-weight: bold;
-            color: #ff9800;
-        }
-        .layer-info {
-            background: rgba(0,0,0,0.5);
-            padding: 8px;
-            border-radius: 10px;
-            margin-top: 10px;
-            font-size: 11px;
-            text-align: center;
-            color: #ccc;
-        }
-        
-        /* Role badge - улучшенная читаемость */
-        .role-badge {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 2000;
-            background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(14px);
-            border-radius: 40px;
-            border: 1px solid rgba(255,255,255,0.2);
-            padding: 10px 20px;
-            font-size: 14px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            pointer-events: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-        .role-pilot { 
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            border: none;
-        }
-        .role-spectator { 
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
-            border: none;
-        }
-        
-        /* Layer Toggle Button - стиль как в index.html */
+        /* Map Toggle Button */
         .map-toggle {
             position: absolute;
-           top: 75px;
+            top: 75px;
             left: 20px;
             z-index: 2000;
             background: rgba(0, 0, 0, 0.7);
@@ -151,49 +203,17 @@
             color: white;
             border: 1px solid rgba(255,255,255,0.2);
             transition: all 0.2s ease;
-            font-family: inherit;
-            margin-right: 0;
         }
+        
         .map-toggle:hover {
             background: rgba(0, 0, 0, 0.85);
             transform: scale(1.02);
         }
         
-    @media (max-width: 768px) {
-    .info-panel { width: 240px; padding: 10px; } 
-    .btn { padding: 8px 16px; font-size: 12px; }
-    .altitude-panel { width: 220px; padding: 10px; }
-    /* Перенос кнопки под плашку на мобильных экранах */
-    .map-toggle { 
-        top: 55px; 
-        left: 15px; 
-        margin-right: 0; 
-        padding: 6px 12px; 
-        font-size: 10px; 
-    }
-    .role-badge { padding: 6px 15px; font-size: 12px; top: 15px; left: 15px; }
-}
-
-.my-balloon-marker { filter: drop-shadow(0 0 4px #10b981); }
-.balloon-marker { filter: drop-shadow(0 0 2px #38bdf8); }
-
-/* Стиль для маркера финиша - только эмодзи без фона */
-.finish-marker {
-    background: none !important;
-    border: none !important;
-    font-size: 32px;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
-
-/* Скрываем notification */
-.notification {
-    display: none;
-}
-
+        /* Маркеры */
         .my-balloon-marker { filter: drop-shadow(0 0 4px #10b981); }
         .balloon-marker { filter: drop-shadow(0 0 2px #38bdf8); }
         
-        /* Стиль для маркера финиша - только эмодзи без фона */
         .finish-marker {
             background: none !important;
             border: none !important;
@@ -201,92 +221,287 @@
             text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
         
-        /* Скрываем notification */
-        .notification {
-            display: none;
+        /* Модальное окно */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(14px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            width: 340px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            color: white;
+        }
+        
+        .modal-content h3 {
+            color: #38bdf8;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        
+        .modal-input {
+            width: 100%;
+            padding: 10px;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            margin-bottom: 12px;
+            box-sizing: border-box;
+        }
+        
+        .modal-input:focus {
+            outline: none;
+            border-color: #38bdf8;
+        }
+        
+        .modal-btn {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .back-link {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+        
+        .back-link:hover {
+            color: #38bdf8;
+        }
+        
+        hr {
+            border: 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 15px 0;
+        }
+        
+        /* Announcements */
+        .announcements-panel {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            z-index: 2000;
+            pointer-events: none;
+        }
+        
+        .announcement {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.95), rgba(139, 92, 246, 0.95));
+            border-left: 4px solid #fbbf24;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            animation: slideDown 0.5s ease-out;
+            pointer-events: auto;
+            backdrop-filter: blur(10px);
+            color: white;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .announcement-text {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .announcement-time {
+            font-size: 10px;
+            color: rgba(255,255,255,0.7);
+            margin-top: 5px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .info-panel { width: 260px; padding: 10px; font-size: 11px; }
+            .altitude-panel { width: 240px; padding: 12px; }
+            .btn { padding: 8px 16px; font-size: 12px; }
+            .map-toggle { top: 55px; left: 15px; padding: 6px 12px; font-size: 10px; }
+            .role-badge { padding: 6px 15px; font-size: 12px; top: 15px; left: 15px; }
+            .announcements-panel { width: 90%; }
+        }
+        
+        /* Scrollbar */
+        .info-panel::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .info-panel::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.3);
+            border-radius: 2px;
+        }
+        
+        .info-panel::-webkit-scrollbar-thumb {
+            background: #38bdf8;
+            border-radius: 2px;
+        }
+        
+        .connection-status {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: white;
+        }
+        
+        .connected-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
-<!-- Модальное окно выбора роли и авторизации (English Version) -->
-<div id="role-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); z-index: 9999; display: flex; align-items: center; justify-content: center;">
-    <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 30px; width: 340px; text-align: center; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); font-family: inherit; color: white;">
-        
-        <!-- Главный экран выбора роли -->
-        <div id="modal-role-selection" style="display: flex; flex-direction: column; gap: 12px;">
-            <h3 style="color: #38bdf8; margin-bottom: 20px; font-size: 18px; letter-spacing: 0.5px;">Enter as:</h3>
-            <button id="choose-spectator-btn" class="btn" style="width: 100%;">👁️ Spectator</button>
-            <button id="choose-pilot-btn" class="btn btn-success" style="width: 100%;">🎈 Aeronaut</button>
-            <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 8px 0;">
-            <a href="register.html" class="btn" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); text-align: center; width: 100%;">📝 Register</a>
-        </div>
-
-        <!-- Форма авторизации пилота -->
-        <div id="modal-pilot-login" style="display: none; flex-direction: column; gap: 12px; text-align: left;">
-            <h3 style="color: #38bdf8; margin-bottom: 15px; font-size: 18px; text-align: center; letter-spacing: 0.5px;">Aeronaut Login</h3>
-            <div style="margin-bottom: 5px;">
-                <label style="font-size: 12px; color: #94a3b8; display: block; margin-bottom: 4px;">Login (Username / Email):</label>
-                <input type="text" id="login-username" style="width: 100%; padding: 10px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white; box-sizing: border-box;">
+    
+    <!-- Модальное окно выбора роли -->
+    <div id="role-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="modal-role-selection">
+                <h3>🎈 Enter Fiesta Race</h3>
+                <button id="choose-spectator-btn" class="btn modal-btn">👁️ Watch as Spectator</button>
+                <button id="choose-pilot-btn" class="btn btn-success modal-btn">🎈 Enter as Aeronaut</button>
+                <hr>
+                <a href="register.html" class="btn btn-warning modal-btn" style="display: block; text-decoration: none;">📝 Register New Pilot</a>
             </div>
-            <div style="margin-bottom: 10px;">
-                <label style="font-size: 12px; color: #94a3b8; display: block; margin-bottom: 4px;">Password:</label>
-                <input type="password" id="login-password" style="width: 100%; padding: 10px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white; box-sizing: border-box;">
+            
+            <div id="modal-pilot-login" style="display: none;">
+                <h3>🔐 Aeronaut Login</h3>
+                <input type="text" id="login-username" class="modal-input" placeholder="Pilot Callsign" autocomplete="off">
+                <input type="password" id="login-password" class="modal-input" placeholder="Email (password)">
+                <button id="submit-login-btn" class="btn btn-success modal-btn">🚀 Enter Gondola</button>
+                <button id="back-to-roles-btn" class="back-link">← Back to role selection</button>
             </div>
-            <button id="submit-login-btn" class="btn btn-success" style="width: 100%;">Enter Gondola</button>
-            <button id="back-to-roles-btn" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 13px; text-align: center; margin-top: 5px; width: 100%;">← Back</button>
         </div>
     </div>
-</div>
-
-
-
-  
     
+    <!-- Role Badge -->
+    <div class="role-badge" id="role-badge" style="display: none;">
+        <span id="role-text">👁️ SPECTATOR</span>
+    </div>
+    
+    <!-- Map Toggle -->
+    <button class="map-toggle" id="layer-toggle">🛰️ Satellite</button>
+    
+    <!-- Info Panel -->
     <div class="info-panel">
-        <h3>🏁 Race Info</h3>
+        <h3>🏁 Race Information</h3>
         <div class="info-item"><span>⏰ Race Start:</span><span id="race-start-time">--</span></div>
         <div class="info-item"><span>🏁 Race End:</span><span class="deadline" id="race-deadline">--</span></div>
         <div class="info-item"><span>🏆 Finish Line:</span><span id="finish-coords">--</span></div>
         <div class="info-item"><span>📊 Status:</span><span id="race-status">Waiting...</span></div>
-        <h3 style="margin-top: 10px;">🌤️ Weather at Finish</h3>
-        <div id="finish-weather"><div class="weather-item">Loading...</div></div>
-        <div class="info-item" style="margin-top: 10px;"><span>🎈 Active Balloons:</span><span id="balloon-count">0</span></div>
-    </div>
-    
-    <div class="altitude-panel" id="altitude-panel" style="display: none;">
-        <h3>🎈 Balloon Controls</h3>
-        <div class="info-item"><span>🏷️ Call sign:</span><span id="pilot-name">--</span></div>
-        <div class="info-item"><span>🔢 Race #:</span><span id="race-number">--</span></div>
-        <div class="info-item"><span>📊 Speed:</span><span id="balloon-speed">0 km/h</span></div>
-        <div class="info-item"><span>🧭 Wind dir:</span><span id="wind-direction">--</span></div>
-        <div class="altitude-value" id="altitude-value">1000 m</div>
-        <input type="range" id="altitude-slider" class="altitude-slider" min="0" max="15000" step="100" value="1000">
-        <div class="layer-info" id="layer-info">Surface Layer (0-2km)</div>
-        <div class="info-text" style="margin-top: 10px; font-size: 10px; text-align: center; color: #94a3b8;">
-            💡 Change altitude to catch different wind layers
+        
+        <h3 style="margin-top: 12px;">🌤️ Weather at Finish</h3>
+        <div id="finish-weather">
+            <div class="weather-item">Loading...</div>
+        </div>
+        
+        <h3 style="margin-top: 12px;">🎈 Active Balloons</h3>
+        <div class="info-item"><span>Total Pilots:</span><span id="balloon-count">0</span></div>
+        <div id="pilots-list" style="font-size: 11px; max-height: 150px; overflow-y: auto;">
+            <div style="color: #94a3b8; text-align: center;">No pilots yet</div>
         </div>
     </div>
     
+    <!-- Altitude Panel (только для пилотов) -->
+    <div class="altitude-panel" id="altitude-panel" style="display: none;">
+        <h3>🎈 Balloon Controls</h3>
+        <div class="info-item"><span>🏷️ Callsign:</span><span id="pilot-name">--</span></div>
+        <div class="info-item"><span>🔢 Race #:</span><span id="race-number">--</span></div>
+        <div class="info-item"><span>💨 Ground Speed:</span><span id="balloon-speed">0 km/h</span></div>
+        <div class="info-item"><span>🧭 Wind Direction:</span><span id="wind-direction">--</span></div>
+        
+        <div class="altitude-value" id="altitude-value">1000 m</div>
+        <input type="range" id="altitude-slider" class="altitude-slider" min="0" max="15000" step="100" value="1000">
+        <div class="layer-info" id="layer-info">Surface Layer (0-2km) - Light winds</div>
+        
+        <h3 style="margin-top: 12px; font-size: 12px;">📊 Personal Stats</h3>
+        <div class="stat-row"><span>⏱️ Flight Time:</span><span id="flight-time">00:00:00</span></div>
+        <div class="stat-row"><span>📏 Distance Traveled:</span><span id="distance-traveled">0 km</span></div>
+        <div class="stat-row"><span>🎯 Distance to Finish:</span><span id="distance-finish">-- km</span></div>
+        <div class="stat-row"><span>📈 Current Altitude:</span><span id="current-altitude">1000 m</span></div>
+        
+        <div class="info-text" style="margin-top: 10px; font-size: 10px; text-align: center; color: #94a3b8;">
+            💡 Change altitude to catch different wind layers!
+        </div>
+    </div>
+    
+    <!-- Control Buttons -->
     <div class="control-panel">
+        <button class="btn" id="focus-finish-btn" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">🎯 Focus Finish</button>
         <button class="btn btn-danger" id="logout-btn">🚪 Exit</button>
     </div>
     
-    <div class="map-toggle" id="layer-toggle">
-        🛰️ Satellite
+    <!-- Announcements -->
+    <div class="announcements-panel" id="announcements-panel"></div>
+    
+    <!-- Connection Status -->
+    <div class="connection-status" id="connection-status">
+        <span class="connected-indicator"></span>
+        <span id="status-text">Connecting...</span>
     </div>
-
+    
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+    
     <script>
-        let map, socket, finishMarker, balloonsMarkers = {};
+        // ============================================
+        // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+        // ============================================
+        let map, socket;
+        let finishMarker = null;
+        let balloonsMarkers = {};
+        let pathLayer = null;
         let myBalloonId = null;
-        let currentConfig = null;
         let myRole = 'spectator';
-        let altitudeSlider, altitudeValue, layerInfo;
+        let currentConfig = null;
         let currentTileLayer;
+        let flightStartTime = null;
+        let flightTimerInterval = null;
         
-        // Tile layers
+        // Tile Layers
         const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
             subdomains: 'abcd',
@@ -304,77 +519,53 @@
         function initMap() {
             console.log('🗺️ Initializing map...');
             map = L.map('map').setView([30, -90], 4);
-            
-            // Добавляем слой по умолчанию (улицы)
             currentTileLayer = streetLayer;
             currentTileLayer.addTo(map);
-            
             L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
-            
-            console.log('✅ Map initialized');
         }
         
-        // ============================================
-        // ПЕРЕКЛЮЧЕНИЕ СЛОЕВ КАРТЫ
-        // ============================================
         function toggleLayer() {
             map.removeLayer(currentTileLayer);
-            if (currentTileLayer === streetLayer) {
-                currentTileLayer = satelliteLayer;
-                document.getElementById('layer-toggle').innerHTML = '🗺️ Streets';
-            } else {
-                currentTileLayer = streetLayer;
-                document.getElementById('layer-toggle').innerHTML = '🛰️ Satellite';
-            }
+            currentTileLayer = (currentTileLayer === streetLayer) ? satelliteLayer : streetLayer;
             currentTileLayer.addTo(map);
+            const btn = document.getElementById('layer-toggle');
+            if (btn) btn.innerHTML = (currentTileLayer === streetLayer) ? '🛰️ Satellite' : '🗺️ Streets';
         }
         
-        // ============================================
-        // ФОКУС НА ФИНИШЕ
-        // ============================================
         function focusOnFinish() {
-            if (currentConfig && currentConfig.finishCoords && map) {
-                const { lat, lng } = currentConfig.finishCoords;
-                map.setView([lat, lng], 6);
-                console.log(`📍 Map focused on finish: ${lat}, ${lng}`);
+            if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng && map) {
+                map.setView([currentConfig.finishCoords.lat, currentConfig.finishCoords.lng], 6);
+                displayAnnouncement({ message: '📍 Map centered on finish line', timestamp: Date.now() });
             }
         }
         
         // ============================================
-        // ОБНОВЛЕНИЕ ПОГОДЫ НА ФИНИШЕ
+        // ПОГОДА НА ФИНИШЕ
         // ============================================
         function updateFinishWeather(lat, lng) {
             if (!lat || !lng) return;
-            
             fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`)
-                .then(r => {
-                    if (!r.ok) throw new Error('Network error');
-                    return r.json();
-                })
+                .then(r => r.json())
                 .then(data => {
-                    if (data && data.current_weather) {
+                    if (data?.current_weather) {
                         const w = data.current_weather;
                         document.getElementById('finish-weather').innerHTML = `
-                            <div class="weather-item">🌡️ Temp: ${w.temperature}°C</div>
-                            <div class="weather-item">💨 Wind: ${w.windspeed} m/s</div>
-                            <div class="weather-item">🧭 Dir: ${w.winddirection}°</div>
+                            <div class="weather-item">🌡️ Temperature: <span style="color:#fbbf24;">${w.temperature}°C</span></div>
+                            <div class="weather-item">💨 Wind Speed: <span style="color:#fbbf24;">${w.windspeed} m/s</span></div>
+                            <div class="weather-item">🧭 Wind Direction: <span style="color:#fbbf24;">${w.winddirection}°</span></div>
                         `;
                     } else {
-                        document.getElementById('finish-weather').innerHTML = `
-                            <div class="weather-item" style="color: #fbbf24;">⏳ No weather data</div>
-                        `;
+                        document.getElementById('finish-weather').innerHTML = '<div class="weather-item">⏳ No weather data</div>';
                     }
                 })
                 .catch(err => {
-                    console.error('Weather fetch error:', err);
-                    document.getElementById('finish-weather').innerHTML = `
-                        <div class="weather-item" style="color: #f87171;">🌧️ Weather unavailable</div>
-                    `;
+                    console.error('Weather error:', err);
+                    document.getElementById('finish-weather').innerHTML = '<div class="weather-item">🌧️ Weather unavailable</div>';
                 });
         }
         
         // ============================================
-        // ОБНОВЛЕНИЕ МАРКЕРОВ ШАРОВ
+        // МАРКЕРЫ ШАРОВ
         // ============================================
         function clearBalloons() {
             Object.values(balloonsMarkers).forEach(marker => {
@@ -383,25 +574,52 @@
             balloonsMarkers = {};
         }
         
+        function updateBalloonsList(balloons) {
+            if (!balloons || !Array.isArray(balloons)) return;
+            const container = document.getElementById('pilots-list');
+            if (!container) return;
+            
+            if (balloons.length === 0) {
+                container.innerHTML = '<div style="color: #94a3b8; text-align: center;">No pilots yet</div>';
+                return;
+            }
+            
+            let html = '';
+            balloons.forEach(b => {
+                const isMe = myBalloonId === b.id;
+                const status = b.finished ? '🏆' : (currentConfig?.raceStarted ? '🎈' : '⏳');
+                html += `
+                    <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <span>${status} <strong>${escapeHtml(b.username)}</strong> ${isMe ? '(you)' : ''}</span>
+                        <span style="color: #fbbf24;">#${b.raceNumber}</span>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+        
         function updateBalloons(balloons) {
             if (!map) return;
             clearBalloons();
             
-            if (!balloons || !Array.isArray(balloons)) return;
+            if (!balloons || !Array.isArray(balloons)) {
+                document.getElementById('balloon-count').innerHTML = '0';
+                return;
+            }
             
             balloons.forEach(b => {
                 if (b && b.lat && b.lng && !isNaN(b.lat) && !isNaN(b.lng)) {
                     const isMyBalloon = myBalloonId === b.id;
                     const icon = L.divIcon({ 
-                        html: `<div style="font-size: ${isMyBalloon ? '26px' : '22px'}; text-align: center;">${isMyBalloon ? '🎈' : '🪁'}</div>`, 
-                        iconSize: [28, 28],
+                        html: `<div style="font-size: ${isMyBalloon ? '28px' : '24px'}; text-align: center;">${isMyBalloon ? '🎈' : '🪁'}</div>`, 
+                        iconSize: [32, 32],
                         className: isMyBalloon ? 'my-balloon-marker' : 'balloon-marker',
                         popupAnchor: [0, -10]
                     });
                     
                     try {
                         const marker = L.marker([b.lat, b.lng], { icon }).addTo(map);
-                        let popupContent = `<b>${b.username || '?'}</b><br>#${b.raceNumber || '?'}<br>🎯 ${Math.round(b.speed || 0)} km/h`;
+                        let popupContent = `<b>${escapeHtml(b.username)}</b><br>#${b.raceNumber}<br>🎯 ${Math.round(b.speed || 0)} km/h`;
                         if (b.altitude) popupContent += `<br>📈 ${b.altitude}m`;
                         if (b.windDirection) popupContent += `<br>🧭 ${b.windDirection}°`;
                         marker.bindPopup(popupContent);
@@ -411,139 +629,243 @@
                     }
                 }
             });
+            
             document.getElementById('balloon-count').innerHTML = Object.keys(balloonsMarkers).length;
+            updateBalloonsList(balloons);
         }
         
         // ============================================
-        // ОБНОВЛЕНИЕ ИНТЕРФЕЙСА ПИЛОТА
+        // ТРЕК ПОЛЕТА (для своего шара)
+        // ============================================
+        function updatePath(balloon) {
+            if (!map || !balloon || myBalloonId !== balloon.id) return;
+            if (balloon.path && balloon.path.length > 1) {
+                if (pathLayer) pathLayer.remove();
+                const pathPoints = balloon.path.map(p => [p.lat, p.lng]);
+                pathLayer = L.polyline(pathPoints, { color: '#10b981', weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(map);
+            }
+        }
+        
+        // ============================================
+        // ИНТЕРФЕЙС ПИЛОТА
         // ============================================
         function updatePilotUI(balloon) {
             if (!balloon) return;
             
-            document.getElementById('pilot-name').innerHTML = balloon.username;
+            document.getElementById('pilot-name').innerHTML = escapeHtml(balloon.username);
             document.getElementById('race-number').innerHTML = `#${balloon.raceNumber}`;
             document.getElementById('balloon-speed').innerHTML = `${Math.round(balloon.speed || 0)} km/h`;
             document.getElementById('wind-direction').innerHTML = balloon.windDirection ? `${balloon.windDirection}°` : '--';
             document.getElementById('altitude-value').innerHTML = `${balloon.altitude || 1000} m`;
-            document.getElementById('layer-info').innerHTML = balloon.layerName || 'Surface Layer (0-2km)';
+            document.getElementById('current-altitude').innerHTML = `${balloon.altitude || 1000} m`;
             
-            if (altitudeSlider) {
-                altitudeSlider.value = balloon.altitude || 1000;
+            const slider = document.getElementById('altitude-slider');
+            if (slider) slider.value = balloon.altitude || 1000;
+            
+            // Layer info
+            const alt = balloon.altitude || 1000;
+            let layerText = '';
+            if (alt < 2000) layerText = 'Surface Layer (0-2km) - Light winds 🌿';
+            else if (alt < 5000) layerText = 'Lower Winds (2-5km) - Moderate winds 🌬️';
+            else if (alt < 8000) layerText = 'Mid Winds (5-8km) - Strong winds 💨';
+            else layerText = 'Jet Stream (8km+) - Very fast winds ⚡';
+            document.getElementById('layer-info').innerHTML = balloon.layerName || layerText;
+            
+            // Distance to finish
+            if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng) {
+                const dist = getDistance(balloon.lat, balloon.lng, currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
+                document.getElementById('distance-finish').innerHTML = `${dist.toFixed(1)} km`;
             }
+            
+            // Distance traveled
+            let totalDist = 0;
+            if (balloon.path && balloon.path.length > 1) {
+                for (let i = 1; i < balloon.path.length; i++) {
+                    totalDist += getDistance(balloon.path[i-1].lat, balloon.path[i-1].lng, balloon.path[i].lat, balloon.path[i].lng);
+                }
+            }
+            document.getElementById('distance-traveled').innerHTML = `${totalDist.toFixed(1)} km`;
+            
+            updatePath(balloon);
+        }
+        
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        function startFlightTimer() {
+            if (flightTimerInterval) clearInterval(flightTimerInterval);
+            flightStartTime = Date.now();
+            flightTimerInterval = setInterval(() => {
+                if (!myBalloonId || !currentConfig?.raceStarted) return;
+                const elapsed = (Date.now() - flightStartTime) / 1000;
+                const hours = Math.floor(elapsed / 3600);
+                const minutes = Math.floor((elapsed % 3600) / 60);
+                const seconds = Math.floor(elapsed % 60);
+                document.getElementById('flight-time').innerHTML = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+        
+        // ============================================
+        // УВЕДОМЛЕНИЯ
+        // ============================================
+        function displayAnnouncement(data) {
+            const container = document.getElementById('announcements-panel');
+            const announcement = document.createElement('div');
+            announcement.className = 'announcement';
+            announcement.innerHTML = `
+                <div class="announcement-text">📢 ${escapeHtml(data.message)}</div>
+                <div class="announcement-time">${new Date(data.timestamp).toLocaleTimeString()}</div>
+            `;
+            container.prepend(announcement);
+            
+            while (container.children.length > 4) {
+                container.removeChild(container.lastChild);
+            }
+            
+            setTimeout(() => {
+                if (announcement.parentNode) {
+                    announcement.style.opacity = '0';
+                    setTimeout(() => {
+                        if (announcement.parentNode) announcement.remove();
+                    }, 500);
+                }
+            }, 8000);
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        // ============================================
+        // УПРАВЛЕНИЕ ВЫСОТОЙ
+        // ============================================
+        function initAltitudeControl() {
+            const slider = document.getElementById('altitude-slider');
+            const valueDisplay = document.getElementById('altitude-value');
+            
+            if (!slider) return;
+            
+            slider.addEventListener('input', (e) => {
+                const alt = parseInt(e.target.value);
+                if (valueDisplay) valueDisplay.innerHTML = `${alt} m`;
+            });
+            
+            slider.addEventListener('change', (e) => {
+                const altitude = parseInt(e.target.value);
+                if (socket && myRole === 'pilot' && myBalloonId) {
+                    socket.emit('fiesta-change-altitude', { altitude: altitude });
+                    displayAnnouncement({ message: `🎈 Changing altitude to ${altitude}m`, timestamp: Date.now() });
+                }
+            });
         }
         
         // ============================================
         // ПОДКЛЮЧЕНИЕ К СОКЕТАМ
         // ============================================
         function connectSocket() {
-            socket = io({
-                transports: ['polling', 'websocket'],
-                upgrade: true,
-                reconnection: true
-            });
+            socket = io({ transports: ['polling', 'websocket'], reconnection: true });
+            
             socket.on('connect', () => {
-                console.log('✅ Connected to race server');
-                
-                const modal = document.getElementById('role-modal');
-                const roleSelection = document.getElementById('modal-role-selection');
-                const pilotLogin = document.getElementById('modal-pilot-login');
-
-                // Принудительно сбрасываем состояние окна при новом коннекте
-                if (modal) modal.style.display = 'flex';
-                if (roleSelection) roleSelection.style.display = 'flex';
-                if (pilotLogin) pilotLogin.style.display = 'none';
-
-                // 1. Вход как Зритель
-                document.getElementById('choose-spectator-btn').onclick = () => {
-                    console.log('👁️ Connecting as spectator');
-                    socket.emit('fiesta-auth', { 
-                        isSpectator: true, 
-                        username: 'Spectator_' + Math.floor(Math.random() * 1000)
-                    });
-                };
-
-                // 2. Клик на кнопку "Участник" — переключаем на форму ввода пароля
-                document.getElementById('choose-pilot-btn').onclick = () => {
-                    roleSelection.style.display = 'none';
-                    pilotLogin.style.display = 'flex';
-                };
-
-                // Возврат назад к выбору ролей
-                document.getElementById('back-to-roles-btn').onclick = () => {
-                    pilotLogin.style.display = 'none';
-                    roleSelection.style.display = 'flex';
-                };
-
-                // 3. Отправка данных авторизации пилота на сервер
-                document.getElementById('submit-login-btn').onclick = () => {
-                    const username = document.getElementById('login-username').value.trim();
-                    const password = document.getElementById('login-password').value;
-
-                    if (!username || !password) {
-                        alert('Please fill in all fields!');
-                        return;
-                    }
-
-                    console.log('🎈 Attempting pilot login for:', username);
-                    // Отправляем логин и пароль на бэкенд. Бэкенд должен уметь проверять пару login/password
-                    socket.emit('fiesta-auth', { 
-                        isSpectator: false,
-                        username: username,
-                        password: password 
-                    });
-                };
+                console.log('✅ Connected to server');
+                document.getElementById('status-text').innerHTML = 'Connected';
+                document.querySelector('.connected-indicator').style.background = '#22c55e';
             });
-
-                             
             
             socket.on('connect_error', (error) => {
                 console.error('Connection error:', error);
-                document.getElementById('role-badge').innerHTML = '❌ Connection error';
+                document.getElementById('status-text').innerHTML = 'Error';
+                document.querySelector('.connected-indicator').style.background = '#ef4444';
             });
             
-            // ============================================
-            // АУТЕНТИФИКАЦИЯ УСПЕШНА
-            // ============================================
-                      socket.on('fiesta-auth-success', (data) => {
-                console.log('🎉 Fiesta Auth Success:', data);
-                
-                // Скрываем модальное окно выбора роли ТОЛЬКО после подтверждения от сервера
+            // Modal handlers
+            const modal = document.getElementById('role-modal');
+            const roleSelection = document.getElementById('modal-role-selection');
+            const pilotLogin = document.getElementById('modal-pilot-login');
+            
+            document.getElementById('choose-spectator-btn').onclick = () => {
+                socket.emit('fiesta-auth', { isSpectator: true, username: 'Spectator_' + Math.floor(Math.random() * 1000) });
+            };
+            
+            document.getElementById('choose-pilot-btn').onclick = () => {
+                if (roleSelection && pilotLogin) {
+                    roleSelection.style.display = 'none';
+                    pilotLogin.style.display = 'block';
+                }
+            };
+            
+            document.getElementById('back-to-roles-btn').onclick = () => {
+                if (pilotLogin && roleSelection) {
+                    pilotLogin.style.display = 'none';
+                    roleSelection.style.display = 'block';
+                }
+            };
+            
+            document.getElementById('submit-login-btn').onclick = () => {
+                const username = document.getElementById('login-username').value.trim();
+                const password = document.getElementById('login-password').value;
+                if (!username || !password) {
+                    displayAnnouncement({ message: 'Please enter both callsign and email', timestamp: Date.now() });
+                    return;
+                }
+                socket.emit('fiesta-auth', { isSpectator: false, username: username, password: password });
+            };
+            
+            // Auth response
+            socket.on('fiesta-auth-success', (data) => {
+                console.log('Auth success:', data);
                 const modal = document.getElementById('role-modal');
                 if (modal) modal.style.display = 'none';
-
-                // Показываем или скрываем пульт Balloon Controls в зависимости от роли
-                const altitudePanel = document.getElementById('altitude-panel');
-                if (altitudePanel) {
-                    if (data.role === 'pilot' || (!data.isSpectator && data.pilotId)) {
-                        console.log('🎈 User is a pilot. Showing controls.');
-                        altitudePanel.style.display = 'block';
-                    } else {
-                        console.log('👁️ User is a spectator. Controls hidden.');
-                        altitudePanel.style.display = 'none';
+                
+                if (data.role === 'pilot' || data.pilotId) {
+                    myRole = 'pilot';
+                    myBalloonId = data.pilotId;
+                    document.getElementById('role-text').innerHTML = '🎈 PILOT';
+                    document.getElementById('role-badge').className = 'role-badge role-pilot';
+                    document.getElementById('altitude-panel').style.display = 'block';
+                    if (data.balloon) {
+                        updatePilotUI(data.balloon);
+                        if (currentConfig?.raceStarted && !flightStartTime) startFlightTimer();
                     }
+                    displayAnnouncement({ message: `Welcome back, ${data.balloon?.username || 'Pilot'}!`, timestamp: Date.now() });
+                } else {
+                    myRole = 'spectator';
+                    document.getElementById('role-text').innerHTML = '👁️ SPECTATOR';
+                    document.getElementById('role-badge').className = 'role-badge role-spectator';
+                    document.getElementById('altitude-panel').style.display = 'none';
+                    displayAnnouncement({ message: 'You are watching as spectator', timestamp: Date.now() });
                 }
-
-                // Обновление интерфейса (остается из оригинального кода)
-                if (data.pilot) {
-                    updatePilotStatus(data.pilot);
-                }
+                document.getElementById('role-badge').style.display = 'block';
             });
-
-            // ============================================
-            // ПОЛУЧЕНИЕ КОНФИГУРАЦИИ
-            // ============================================
+            
+            socket.on('fiesta-auth-error', (data) => {
+                displayAnnouncement({ message: `Login failed: ${data.message}`, timestamp: Date.now() });
+            });
+            
+            // Race config
             socket.on('fiesta-race-config', (config) => {
-                console.log('📡 Race config received');
-                if (!config) return;
+                console.log('Race config received');
                 currentConfig = config;
                 
-                if (config.finishCoords && config.finishCoords.lat && config.finishCoords.lng) {
+                if (config.finishCoords?.lat && config.finishCoords?.lng) {
                     document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
                     
                     if (config.raceStartDateTime) {
                         const startTime = new Date(config.raceStartDateTime);
                         document.getElementById('race-start-time').innerHTML = startTime.toLocaleString();
-                        
                         if (config.raceDurationHours) {
                             const endTime = new Date(startTime);
                             endTime.setHours(endTime.getHours() + config.raceDurationHours);
@@ -551,47 +873,42 @@
                         }
                     }
                     
-                    if (config.raceStarted) {
-                        document.getElementById('race-status').innerHTML = '🏁 RACE IN PROGRESS';
-                        document.getElementById('race-status').style.color = '#10b981';
+                    let statusText = '', statusColor = '';
+                    if (config.raceStarted && !config.raceFinished) {
+                        statusText = '🏁 RACE IN PROGRESS';
+                        statusColor = '#10b981';
+                        if (myRole === 'pilot' && !flightStartTime) startFlightTimer();
                     } else if (config.raceFinished) {
-                        document.getElementById('race-status').innerHTML = '🏆 RACE FINISHED';
-                        document.getElementById('race-status').style.color = '#ef4444';
+                        statusText = '🏆 RACE FINISHED';
+                        statusColor = '#ef4444';
                     } else {
-                        document.getElementById('race-status').innerHTML = '⏳ WAITING FOR START';
-                        document.getElementById('race-status').style.color = '#fbbf24';
+                        statusText = '⏳ WAITING FOR START';
+                        statusColor = '#fbbf24';
                     }
+                    const statusEl = document.getElementById('race-status');
+                    statusEl.innerHTML = statusText;
+                    statusEl.style.color = statusColor;
                     
-                    // Обновляем маркер финиша - только эмодзи, без фона
                     if (finishMarker && map) map.removeLayer(finishMarker);
-                    
                     const finishIcon = L.divIcon({
-                        html: '<span style="font-size: 32px; line-height: 1;">🏁</span>',
+                        html: '<span style="font-size: 32px;">🏁</span>',
                         iconSize: [32, 32],
-                        className: 'finish-marker',
-                        popupAnchor: [0, -16]
+                        className: 'finish-marker'
                     });
-                    
                     finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
-                    finishMarker.bindPopup('<b>🏁 FINISH LINE</b><br>First to reach within 50km wins!');
+                    finishMarker.bindPopup('<b>🏁 FINISH LINE</b><br>First within 50km wins!');
                     
                     updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
-                    focusOnFinish();
                 }
             });
             
-            // ============================================
-            // ОБНОВЛЕНИЕ ШАРОВ
-            // ============================================
+            // Balloons updates
             socket.on('fiesta-all-balloons', (balloons) => {
                 if (balloons && Array.isArray(balloons)) {
                     updateBalloons(balloons);
-                    
                     if (myRole === 'pilot' && myBalloonId) {
                         const myBalloon = balloons.find(b => b.id === myBalloonId);
-                        if (myBalloon) {
-                            updatePilotUI(myBalloon);
-                        }
+                        if (myBalloon) updatePilotUI(myBalloon);
                     }
                 }
             });
@@ -602,153 +919,69 @@
                     if (myRole === 'pilot' && myBalloonId === balloon.id) {
                         updatePilotUI(balloon);
                     }
-                } else {
-                    socket.emit('fiesta-get-participants');
+                } else if (balloon && myRole === 'pilot' && myBalloonId === balloon.id) {
+                    updatePilotUI(balloon);
                 }
             });
             
-            socket.on('fiesta-balloon-created', () => {
-                socket.emit('fiesta-get-participants');
-            });
-            
-            socket.on('fiesta-balloon-removed', () => {
-                socket.emit('fiesta-get-participants');
-            });
-            
-            // ============================================
-            // СОБЫТИЯ ГОНКИ (без уведомлений)
-            // ============================================
+            // Race events
             socket.on('fiesta-race-started', (data) => {
+                if (currentConfig) currentConfig.raceStarted = true;
                 document.getElementById('race-status').innerHTML = '🏁 RACE IN PROGRESS';
                 document.getElementById('race-status').style.color = '#10b981';
-                console.log('Race started:', data.message);
+                if (myRole === 'pilot' && !flightStartTime) startFlightTimer();
+                displayAnnouncement({ message: data.message, timestamp: Date.now() });
             });
             
             socket.on('fiesta-race-finished', (data) => {
+                if (currentConfig) currentConfig.raceFinished = true;
                 document.getElementById('race-status').innerHTML = '🏆 RACE FINISHED';
                 document.getElementById('race-status').style.color = '#ef4444';
-                console.log('Race finished:', data.message);
+                if (flightTimerInterval) clearInterval(flightTimerInterval);
+                displayAnnouncement({ message: data.message, timestamp: Date.now() });
+            });
+            
+            socket.on('fiesta-admin-message', (data) => {
+                displayAnnouncement(data);
             });
             
             socket.on('fiesta-message', (data) => {
                 if (data.type === 'finish') {
-                    console.log('Finish message:', data.message);
+                    displayAnnouncement({ message: data.message, timestamp: data.finishTime });
                 }
-            });
-            
-            socket.on('fiesta-admin-message', (data) => {
-                console.log('Admin message:', data.message);
-            });
-            
-            socket.on('fiesta-pilot-disconnected', (data) => {
-                console.log(`Pilot ${data.username} disconnected`);
-            });
-            
-            socket.on('fiesta-warning', (msg) => {
-                console.warn('Warning:', msg);
             });
             
             socket.on('fiesta-error', (msg) => {
-                console.error('Server error:', msg);
+                displayAnnouncement({ message: `Error: ${msg}`, timestamp: Date.now() });
             });
-        }
-        
-        // ============================================
-        // УПРАВЛЕНИЕ ВЫСОТОЙ
-        // ============================================
-        function initAltitudeControl() {
-            altitudeSlider = document.getElementById('altitude-slider');
-            altitudeValue = document.getElementById('altitude-value');
-            layerInfo = document.getElementById('layer-info');
-            
-            if (!altitudeSlider) return;
-            
-            altitudeSlider.addEventListener('input', (e) => {
-                const altitude = parseInt(e.target.value);
-                altitudeValue.innerHTML = `${altitude} m`;
-                
-                if (altitude < 2000) {
-                    layerInfo.innerHTML = 'Surface Layer (0-2km) - Slow winds';
-                } else if (altitude < 5000) {
-                    layerInfo.innerHTML = 'Lower Winds (2-5km) - Moderate winds';
-                } else if (altitude < 8000) {
-                    layerInfo.innerHTML = 'Mid Winds (5-8km) - Strong winds';
-                } else {
-                    layerInfo.innerHTML = 'Jet Stream (8km+) - Very fast winds';
-                }
-            });
-            
-            altitudeSlider.addEventListener('change', (e) => {
-                const altitude = parseInt(e.target.value);
-                if (socket && myRole === 'pilot') {
-                    socket.emit('fiesta-change-altitude', { altitude: altitude });
-                }
-            });
-        }
-        
-        // ============================================
-        // УПРАВЛЕНИЕ ШАРОМ (ДЛЯ ЗРИТЕЛЕЙ)
-        // ============================================
-        function takeControl() {
-            if (myRole === 'spectator') {
-                window.location.href = 'register.html';
-            }
         }
         
         // ============================================
         // ВЫХОД
         // ============================================
         function exit() {
-            if (confirm('Are you sure you want to exit?\n\nYou will be redirected to the Aerostar website.')) {
-                window.location.href = 'https://aerost.art/';
+            if (confirm('Are you sure you want to exit the Fiesta?')) {
+                localStorage.removeItem('aerostar_pilot_id');
+                localStorage.removeItem('aerostar_pilot_name');
+                window.location.href = 'https://aerost.art';
             }
         }
         
         // ============================================
         // ЗАПУСК
         // ============================================
-                    window.addEventListener('load', () => {
-            console.log('📄 Page loaded, initializing...');
+        window.addEventListener('load', () => {
+            console.log('📄 Page loaded');
             initMap();
             initAltitudeControl();
             connectSocket();
             
-            // Безопасный обработчик для кнопки EXIT с редиректом на aerost.art
-            const exitBtn = document.getElementById('logout-btn') || document.getElementById('exit-btn');
-            if (exitBtn) {
-                exitBtn.addEventListener('click', () => {
-                    if (confirm('Are you sure you want to exit the Fiesta?')) {
-                        console.log('🚪 Exiting fiesta, clearing session...');
-                        localStorage.removeItem('aerostar_pilot_id');
-                        localStorage.removeItem('aerostar_pilot_name');
-                        // Переход на внешний сайт aerost.art
-                        window.location.href = 'https://aerost.art';
-                    }
-                });
-            }
-
-            // Безопасный обработчик переключателя карты
-            const layerToggle = document.getElementById('layer-toggle') || document.getElementById('map-type');
-            if (layerToggle) {
-                if (layerToggle.tagName === 'SELECT') {
-                    layerToggle.addEventListener('change', (e) => {
-                        const type = e.target.value;
-                        if (typeof currentLayer !== 'undefined' && typeof satelliteLayer !== 'undefined' && typeof osmLayer !== 'undefined') {
-                            currentLayer.remove();
-                            currentLayer = (type === 'satellite') ? satelliteLayer.addTo(map) : osmLayer.addTo(map);
-                        }
-                    });
-                } else {
-                    layerToggle.addEventListener('click', () => {
-                        if (typeof toggleLayer === 'function') toggleLayer();
-                    });
-                }
-            }
+            document.getElementById('layer-toggle')?.addEventListener('click', toggleLayer);
+            document.getElementById('focus-finish-btn')?.addEventListener('click', focusOnFinish);
+            document.getElementById('logout-btn')?.addEventListener('click', exit);
             
             setInterval(() => {
-                if (socket && socket.connected) {
-                    socket.emit('fiesta-get-participants');
-                }
+                if (socket?.connected) socket.emit('fiesta-get-participants');
             }, 5000);
             
             setInterval(() => {
@@ -757,8 +990,6 @@
                 }
             }, 60000);
         });
-
-
     </script>
 </body>
 </html>
