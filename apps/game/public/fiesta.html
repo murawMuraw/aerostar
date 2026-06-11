@@ -238,7 +238,7 @@
         <div class="info-item" style="margin-top: 10px;"><span>🎈 Active Balloons:</span><span id="balloon-count">0</span></div>
     </div>
     
-    <div class="altitude-panel" id="altitude-panel">
+    <div class="altitude-panel" id="altitude-panel" style="display: none;">
         <h3>🎈 Balloon Controls</h3>
         <div class="info-item"><span>🏷️ Call sign:</span><span id="pilot-name">--</span></div>
         <div class="info-item"><span>🔢 Race #:</span><span id="race-number">--</span></div>
@@ -428,24 +428,26 @@
                 reconnection: true
             });
             
-                       socket.on('connect', () => {
+                              socket.on('connect', () => {
                 console.log('✅ Connected to race server');
                 
                 const savedPilotId = localStorage.getItem('aerostar_pilot_id');
                 const savedPilotName = localStorage.getItem('aerostar_pilot_name');
                 const modal = document.getElementById('role-modal');
 
-                // Если пилот уже залогинен ранее, авторизуем его автоматически без показа окна
+                // Показываем окно выбора роли принудительно
+                if (modal) modal.style.display = 'flex';
+
+                // Если пилот уже авторизован ранее, можем сразу пустить его (опционально)
+                // Если хотите, чтобы ДАЖЕ пилоты выбирали роль вручную, удалите if ниже:
                 if (savedPilotId) {
-                    console.log('🎖️ Restoring pilot session');
-                    modal.style.display = 'none';
+                    console.log('🎖️ Auto-restoring pilot session');
                     socket.emit('fiesta-auth', { pilotId: savedPilotId });
                     return;
                 }
 
-                // Кнопка: Войти как зритель
+                // Слушатель кнопки Зритель
                 document.getElementById('choose-spectator-btn').onclick = () => {
-                    modal.style.display = 'none';
                     console.log('👁️ Connecting as spectator');
                     socket.emit('fiesta-auth', { 
                         isSpectator: true, 
@@ -453,17 +455,18 @@
                     });
                 };
 
-                // Кнопка: Войти как участник
+                // Слушатель кнопки Участник
                 document.getElementById('choose-pilot-btn').onclick = () => {
                     if (savedPilotId) {
-                        modal.style.display = 'none';
                         socket.emit('fiesta-auth', { pilotId: savedPilotId });
                     } else {
-                        alert('У вас нет активной сессии пилота. Пожалуйста, пройдите регистрацию.');
+                        alert('У вас нет сохраненной сессии пилота. Пожалуйста, зарегистрируйтесь.');
                         window.location.href = 'register.html';
                     }
                 };
             });
+
+               
 
             
             socket.on('connect_error', (error) => {
@@ -474,29 +477,31 @@
             // ============================================
             // АУТЕНТИФИКАЦИЯ УСПЕШНА
             // ============================================
-            socket.on('fiesta-auth-success', (data) => {
-                console.log('🔐 Auth success:', data);
-                myRole = data.role;
+                      socket.on('fiesta-auth-success', (data) => {
+                console.log('🎉 Fiesta Auth Success:', data);
                 
-                if (data.role === 'pilot') {
-                    myBalloonId = data.balloon.id;
-                    document.getElementById('role-badge').innerHTML = '🎖️ PILOT MODE ACTIVE';
-                    document.getElementById('role-badge').className = 'role-badge role-pilot';
-                    document.getElementById('altitude-panel').style.display = 'block';
-                    document.getElementById('control-btn').style.display = 'none';
-                    document.getElementById('register-btn').style.display = 'none';
-                    
-                    updatePilotUI(data.balloon);
-                    console.log(`✅ Pilot mode: ${data.balloon.username}`);
-                } else {
-                    document.getElementById('role-badge').innerHTML = '👁️ SPECTATOR MODE';
-                    document.getElementById('role-badge').className = 'role-badge role-spectator';
-                    document.getElementById('altitude-panel').style.display = 'none';
-                    document.getElementById('control-btn').style.display = 'block';
-                    document.getElementById('register-btn').style.display = 'block';
+                // Скрываем модальное окно выбора роли ТОЛЬКО после подтверждения от сервера
+                const modal = document.getElementById('role-modal');
+                if (modal) modal.style.display = 'none';
+
+                // Показываем или скрываем пульт Balloon Controls в зависимости от роли
+                const altitudePanel = document.getElementById('altitude-panel');
+                if (altitudePanel) {
+                    if (data.role === 'pilot' || (!data.isSpectator && data.pilotId)) {
+                        console.log('🎈 User is a pilot. Showing controls.');
+                        altitudePanel.style.display = 'block';
+                    } else {
+                        console.log('👁️ User is a spectator. Controls hidden.');
+                        altitudePanel.style.display = 'none';
+                    }
+                }
+
+                // Обновление интерфейса (остается из оригинального кода)
+                if (data.pilot) {
+                    updatePilotStatus(data.pilot);
                 }
             });
-            
+
             // ============================================
             // ПОЛУЧЕНИЕ КОНФИГУРАЦИИ
             // ============================================
