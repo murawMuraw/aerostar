@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -697,11 +697,21 @@
         // ============================================
         function updatePilotUI(balloon) {
             if (!balloon) return;
+            console.log('🎈 Updating UI for balloon:', balloon.username, 'Speed:', balloon.speed, 'Wind direction:', balloon.windDirection);
             
             document.getElementById('pilot-name').innerHTML = escapeHtml(balloon.username);
             document.getElementById('race-number').innerHTML = `#${balloon.raceNumber}`;
-            document.getElementById('balloon-speed').innerHTML = `${Math.round(balloon.speed || 0)} km/h`;
-            document.getElementById('wind-direction').innerHTML = balloon.windDirection ? `${balloon.windDirection}°` : '--';
+            
+            const speedElement = document.getElementById('balloon-speed');
+            const windDirectionElement = document.getElementById('wind-direction');
+    
+            if (speedElement) {
+                speedElement.innerHTML = `${Math.round(balloon.speed || 0)} km/h`;
+            }
+            if (windDirectionElement) {
+                windDirectionElement.innerHTML = balloon.windDirection ? `${balloon.windDirection}°` : '--';
+            }
+            
             document.getElementById('altitude-value').innerHTML = `${balloon.altitude || 1000} m`;
             document.getElementById('current-altitude').innerHTML = `${balloon.altitude || 1000} m`;
             
