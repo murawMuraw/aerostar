@@ -504,7 +504,6 @@
         <div class="layer-info" id="layer-info">Surface Layer (0-2km) - Light winds</div>
         
         <h3 style="margin-top: 12px; font-size: 12px;">📊 Personal Stats</h3>
-        <div class="stat-row"><span>⏱️ Flight Time:</span><span id="flight-time">00:00:00</span></div>
         <div class="stat-row"><span>📏 Distance Traveled:</span><span id="distance-traveled">0 km</span></div>
         <div class="stat-row"><span>🎯 Distance to Finish:</span><span id="distance-finish">-- km</span></div>
         <div class="stat-row"><span>📈 Current Altitude:</span><span id="current-altitude">1000 m</span></div>
@@ -706,7 +705,7 @@
             const windDirectionElement = document.getElementById('wind-direction');
     
             if (speedElement) {
-                speedElement.innerHTML = `${Math.round(balloon.speed || 0)} km/h`;
+                speedElement.innerHTML = `${Math.round(balloon.speed || 0)} m/s`;
             }
             if (windDirectionElement) {
                 windDirectionElement.innerHTML = balloon.windDirection ? `${balloon.windDirection}°` : '--';
@@ -756,18 +755,7 @@
             return R * c;
         }
         
-        function startFlightTimer() {
-            if (flightTimerInterval) clearInterval(flightTimerInterval);
-            flightStartTime = Date.now();
-            flightTimerInterval = setInterval(() => {
-                if (!myBalloonId || !currentConfig?.raceStarted) return;
-                const elapsed = (Date.now() - flightStartTime) / 1000;
-                const hours = Math.floor(elapsed / 3600);
-                const minutes = Math.floor((elapsed % 3600) / 60);
-                const seconds = Math.floor(elapsed % 60);
-                document.getElementById('flight-time').innerHTML = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            }, 1000);
-        }
+  
         
         // ============================================
         // УВЕДОМЛЕНИЯ
@@ -894,8 +882,7 @@
                     document.getElementById('altitude-panel').style.display = 'block';
                     if (data.balloon) {
                         updatePilotUI(data.balloon);
-                        if (currentConfig?.raceStarted && !flightStartTime) startFlightTimer();
-                    }
+                 }
                     displayAnnouncement({ message: `Welcome back, ${data.balloon?.username || 'Pilot'}!`, timestamp: Date.now() });
                 } else {
                     myRole = 'spectator';
@@ -985,7 +972,6 @@
                 if (currentConfig) currentConfig.raceStarted = true;
                 document.getElementById('race-status').innerHTML = '🏁 RACE IN PROGRESS';
                 document.getElementById('race-status').style.color = '#10b981';
-                if (myRole === 'pilot' && !flightStartTime) startFlightTimer();
                 displayAnnouncement({ message: data.message, timestamp: Date.now() });
             });
             
