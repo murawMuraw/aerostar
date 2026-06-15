@@ -42,9 +42,9 @@ let raceConfig = {
         minLng: -120,
         maxLng: -70
     },
-    registrationWindowFrom: new Date('2024-06-01'),
-    registrationWindowTo: new Date('2024-12-31'),
-    raceStartDateTime: new Date('2024-12-31T12:00:00'),
+    registrationWindowFrom: new Date('2026-06-01'),
+    registrationWindowTo: new Date('2026-12-31'),
+    raceStartDateTime: new Date('2026-12-31T12:00:00'),
     maxParticipants: MAX_PARTICIPANTS,
     raceStarted: false,
     raceFinished: false,
@@ -138,7 +138,7 @@ function checkAndFinishRaceByTime() {
         simulationIntervals.clear();
         
         io.emit('fiesta-race-finished', {
-            message: "🏁 Время гонки истекло! Спасибо за участие! 🏁",
+            message: "🏁 Time's up! Thanks for taking part! 🏁",
             timestamp: new Date()
         });
         
@@ -206,7 +206,7 @@ async function startBalloonSimulation(balloonId) {
             
             balloon.lat += latChange;
             balloon.lng += lngChange;
-            balloon.speed = wind.speed * 3.6;
+            balloon.speed = wind.speed;
             balloon.layerName = wind.layerName;
             balloon.windDirection = wind.direction;
             balloon.lastWindUpdate = wind.timestamp;
