@@ -1,6 +1,6 @@
 /**
  * ГЛАВНЫЙ ИГРОВОЙ СЕРВЕР «ФИЕСТА» (Порт 3001)
- * Версия 3.0 - с поддержкой комнат и хэшированием паролей
+ * Версия 3.1 - с сохранением состояния и восстановлением после перезапуска
  */
 
 const express = require('express');
@@ -8,7 +8,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
-const bcrypt = require('bcrypt'); // ← ДОБАВЛЯЕМ BCrypt
+const bcrypt = require('bcrypt');
 
 // Подключаем модули
 const balloonCatalog = require('./balloonCatalog');
@@ -29,9 +29,10 @@ const io = new Server(server, {
 
 const PORT = 3001;
 const CONFIG_FILE = path.join(__dirname, 'race-config.json');
+const PILOTS_FILE = path.join(__dirname, 'pilots.json');
 const MAX_PARTICIPANTS = 10;
 const SIMULATION_INTERVAL = 5000;
-const SALT_ROUNDS = 10; // ← Сложность хэширования (10-12 рекомендуемо)
+const SALT_ROUNDS = 10;
 
 // Данные игры
 let raceConfig = {
@@ -42,9 +43,9 @@ let raceConfig = {
         minLng: -120,
         maxLng: -70
     },
-    registrationWindowFrom: new Date('2026-06-01'),
-    registrationWindowTo: new Date('2026-12-31'),
-    raceStartDateTime: new Date('2026-12-31T12:00:00'),
+    registrationWindowFrom: new Date('2024-06-01'),
+    registrationWindowTo: new Date('2024-12-31'),
+    raceStartDateTime: new Date('2024-12-31T12:00:00'),
     maxParticipants: MAX_PARTICIPANTS,
     raceStarted: false,
     raceFinished: false,
@@ -95,6 +96,58 @@ function saveConfigToFile() {
 }
 
 // ============================================
+// СОХРАНЕНИЕ И ЗАГРУЗКА ПИЛОТОВ
+// ============================================
+function savePilotsToFile() {
+    const pilotsToSave = {};
+    for (const [id, balloon] of Object.entries(balloons)) {
+        pilotsToSave[id] = {
+            id: balloon.id,
+            username: balloon.username,
+            password: balloon.password,
+            email: balloon.email,
+            balloonColor: balloon.balloonColor,
+            balloonStyle: balloon.balloonStyle,
+            raceNumber: balloon.raceNumber,
+            lat: balloon.lat,
+            lng: balloon.lng,
+            altitude: balloon.altitude,
+            finished: balloon.finished,
+            finishTime: balloon.finishTime,
+            speed: balloon.speed || 0,
+            layerName: balloon.layerName || 'Surface Layer',
+            windDirection: balloon.windDirection || 0,
+            lastUpdate: balloon.lastUpdate || Date.now()
+        };
+    }
+    fs.writeFileSync(PILOTS_FILE, JSON.stringify(pilotsToSave, null, 2));
+    console.log(`💾 Saved ${Object.keys(pilotsToSave).length} pilots to file`);
+}
+
+function loadPilotsFromFile() {
+    if (fs.existsSync(PILOTS_FILE)) {
+        try {
+            const saved = JSON.parse(fs.readFileSync(PILOTS_FILE, 'utf8'));
+            for (const [id, pilot] of Object.entries(saved)) {
+                balloons[id] = {
+                    ...pilot,
+                    path: [], // Новый path для восстановленного шара
+                    lastUpdate: Date.now(),
+                    pilotConnected: false,
+                    lastSeen: Date.now(),
+                    socketId: null
+                };
+            }
+            console.log(`✅ Loaded ${Object.keys(balloons).length} pilots from file`);
+        } catch(e) {
+            console.error('Error loading pilots:', e);
+        }
+    } else {
+        console.log('📝 No pilots file found, starting fresh');
+    }
+}
+
+// ============================================
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================
 function isInStartZone(lat, lng) {
@@ -138,7 +191,7 @@ function checkAndFinishRaceByTime() {
         simulationIntervals.clear();
         
         io.emit('fiesta-race-finished', {
-            message: "🏁 Time's up! Thanks for taking part! 🏁",
+            message: "🏁 Время гонки истекло! Спасибо за участие! 🏁",
             timestamp: new Date()
         });
         
@@ -206,7 +259,7 @@ async function startBalloonSimulation(balloonId) {
             
             balloon.lat += latChange;
             balloon.lng += lngChange;
-            balloon.speed = wind.speed;
+            balloon.speed = wind.speed; // ← В М/С (было * 3.6)
             balloon.layerName = wind.layerName;
             balloon.windDirection = wind.direction;
             balloon.lastWindUpdate = wind.timestamp;
@@ -234,6 +287,7 @@ async function startBalloonSimulation(balloonId) {
             if (distanceToFinish < 50 && !balloon.finished) {
                 balloon.finished = true;
                 balloon.finishTime = Date.now();
+                savePilotsToFile();
                 
                 io.to('race-room').emit('fiesta-message', {
                     type: 'finish',
@@ -258,6 +312,33 @@ async function startBalloonSimulation(balloonId) {
 }
 
 // ============================================
+// ВОССТАНОВЛЕНИЕ СИМУЛЯЦИИ ПРИ СТАРТЕ
+// ============================================
+function restoreSimulations() {
+    console.log('🔄 Restoring simulations for existing balloons...');
+    
+    if (raceConfig.raceStarted && !raceConfig.raceFinished) {
+        const balloonIds = Object.keys(balloons);
+        console.log(`🎈 Found ${balloonIds.length} existing balloons`);
+        
+        if (balloonIds.length === 0) {
+            console.log('📭 No balloons to simulate');
+            return;
+        }
+        
+        for (const balloonId of balloonIds) {
+            if (!simulationIntervals.has(balloonId)) {
+                console.log(`▶️ Starting simulation for ${balloons[balloonId]?.username || balloonId}`);
+                startBalloonSimulation(balloonId);
+            }
+        }
+    } else {
+        console.log(`⏳ Race not started yet (started: ${raceConfig.raceStarted}, finished: ${raceConfig.raceFinished})`);
+        console.log('📌 Simulations will start when race begins');
+    }
+}
+
+// ============================================
 // НАСТРОЙКА EXPRESS
 // ============================================
 app.use(express.static(path.join(__dirname, 'public')));
@@ -277,6 +358,30 @@ app.get('/register.html', (req, res) => {
 
 app.get('/admin.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+// Секретный эндпоинт для принудительного старта (на случай, если админка не работает)
+app.get('/force-start', (req, res) => {
+    if (!raceConfig.raceStarted) {
+        raceConfig.raceStarted = true;
+        saveConfigToFile();
+        
+        for (const [id, balloon] of Object.entries(balloons)) {
+            if (!simulationIntervals.has(id)) {
+                startBalloonSimulation(id);
+            }
+        }
+        
+        io.to('race-room').emit('fiesta-race-started', { 
+            message: "🏁 ГОНКА ЗАПУЩЕНА ЧЕРЕЗ СЕКРЕТНЫЙ ЭНДПОИНТ! 🏁",
+            timestamp: new Date()
+        });
+        
+        res.send('✅ Race started!');
+        console.log("🏁 Race force-started via /force-start");
+    } else {
+        res.send('Race already started');
+    }
 });
 
 // ============================================
@@ -302,14 +407,13 @@ io.on('connection', (socket) => {
     socket.emit('fiesta-all-balloons', Object.values(balloons));
     
     // ============================================
-    // РЕГИСТРАЦИЯ НОВОГО ПИЛОТА (С ХЭШИРОВАНИЕМ ПАРОЛЯ)
+    // РЕГИСТРАЦИЯ НОВОГО ПИЛОТА
     // ============================================
-    socket.on('fiesta-start-flight', async (data) => {  // ← ДОБАВЛЯЕМ async
+    socket.on('fiesta-start-flight', async (data) => {
         console.log('📝 Registration attempt:', { ...data, password: '***' });
 
-        // 1. Проверяем лимит участников
         const currentPilotsCount = Object.keys(balloons).length;
-        if (currentPilotsCount >= 10) {
+        if (currentPilotsCount >= MAX_PARTICIPANTS) {
             socket.emit('fiesta-registration-complete', { 
                 success: false,
                 message: 'Registration closed. Maximum 10 aeronauts reached.' 
@@ -317,7 +421,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // 2. Проверяем уникальность имени
         const nameExists = Object.values(balloons).some(
             b => b.username.toLowerCase() === data.username.trim().toLowerCase()
         );
@@ -329,7 +432,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // 3. Проверяем уникальность шара
         const balloonExists = Object.values(balloons).some(
             b => b.balloonColor === data.balloonColor
         );
@@ -341,7 +443,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // 4. Проверяем стартовую позицию
         if (!data.lat || !data.lng) {
             socket.emit('fiesta-registration-complete', { 
                 success: false,
@@ -358,7 +459,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // 5. Проверяем регистрацию
         if (!isRegistrationOpen()) {
             socket.emit('fiesta-registration-complete', { 
                 success: false,
@@ -367,7 +467,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // 6. Проверяем старт гонки
         if (raceConfig.raceStarted) {
             socket.emit('fiesta-registration-complete', { 
                 success: false,
@@ -376,7 +475,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // 7. Проверяем пароль
         if (!data.password || data.password.length < 4) {
             socket.emit('fiesta-registration-complete', { 
                 success: false,
@@ -385,11 +483,9 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // 8. ХЭШИРУЕМ ПАРОЛЬ (ВОТ ЗДЕСЬ!)
         const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS);
         console.log(`🔐 Password hashed for ${data.username}`);
 
-        // 9. Создаем пилота с хэшированным паролем
         const pilotId = 'pilot_' + Math.random().toString(36).substr(2, 9);
         const raceNumber = currentPilotsCount + 1;
         const selectedBalloon = balloonCatalog[data.balloonColor] || balloonCatalog.classic;
@@ -398,7 +494,7 @@ io.on('connection', (socket) => {
             id: pilotId,
             socketId: socket.id,
             username: data.username.trim(),
-            password: hashedPassword,  // ← СОХРАНЯЕМ ХЭШ, а не plain текст!
+            password: hashedPassword,
             email: data.email || '',
             balloonColor: data.balloonColor,
             balloonStyle: selectedBalloon,
@@ -420,6 +516,7 @@ io.on('connection', (socket) => {
         };
 
         console.log(`✅ New pilot: ${data.username} (Race #${raceNumber}) - Password hashed`);
+        savePilotsToFile();
         
         socket.join('race-room');
         socketToPilot.set(socket.id, pilotId);
@@ -439,12 +536,11 @@ io.on('connection', (socket) => {
     });
     
     // ============================================
-    // АУТЕНТИФИКАЦИЯ (С ПРОВЕРКОЙ ХЭША ПАРОЛЯ)
+    // АУТЕНТИФИКАЦИЯ
     // ============================================
-    socket.on('fiesta-auth', async (authData) => {  // ← ДОБАВЛЯЕМ async
+    socket.on('fiesta-auth', async (authData) => {
         console.log('🔐 Auth attempt:', { ...authData, password: '***' });
         
-        // Вход зрителя
         if (authData.isSpectator) {
             socket.join('race-room');
             socket.emit('fiesta-auth-success', { 
@@ -455,7 +551,6 @@ io.on('connection', (socket) => {
             return;
         }
         
-        // Вход пилота - проверяем username И password
         if (!authData.username || !authData.password) {
             socket.emit('fiesta-auth-error', { 
                 message: 'Please enter callsign and password' 
@@ -463,7 +558,6 @@ io.on('connection', (socket) => {
             return;
         }
         
-        // Ищем пилота по имени
         const balloon = Object.values(balloons).find(b => 
             b.username.toLowerCase() === authData.username.trim().toLowerCase()
         );
@@ -476,11 +570,9 @@ io.on('connection', (socket) => {
             return;
         }
         
-        // ВОТ ЗДЕСЬ! СРАВНИВАЕМ ВВЕДЕННЫЙ ПАРОЛЬ С ХЭШЕМ
         const isValid = await bcrypt.compare(authData.password, balloon.password);
         
         if (isValid) {
-            // Успешная авторизация
             balloon.socketId = socket.id;
             balloon.pilotConnected = true;
             socket.currentPilotId = balloon.id;
@@ -495,7 +587,11 @@ io.on('connection', (socket) => {
             
             console.log(`✅ Pilot ${balloon.username} authenticated successfully`);
             
-            // Оповещаем всех об обновлении статуса пилота
+            // Если гонка уже идёт, но симуляция не запущена - запускаем
+            if (raceConfig.raceStarted && !raceConfig.raceFinished && !simulationIntervals.has(balloon.id)) {
+                startBalloonSimulation(balloon.id);
+            }
+            
             io.to('race-room').emit('fiesta-balloon-updated', balloon);
         } else {
             socket.emit('fiesta-auth-error', { 
@@ -506,17 +602,15 @@ io.on('connection', (socket) => {
     });
     
     // ============================================
-    // СМЕНА ПАРОЛЯ (С ХЭШИРОВАНИЕМ)
+    // СМЕНА ПАРОЛЯ
     // ============================================
-    socket.on('fiesta-change-password', async (data) => {  // ← ДОБАВЛЯЕМ async
+    socket.on('fiesta-change-password', async (data) => {
         if (!socket.currentPilotId || !balloons[socket.currentPilotId]) {
             socket.emit('fiesta-error', 'Not authenticated');
             return;
         }
         
         const balloon = balloons[socket.currentPilotId];
-        
-        // Проверяем старый пароль
         const isValid = await bcrypt.compare(data.oldPassword, balloon.password);
         
         if (!isValid) {
@@ -529,9 +623,9 @@ io.on('connection', (socket) => {
             return;
         }
         
-        // Хэшируем новый пароль
         const hashedNewPassword = await bcrypt.hash(data.newPassword, SALT_ROUNDS);
         balloon.password = hashedNewPassword;
+        savePilotsToFile();
         
         socket.emit('fiesta-password-changed', { success: true });
         console.log(`🔐 Password changed for ${balloon.username}`);
@@ -552,6 +646,7 @@ io.on('connection', (socket) => {
         
         const levelInfo = windService.getPressureLevelInfo(newAltitude);
         balloon.layerName = levelInfo.name;
+        savePilotsToFile();
         
         io.to('race-room').emit('fiesta-balloon-updated', balloon);
         console.log(`📈 ${balloon.username} altitude → ${newAltitude}m`);
@@ -697,11 +792,22 @@ io.on('connection', (socket) => {
 // ============================================
 // ЗАПУСК СЕРВЕРА
 // ============================================
+
+// 1. Загружаем конфиг
 loadConfig();
 
+// 2. Загружаем пилотов
+loadPilotsFromFile();
+
+// 3. Восстанавливаем симуляцию для существующих шаров
+setTimeout(() => {
+    restoreSimulations();
+}, 2000);
+
+// 4. Периодическая проверка окончания гонки
 setInterval(checkAndFinishRaceByTime, 60000);
 
-// Автоматический старт гонки
+// 5. Автоматический старт гонки (по расписанию)
 setInterval(() => {
     if (!raceConfig.raceStarted && isRaceStarted() && !raceConfig.raceFinished) {
         raceConfig.raceStarted = true;
@@ -722,6 +828,14 @@ setInterval(() => {
     }
 }, 1000);
 
+// 6. Периодическое сохранение пилотов (каждые 30 секунд)
+setInterval(() => {
+    if (Object.keys(balloons).length > 0) {
+        savePilotsToFile();
+    }
+}, 30000);
+
+// 7. Запуск сервера
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🎮 Fiesta Game Server running on port ${PORT}`);
     console.log(`📍 Race page: http://localhost:${PORT}/fiesta.html`);
@@ -731,5 +845,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`🏁 Race start: ${raceConfig.raceStartDateTime.toLocaleString()}`);
     console.log(`🎯 Finish: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
     console.log(`🔐 Password hashing: ACTIVE (bcrypt, rounds=${SALT_ROUNDS})`);
-    console.log(`📊 Registered pilots: ${Object.keys(balloons).length}/${MAX_PARTICIPANTS}\n`);
+    console.log(`📊 Registered pilots: ${Object.keys(balloons).length}/${MAX_PARTICIPANTS}`);
+    console.log(`💾 Pilots file: ${PILOTS_FILE}`);
+    console.log(`🔄 Auto-restore: ACTIVE\n`);
 });
