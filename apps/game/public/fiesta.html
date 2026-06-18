@@ -916,10 +916,19 @@
                         }
                     }
                     
-                    let statusText = '', statusColor = '';
-                    if (config.raceStarted && !config.raceFinished) {
-                        statusText = '🏁 RACE IN PROGRESS';
-                        statusColor = '#10b981';
+                    const statusMap = {
+                        'idle': { text: '⏸️ No race active', color: '#94a3b8' },
+                        'registration': { text: '📝 Registration open!', color: '#fbbf24' },
+                        'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981' },
+                        'finished': { text: '🏆 RACE FINISHED', color: '#ef4444' }
+                        };
+                    const statusInfo = statusMap[config.raceStatus] || statusMap['idle'];
+                    const statusEl = document.getElementById('race-status');
+                        if (statusEl) {
+                            statusEl.innerHTML = statusInfo.text;
+                            statusEl.style.color = statusInfo.color;
+                                }
+                    
                         if (myRole === 'pilot' && !flightStartTime) startFlightTimer();
                     } else if (config.raceFinished) {
                         statusText = '🏆 RACE FINISHED';
