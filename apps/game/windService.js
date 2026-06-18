@@ -1,56 +1,21 @@
 /**
  * ИГРОВОЙ СЕРВИС ВЫСОТНЫХ ВЕТРОВ
- * Использует модель GFS (Global Forecast System) через бесплатный API Open-Meteo
- * 
- * Версия 2.0:
- * - Ветер возвращается в м/с
- * - Высота преобразуется в hPa согласно международной стандартной атмосфере
- * - Исправлены опечатки в URL
- * - Встроенное кэширование запросов (10 секунд)
+ * Использует встроенный fetch (Node.js 18+)
  */
 
-const CACHE_TTL = 10000; // Время жизни кэша 10 секунд
-
-/**
- * Кэш для хранения данных о ветре
- * Структура: cache.set(key, { data, timestamp })
- */
+const CACHE_TTL = 10000;
 const windCache = new Map();
 
-/**
- * Карта высот в метрах и соответствующих им изобарических уровней (hPa)
- * Основано на международной стандартной атмосфере (ISA)
- */
 const PRESSURE_LEVELS = [
-  { maxAltitude: 1500,  level: '925hPa', name: 'Приземный слой (эшелон 1)', pressure: 925 },
-  { maxAltitude: 3000,  level: '850hPa', name: 'Нижняя тропосфера (эшелон 2)', pressure: 850 },
-  { maxAltitude: 5500,  level: '700hPa', name: 'Средняя тропосфера (эшелон 3)', pressure: 700 },
-  { maxAltitude: 9000,  level: '500hPa', name: 'Высотная тропосфера (эшелон 4)', pressure: 500 },
-  { maxAltitude: 11000, level: '300hPa', name: 'Струйное течение (эшелон 5)', pressure: 300 },
-  { maxAltitude: 14000, level: '250hPa', name: 'Нижняя стратосфера (эшелон 6)', pressure: 250 },
-  { maxAltitude: Infinity, level: '200hPa', name: 'Стратосфера (максимальный эшелон)', pressure: 200 }
+  { maxAltitude: 1500,  level: '925hPa', name: 'Приземный слой', pressure: 925 },
+  { maxAltitude: 3000,  level: '850hPa', name: 'Нижняя тропосфера', pressure: 850 },
+  { maxAltitude: 5500,  level: '700hPa', name: 'Средняя тропосфера', pressure: 700 },
+  { maxAltitude: 9000,  level: '500hPa', name: 'Высотная тропосфера', pressure: 500 },
+  { maxAltitude: 11000, level: '300hPa', name: 'Струйное течение', pressure: 300 },
+  { maxAltitude: 14000, level: '250hPa', name: 'Нижняя стратосфера', pressure: 250 },
+  { maxAltitude: Infinity, level: '200hPa', name: 'Стратосфера', pressure: 200 }
 ];
 
-/**
- * Преобразует высоту в метрах в давление (hPa) по стандартной атмосфере
- * Используется упрощенная барометрическая формула для тропосферы
- * @param {number} altitudeMeters - Высота в метрах
- * @returns {number} Давление в hPa
- */
-function altitudeToPressure(altitudeMeters) {
-  // Стандартное давление на уровне моря: 1013.25 hPa
-  // Температурный градиент: -6.5°C на км
-  // Упрощенная формула: P = P0 * (1 - 0.0000225577 * h)^5.25588
-  const h = altitudeMeters;
-  const pressure = 1013.25 * Math.pow(1 - 0.0000225577 * h, 5.25588);
-  return Math.round(pressure);
-}
-
-/**
- * Подбирает метеорологический уровень давления в зависимости от высоты полета шара
- * @param {number} altitudeMeters - Высота шара в метрах
- * @returns {Object} Объект уровня давления { level, name, pressure }
- */
 function getPressureLevelInfo(altitudeMeters) {
   const level = PRESSURE_LEVELS.find(p => altitudeMeters <= p.maxAltitude);
   return {
@@ -60,116 +25,108 @@ function getPressureLevelInfo(altitudeMeters) {
   };
 }
 
-/**
- * Генерирует уникальный ключ для кэша на основе координат, высоты и времени
- * @param {number} lat - Широта
- * @param {number} lng - Долгота  
- * @param {number} pressure - Давление в hPa
- * @returns {string} Ключ для кэша
- */
 function getCacheKey(lat, lng, pressure) {
-  // Округляем координаты до 2 знаков для группировки близких запросов
   const roundedLat = Math.round(lat * 100) / 100;
   const roundedLng = Math.round(lng * 100) / 100;
   return `${roundedLat},${roundedLng},${pressure}hPa`;
 }
 
-/**
- * Запрашивает вектор высотного ветра для конкретной точки Земли
- * @param {number} lat - Широта (-90 до 90)
- * @param {number} lng - Долгота (-180 до 180)
- * @param {number} altitude - Высота в метрах
- * @returns {Promise<Object>} Данные ветра: speed (м/с), direction (градусы), name (название эшелона)
- */
 async function getWindAtPosition(lat, lng, altitude) {
-  // Получаем информацию об уровне давления
+  // Валидация входных данных
+  if (isNaN(lat) || isNaN(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+    console.log(`[WindService] ❌ Невалидные координаты: ${lat}, ${lng}`);
+    const levelInfo = getPressureLevelInfo(altitude || 1000);
+    return {
+      speed: 5 + Math.random() * 5,
+      direction: 180 + Math.random() * 180,
+      layerName: `${levelInfo.name} (резерв)`,
+      level: levelInfo.level,
+      pressure: levelInfo.pressure,
+      altitude: altitude || 1000,
+      timestamp: Date.now(),
+      isFallback: true
+    };
+  }
+
   const levelInfo = getPressureLevelInfo(altitude);
   const targetLevel = levelInfo.level;
   const pressure = levelInfo.pressure;
   
-  // Проверяем кэш
   const cacheKey = getCacheKey(lat, lng, pressure);
   const cached = windCache.get(cacheKey);
   
   if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-    console.log(`[WindService] Использован кэш для ${cacheKey}`);
+    console.log(`[WindService] 📦 Кэш для ${cacheKey}`);
     return cached.data;
   }
 
-  // Формируем правильный URL к Open-Meteo API
-  // Используем pressure level API для получения ветра на конкретном барическом уровне
-  const baseUrl = 'https://api.open-meteo.com/v1/forecast';
-  const params = new URLSearchParams({
-    latitude: lat.toString(),
-    longitude: lng.toString(),
-    hourly: `windspeed_${targetLevel},winddirection_${targetLevel}`,
-    wind_speed_unit: 'ms',
-    forecast_days: '1'
-  });
+  // Формируем URL вручную, без URLSearchParams для совместимости
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=windspeed_${targetLevel},winddirection_${targetLevel}&wind_speed_unit=ms&forecast_days=1`;
   
-  const url = `${baseUrl}?${params.toString()}`;
+  console.log(`[WindService] 🌐 Запрос: ${url}`);
 
   try {
-    console.log(`[WindService] Запрос ветра: ${url}`);
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Aerostar/2.0'
+      }
+    });
     
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
     const data = await response.json();
-    const hourlyData = data.hourly;
     
-    if (!hourlyData) {
-      throw new Error('Данные погоды отсутствуют в ответе API');
+    if (!data?.hourly) {
+      throw new Error('Нет данных hourly в ответе');
     }
 
-    // Определяем текущий час по UTC (метеомодели всегда работают по всемирному времени)
     const currentUTCHour = new Date().getUTCHours();
-    
-    // Извлекаем скорость (м/с) и направление (откуда дует, в градусах)
     const windSpeedKey = `windspeed_${targetLevel}`;
     const windDirectionKey = `winddirection_${targetLevel}`;
     
-    const rawSpeed = hourlyData[windSpeedKey]?.[currentUTCHour];
-    const rawDirection = hourlyData[windDirectionKey]?.[currentUTCHour];
-
-    // Проверяем валидность полученных данных
-    if (rawSpeed === undefined || rawDirection === undefined) {
-      throw new Error(`Не удалось найти данные на час ${currentUTCHour} для уровня ${targetLevel}`);
+    // Проверяем, есть ли данные за текущий час
+    let speed = data.hourly[windSpeedKey]?.[currentUTCHour];
+    let direction = data.hourly[windDirectionKey]?.[currentUTCHour];
+    
+    // Если нет - берём первый доступный час
+    if (speed === undefined && data.hourly[windSpeedKey]?.length > 0) {
+      speed = data.hourly[windSpeedKey][0];
+      direction = data.hourly[windDirectionKey]?.[0] || 270;
+      console.log(`[WindService] ⏰ Использован час 0 вместо ${currentUTCHour}`);
     }
-
+    
+    if (speed === undefined) {
+      throw new Error(`Нет данных для ${targetLevel}`);
+    }
+    
     const windData = {
-      speed: Number(rawSpeed),         // Скорость в метрах в секунду (м/с)
-      direction: Number(rawDirection), // Направление от 0 до 360 градусов (откуда дует)
-      layerName: levelInfo.name,       // Красивое имя эшелона для пилота
-      level: targetLevel,              // Код уровня (например, '500hPa')
-      pressure: pressure,              // Давление в hPa
-      altitude: altitude,              // Исходная высота в метрах
-      timestamp: Date.now()            // Время получения данных
+      speed: Number(speed),
+      direction: Number(direction) || 270,
+      layerName: levelInfo.name,
+      level: targetLevel,
+      pressure: pressure,
+      altitude: altitude,
+      timestamp: Date.now()
     };
     
-    // Сохраняем в кэш
-    windCache.set(cacheKey, {
-      data: windData,
-      timestamp: Date.now()
-    });
-    
-    console.log(`[WindService] Ветер на ${levelInfo.name} (${pressure}hPa): ${windData.speed} м/с, направление ${windData.direction}°`);
+    windCache.set(cacheKey, { data: windData, timestamp: Date.now() });
+    console.log(`[WindService] ✅ Ветер: ${windData.speed} м/с, ${windData.direction}°`);
     
     return windData;
-
-  } catch (error) {
-    console.error(`[WindService Error] Координаты: [${lat}, ${lng}], Высота: ${altitude}м (${targetLevel}). Причина:`, error.message);
     
-    // БЕЗОПАСНЫЙ РЕЗЕРВНЫЙ ВАРИАНТ
-    // Если упал интернет или API выдал ошибку, выдаем стабильный умеренный ветер
-    console.log(`[WindService] Использован резервный режим для ${cacheKey}`);
+  } catch (error) {
+    console.error(`[WindService] ❌ Ошибка:`, error.message);
+    
+    // Возвращаем резервный ветер
+    const fallbackSpeed = 8 + Math.random() * 7;
+    const fallbackDirection = 180 + Math.random() * 180;
     
     const fallbackData = {
-      speed: 5.0,                      // 5 м/с (~18 км/ч) - умеренный ветер
-      direction: 270,                  // Строго с запада на восток (поможет лететь к Парижу)
-      layerName: `${levelInfo.name} (Резервный режим)`,
+      speed: fallbackSpeed,
+      direction: fallbackDirection,
+      layerName: `${levelInfo.name} (резерв)`,
       level: targetLevel,
       pressure: pressure,
       altitude: altitude,
@@ -177,45 +134,20 @@ async function getWindAtPosition(lat, lng, altitude) {
       isFallback: true
     };
     
-    // Резервные данные тоже кэшируем, но с меньшим TTL (5 секунд)
-    windCache.set(cacheKey, {
-      data: fallbackData,
-      timestamp: Date.now() - (CACHE_TTL / 2) // Чтобы быстрее обновились при восстановлении связи
-    });
-    
+    console.log(`[WindService] 🔄 Резерв: ${fallbackSpeed.toFixed(1)} м/с, ${Math.round(fallbackDirection)}°`);
+    windCache.set(cacheKey, { data: fallbackData, timestamp: Date.now() - 3000 });
     return fallbackData;
   }
 }
 
-/**
- * Очищает кэш ветров (полезно при смене метеоусловий)
- */
 function clearWindCache() {
   windCache.clear();
-  console.log('[WindService] Кэш ветров очищен');
+  console.log('[WindService] 🗑️ Кэш очищен');
 }
 
-/**
- * Получает статистику кэша (для отладки)
- * @returns {Object} Статистика кэша
- */
 function getCacheStats() {
-  const now = Date.now();
-  let validCount = 0;
-  let expiredCount = 0;
-  
-  for (const [key, value] of windCache.entries()) {
-    if (now - value.timestamp < CACHE_TTL) {
-      validCount++;
-    } else {
-      expiredCount++;
-    }
-  }
-  
   return {
     totalEntries: windCache.size,
-    validEntries: validCount,
-    expiredEntries: expiredCount,
     cacheTTLms: CACHE_TTL
   };
 }
@@ -223,7 +155,7 @@ function getCacheStats() {
 module.exports = {
   getWindAtPosition,
   getPressureLevelInfo,
-  altitudeToPressure,
+  altitudeToPressure: (m) => Math.round(1013.25 * Math.pow(1 - 0.0000225577 * m, 5.25588)),
   clearWindCache,
   getCacheStats
 };
