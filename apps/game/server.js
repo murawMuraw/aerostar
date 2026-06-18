@@ -1,6 +1,6 @@
 /**
  * ГЛАВНЫЙ ИГРОВОЙ СЕРВЕР «ФИЕСТА» (Порт 3001)
- * Версия 3.1 - с сохранением состояния и восстановлением после перезапуска
+ * Версия 3.2 - с ручным управлением статусами гонки
  */
 
 const express = require('express');
@@ -49,7 +49,8 @@ let raceConfig = {
     maxParticipants: MAX_PARTICIPANTS,
     raceStarted: false,
     raceFinished: false,
-    raceDurationHours: 24
+    raceDurationHours: 24,
+    raceStatus: 'idle' // idle | registration | racing | finished
 };
 
 let balloons = {};
@@ -69,7 +70,8 @@ function loadConfig() {
                 allowedStartRegion: saved.allowedStartRegion || raceConfig.allowedStartRegion,
                 registrationWindowFrom: saved.registrationWindowFrom ? new Date(saved.registrationWindowFrom) : raceConfig.registrationWindowFrom,
                 registrationWindowTo: saved.registrationWindowTo ? new Date(saved.registrationWindowTo) : raceConfig.registrationWindowTo,
-                raceStartDateTime: saved.raceStartDateTime ? new Date(saved.raceStartDateTime) : raceConfig.raceStartDateTime
+                raceStartDateTime: saved.raceStartDateTime ? new Date(saved.raceStartDateTime) : raceConfig.raceStartDateTime,
+                raceStatus: saved.raceStatus || 'idle'
             };
             console.log('✅ Loaded race config from file');
         } catch(e) {
@@ -90,9 +92,86 @@ function saveConfigToFile() {
         maxParticipants: raceConfig.maxParticipants,
         raceStarted: raceConfig.raceStarted,
         raceFinished: raceConfig.raceFinished,
-        raceDurationHours: raceConfig.raceDurationHours
+        raceDurationHours: raceConfig.raceDurationHours,
+        raceStatus: raceConfig.raceStatus
     };
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(configToSave, null, 2));
+}
+
+// ============================================
+// УПРАВЛЕНИЕ СТАТУСАМИ
+// ============================================
+function setRaceStatus(status) {
+    const validStatuses = ['idle', 'registration', 'racing', 'finished'];
+    if (!validStatuses.includes(status)) {
+        console.error(`❌ Invalid status: ${status}`);
+        return false;
+    }
+    
+    raceConfig.raceStatus = status;
+    
+    switch (status) {
+        case 'idle':
+            raceConfig.raceStarted = false;
+            raceConfig.raceFinished = false;
+            // Закрываем регистрацию
+            raceConfig.registrationWindowFrom = new Date('1970-01-01');
+            raceConfig.registrationWindowTo = new Date('1970-01-01');
+            // Останавливаем все симуляции
+            for (const [id, interval] of simulationIntervals) {
+                clearInterval(interval);
+            }
+            simulationIntervals.clear();
+            break;
+        case 'registration':
+            raceConfig.raceStarted = false;
+            raceConfig.raceFinished = false;
+            // Открываем регистрацию на 7 дней
+            raceConfig.registrationWindowFrom = new Date();
+            raceConfig.registrationWindowTo = new Date();
+            raceConfig.registrationWindowTo.setDate(raceConfig.registrationWindowTo.getDate() + 7);
+            break;
+        case 'racing':
+            raceConfig.raceStarted = true;
+            raceConfig.raceFinished = false;
+            // Закрываем регистрацию
+            raceConfig.registrationWindowTo = new Date();
+            // Запускаем симуляцию для всех шаров
+            for (const [id, balloon] of Object.entries(balloons)) {
+                if (!simulationIntervals.has(id)) {
+                    startBalloonSimulation(id);
+                }
+            }
+            break;
+        case 'finished':
+            raceConfig.raceStarted = false;
+            raceConfig.raceFinished = true;
+            // Останавливаем все симуляции
+            for (const [id, interval] of simulationIntervals) {
+                clearInterval(interval);
+            }
+            simulationIntervals.clear();
+            break;
+    }
+    
+    saveConfigToFile();
+    console.log(`📊 Race status changed to: ${status}`);
+    return true;
+}
+
+function getConfigForClient() {
+    return {
+        finishCoords: raceConfig.finishCoords,
+        allowedStartRegion: raceConfig.allowedStartRegion,
+        registrationWindowFrom: raceConfig.registrationWindowFrom,
+        registrationWindowTo: raceConfig.registrationWindowTo,
+        raceStartDateTime: raceConfig.raceStartDateTime,
+        maxParticipants: raceConfig.maxParticipants,
+        raceStarted: raceConfig.raceStarted,
+        raceFinished: raceConfig.raceFinished,
+        raceDurationHours: raceConfig.raceDurationHours,
+        raceStatus: raceConfig.raceStatus
+    };
 }
 
 // ============================================
@@ -131,7 +210,7 @@ function loadPilotsFromFile() {
             for (const [id, pilot] of Object.entries(saved)) {
                 balloons[id] = {
                     ...pilot,
-                    path: [], // Новый path для восстановленного шара
+                    path: [],
                     lastUpdate: Date.now(),
                     pilotConnected: false,
                     lastSeen: Date.now(),
@@ -182,19 +261,11 @@ function isRaceTimeExpired() {
 
 function checkAndFinishRaceByTime() {
     if (raceConfig.raceStarted && !raceConfig.raceFinished && isRaceTimeExpired()) {
-        raceConfig.raceFinished = true;
-        saveConfigToFile();
-        
-        for (const [id, interval] of simulationIntervals) {
-            clearInterval(interval);
-        }
-        simulationIntervals.clear();
-        
+        setRaceStatus('finished');
         io.emit('fiesta-race-finished', {
             message: "🏁 Время гонки истекло! Спасибо за участие! 🏁",
             timestamp: new Date()
         });
-        
         console.log("🏁 Race finished automatically due to time limit");
     }
 }
@@ -229,21 +300,15 @@ async function startBalloonSimulation(balloonId) {
             return;
         }
         
-        if (!raceConfig.raceStarted && isRaceStarted()) {
-            raceConfig.raceStarted = true;
-            saveConfigToFile();
-            io.emit('fiesta-race-started', { 
-                message: "🏁 ГОНКА НАЧАЛАСЬ! Все шары в движении! 🏁",
-                timestamp: raceConfig.raceStartDateTime
-            });
-            console.log("🏁 Race has started!");
+        // Если статус не 'racing' - останавливаем симуляцию
+        if (raceConfig.raceStatus !== 'racing') {
+            clearInterval(interval);
+            simulationIntervals.delete(balloonId);
+            console.log(`⏸️ Simulation stopped for ${balloonId} (status: ${raceConfig.raceStatus})`);
+            return;
         }
         
         checkAndFinishRaceByTime();
-        
-        if (!raceConfig.raceStarted || raceConfig.raceFinished) {
-            return;
-        }
         
         try {
             const wind = await windService.getWindAtPosition(balloon.lat, balloon.lng, balloon.altitude);
@@ -259,7 +324,7 @@ async function startBalloonSimulation(balloonId) {
             
             balloon.lat += latChange;
             balloon.lng += lngChange;
-            balloon.speed = wind.speed; // ← В М/С (было * 3.6)
+            balloon.speed = wind.speed;
             balloon.layerName = wind.layerName;
             balloon.windDirection = wind.direction;
             balloon.lastWindUpdate = wind.timestamp;
@@ -317,7 +382,7 @@ async function startBalloonSimulation(balloonId) {
 function restoreSimulations() {
     console.log('🔄 Restoring simulations for existing balloons...');
     
-    if (raceConfig.raceStarted && !raceConfig.raceFinished) {
+    if (raceConfig.raceStatus === 'racing') {
         const balloonIds = Object.keys(balloons);
         console.log(`🎈 Found ${balloonIds.length} existing balloons`);
         
@@ -333,8 +398,7 @@ function restoreSimulations() {
             }
         }
     } else {
-        console.log(`⏳ Race not started yet (started: ${raceConfig.raceStarted}, finished: ${raceConfig.raceFinished})`);
-        console.log('📌 Simulations will start when race begins');
+        console.log(`⏳ Race status: ${raceConfig.raceStatus}, simulations not started`);
     }
 }
 
@@ -360,27 +424,33 @@ app.get('/admin.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-// Секретный эндпоинт для принудительного старта (на случай, если админка не работает)
-app.get('/force-start', (req, res) => {
-    if (!raceConfig.raceStarted) {
-        raceConfig.raceStarted = true;
-        saveConfigToFile();
-        
-        for (const [id, balloon] of Object.entries(balloons)) {
-            if (!simulationIntervals.has(id)) {
-                startBalloonSimulation(id);
-            }
-        }
-        
-        io.to('race-room').emit('fiesta-race-started', { 
-            message: "🏁 ГОНКА ЗАПУЩЕНА ЧЕРЕЗ СЕКРЕТНЫЙ ЭНДПОИНТ! 🏁",
-            timestamp: new Date()
-        });
-        
-        res.send('✅ Race started!');
-        console.log("🏁 Race force-started via /force-start");
+// Секретный эндпоинт для сброса гонки
+app.get('/reset-race', (req, res) => {
+    console.log('🔄 Сброс гонки по запросу /reset-race');
+    setRaceStatus('idle');
+    res.send(`
+        <h1>✅ Race Reset Successful!</h1>
+        <p>Status: <strong>${raceConfig.raceStatus}</strong></p>
+        <p><a href="/admin.html">Go to Admin Panel</a> | <a href="/fiesta.html">Go to Race</a></p>
+    `);
+});
+
+// Секретный эндпоинт для принудительного старта
+app.get('/force-start-now', (req, res) => {
+    if (raceConfig.raceStatus === 'idle' || raceConfig.raceStatus === 'registration') {
+        setRaceStatus('racing');
+        res.send(`
+            <h1>🏁 Race Started!</h1>
+            <p>All ${Object.keys(balloons).length} balloons are now moving!</p>
+            <p><a href="/fiesta.html">Go to Race</a></p>
+        `);
+        console.log('🏁 Race force-started via /force-start-now');
     } else {
-        res.send('Race already started');
+        res.send(`
+            <h1>⚠️ Cannot Start Race</h1>
+            <p>Current status: ${raceConfig.raceStatus}</p>
+            <p><a href="/reset-race">Reset race first</a></p>
+        `);
     }
 });
 
@@ -392,17 +462,7 @@ io.on('connection', (socket) => {
     let currentPilotId = null;
     
     // Отправляем конфигурацию новому клиенту
-    socket.emit('fiesta-race-config', {
-        finishCoords: raceConfig.finishCoords,
-        allowedStartRegion: raceConfig.allowedStartRegion,
-        registrationWindowFrom: raceConfig.registrationWindowFrom,
-        registrationWindowTo: raceConfig.registrationWindowTo,
-        raceStartDateTime: raceConfig.raceStartDateTime,
-        maxParticipants: raceConfig.maxParticipants,
-        raceStarted: raceConfig.raceStarted,
-        raceFinished: raceConfig.raceFinished
-    });
-    
+    socket.emit('fiesta-race-config', getConfigForClient());
     socket.emit('fiesta-balloon-catalog', balloonCatalog);
     socket.emit('fiesta-all-balloons', Object.values(balloons));
     
@@ -411,6 +471,15 @@ io.on('connection', (socket) => {
     // ============================================
     socket.on('fiesta-start-flight', async (data) => {
         console.log('📝 Registration attempt:', { ...data, password: '***' });
+
+        // Проверяем статус гонки
+        if (raceConfig.raceStatus !== 'registration' && raceConfig.raceStatus !== 'idle') {
+            socket.emit('fiesta-registration-complete', { 
+                success: false,
+                message: `Registration is not open. Current status: ${raceConfig.raceStatus}` 
+            });
+            return;
+        }
 
         const currentPilotsCount = Object.keys(balloons).length;
         if (currentPilotsCount >= MAX_PARTICIPANTS) {
@@ -467,7 +536,7 @@ io.on('connection', (socket) => {
             return;
         }
 
-        if (raceConfig.raceStarted) {
+        if (raceConfig.raceStatus === 'racing') {
             socket.emit('fiesta-registration-complete', { 
                 success: false,
                 message: 'Race has already started!' 
@@ -530,7 +599,8 @@ io.on('connection', (socket) => {
         
         io.to('race-room').emit('fiesta-all-balloons', Object.values(balloons));
         
-        if (raceConfig.raceStarted && !raceConfig.raceFinished) {
+        // Если гонка уже идёт - запускаем симуляцию
+        if (raceConfig.raceStatus === 'racing' && !simulationIntervals.has(pilotId)) {
             startBalloonSimulation(pilotId);
         }
     });
@@ -587,8 +657,8 @@ io.on('connection', (socket) => {
             
             console.log(`✅ Pilot ${balloon.username} authenticated successfully`);
             
-            // Если гонка уже идёт, но симуляция не запущена - запускаем
-            if (raceConfig.raceStarted && !raceConfig.raceFinished && !simulationIntervals.has(balloon.id)) {
+            // Если гонка идёт, но симуляция не запущена - запускаем
+            if (raceConfig.raceStatus === 'racing' && !simulationIntervals.has(balloon.id)) {
                 startBalloonSimulation(balloon.id);
             }
             
@@ -689,17 +759,7 @@ io.on('connection', (socket) => {
             
             saveConfigToFile();
             
-            io.to('race-room').emit('fiesta-race-config', {
-                finishCoords: raceConfig.finishCoords,
-                allowedStartRegion: raceConfig.allowedStartRegion,
-                registrationWindowFrom: raceConfig.registrationWindowFrom,
-                registrationWindowTo: raceConfig.registrationWindowTo,
-                raceStartDateTime: raceConfig.raceStartDateTime,
-                maxParticipants: raceConfig.maxParticipants,
-                raceStarted: raceConfig.raceStarted,
-                raceFinished: raceConfig.raceFinished
-            });
-            
+            io.to('race-room').emit('fiesta-race-config', getConfigForClient());
             socket.emit('fiesta-config-saved', { success: true });
             console.log('🔧 Race config updated by admin');
         } else {
@@ -707,9 +767,45 @@ io.on('connection', (socket) => {
         }
     });
     
+    // Новый обработчик для смены статуса
+    socket.on('fiesta-admin-set-status', (data) => {
+        if (data.adminKey === 'aerostar2024') {
+            const success = setRaceStatus(data.status);
+            if (success) {
+                socket.emit('fiesta-status-changed', { status: data.status });
+                io.to('race-room').emit('fiesta-race-config', getConfigForClient());
+                
+                // Если статус 'racing' - запускаем симуляцию для всех шаров
+                if (data.status === 'racing') {
+                    for (const [id, balloon] of Object.entries(balloons)) {
+                        if (!simulationIntervals.has(id)) {
+                            startBalloonSimulation(id);
+                        }
+                    }
+                    io.to('race-room').emit('fiesta-race-started', { 
+                        message: "🏁 ГОНКА ЗАПУЩЕНА АДМИНИСТРАТОРОМ! 🏁",
+                        timestamp: new Date()
+                    });
+                }
+                
+                // Если статус 'finished' - отправляем уведомление
+                if (data.status === 'finished') {
+                    io.to('race-room').emit('fiesta-race-finished', {
+                        message: "🏁 ГОНКА ЗАВЕРШЕНА АДМИНИСТРАТОРОМ! 🏁",
+                        timestamp: new Date()
+                    });
+                }
+            } else {
+                socket.emit('fiesta-error', 'Invalid status');
+            }
+        } else {
+            socket.emit('fiesta-error', 'Admin privileges required');
+        }
+    });
+    
     socket.on('fiesta-force-race-start', () => {
-        if (!raceConfig.raceStarted) {
-            raceConfig.raceStarted = true;
+        if (raceConfig.raceStatus !== 'racing') {
+            setRaceStatus('racing');
             saveConfigToFile();
             
             for (const [id, balloon] of Object.entries(balloons)) {
@@ -730,8 +826,8 @@ io.on('connection', (socket) => {
     });
     
     socket.on('fiesta-force-race-finish', () => {
-        if (!raceConfig.raceFinished) {
-            raceConfig.raceFinished = true;
+        if (raceConfig.raceStatus !== 'finished') {
+            setRaceStatus('finished');
             saveConfigToFile();
             
             for (const [id, interval] of simulationIntervals) {
@@ -807,11 +903,13 @@ setTimeout(() => {
 // 4. Периодическая проверка окончания гонки
 setInterval(checkAndFinishRaceByTime, 60000);
 
-// 5. Автоматический старт гонки (по расписанию)
+// 5. Автоматический старт гонки (по расписанию) - только если статус не установлен вручную
 setInterval(() => {
-    if (!raceConfig.raceStarted && isRaceStarted() && !raceConfig.raceFinished) {
-        raceConfig.raceStarted = true;
-        saveConfigToFile();
+    if (raceConfig.raceStatus !== 'racing' && 
+        raceConfig.raceStatus !== 'finished' &&
+        isRaceStarted() && 
+        !raceConfig.raceFinished) {
+        setRaceStatus('racing');
         
         for (const [id, balloon] of Object.entries(balloons)) {
             if (!simulationIntervals.has(id)) {
@@ -820,7 +918,7 @@ setInterval(() => {
         }
         
         io.to('race-room').emit('fiesta-race-started', { 
-            message: "🏁 ГОНКА НАЧАЛАСЬ! 🏁",
+            message: "🏁 ГОНКА НАЧАЛАСЬ АВТОМАТИЧЕСКИ! 🏁",
             timestamp: raceConfig.raceStartDateTime
         });
         
@@ -828,7 +926,7 @@ setInterval(() => {
     }
 }, 1000);
 
-// 6. Периодическое сохранение пилотов (каждые 30 секунд)
+// 6. Периодическое сохранение пилотов
 setInterval(() => {
     if (Object.keys(balloons).length > 0) {
         savePilotsToFile();
@@ -846,6 +944,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`🎯 Finish: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
     console.log(`🔐 Password hashing: ACTIVE (bcrypt, rounds=${SALT_ROUNDS})`);
     console.log(`📊 Registered pilots: ${Object.keys(balloons).length}/${MAX_PARTICIPANTS}`);
+    console.log(`📊 Race status: ${raceConfig.raceStatus}`);
     console.log(`💾 Pilots file: ${PILOTS_FILE}`);
     console.log(`🔄 Auto-restore: ACTIVE\n`);
 });
