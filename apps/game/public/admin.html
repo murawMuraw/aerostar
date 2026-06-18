@@ -68,6 +68,8 @@
         .btn-success:hover { background: #047857; }
         .btn-warning { background: #d97706; }
         .btn-warning:hover { background: #b45309; }
+        .btn-idle { background: #64748b; }
+        .btn-idle:hover { background: #475569; }
         .current-config {
             background: rgba(56,189,248,0.1);
             border-radius: 12px;
@@ -76,8 +78,6 @@
             font-size: 13px;
             line-height: 1.6;
         }
-        .connected-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; margin-right: 8px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         .status-badge {
             display: inline-block;
             padding: 4px 12px;
@@ -86,15 +86,17 @@
             font-weight: bold;
             margin-left: 10px;
         }
-        .status-race-not-started { background: #f59e0b; color: #000; }
-        .status-race-started { background: #10b981; color: #fff; }
-        .status-race-finished { background: #ef4444; color: #fff; }
+        .status-idle { background: #64748b; color: #fff; }
+        .status-registration { background: #f59e0b; color: #000; }
+        .status-racing { background: #10b981; color: #fff; }
+        .status-finished { background: #ef4444; color: #fff; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 10px; }
         .info-text { font-size: 12px; color: #94a3b8; margin-top: 5px; }
-        .button-group { display: flex; gap: 10px; }
-        .button-group button { flex: 1; }
-        .warning-text { color: #fbbf24; font-size: 12px; margin-top: 8px; padding: 8px; background: rgba(251,191,36,0.1); border-radius: 8px; }
-        .announcement-box { background: rgba(56,189,248,0.05); border: 1px solid rgba(56,189,248,0.2); border-radius: 12px; padding: 15px; margin-bottom: 20px; }
-        .char-counter { font-size: 11px; color: #94a3b8; text-align: right; margin-top: 5px; }
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .button-group button { flex: 1; min-width: 120px; }
+        .status-display { font-size: 18px; font-weight: bold; padding: 10px; border-radius: 10px; text-align: center; margin-top: 10px; }
+        .connected-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; margin-right: 8px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -113,23 +115,47 @@
         <div class="admin-container">
             <div class="admin-header">
                 <h1>🏁 Fiesta Race Administrator</h1>
-                <div><span class="connected-indicator"></span><span id="status-text">Connected</span>
-                <span id="race-status-badge" class="status-badge status-race-not-started">⏳ Race Not Started</span></div>
+                <div>
+                    <span class="connected-indicator"></span>
+                    <span id="status-text">Connected</span>
+                    <span id="race-status-badge" class="status-badge status-idle">⏸️ Idle</span>
+                </div>
                 <button id="logout-btn" style="width: auto; padding: 8px 20px; margin-top: 10px;">Logout</button>
             </div>
-            
+
+            <!-- БЛОК УПРАВЛЕНИЯ СТАТУСАМИ -->
             <div class="admin-card">
-                <h2>💬 Admin Announcement</h2>
-                <div class="announcement-box">
-                    <div class="form-group">
-                        <label>Message to all pilots</label>
-                        <textarea id="admin-message" placeholder="Enter your message here..."></textarea>
-                        <div class="char-counter"><span id="char-count">0</span> / 500 characters</div>
-                    </div>
-                    <button id="send-announcement" class="btn-warning">📢 Send Announcement</button>
+                <h2>🎯 Race Status Control</h2>
+                <div class="button-group">
+                    <button id="status-idle" class="btn-idle">⏸️ Idle</button>
+                    <button id="status-registration" class="btn-warning">📝 Registration</button>
+                    <button id="status-racing" class="btn-success">🏁 Racing</button>
+                    <button id="status-finished" class="btn-danger">🏆 Finished</button>
+                </div>
+                <div class="info-text" style="margin-top: 10px;">
+                    Current status: <strong id="status-display-text">unknown</strong>
+                </div>
+                <div class="status-display" id="status-display-box" style="background: #64748b; color: #fff;">
+                    ⏸️ IDLE
+                </div>
+                <div class="info-text" style="margin-top: 10px; font-size: 11px; color: #94a3b8;">
+                    💡 <strong>Idle</strong> — гонка не активна, регистрация закрыта<br>
+                    💡 <strong>Registration</strong> — открыта регистрация на 7 дней<br>
+                    💡 <strong>Racing</strong> — гонка в процессе<br>
+                    💡 <strong>Finished</strong> — гонка завершена
                 </div>
             </div>
-            
+
+            <div class="admin-card">
+                <h2>💬 Admin Announcement</h2>
+                <div class="form-group">
+                    <label>Message to all pilots</label>
+                    <textarea id="admin-message" placeholder="Enter your message here..."></textarea>
+                    <div class="char-counter"><span id="char-count">0</span> / 500 characters</div>
+                </div>
+                <button id="send-announcement" class="btn-warning">📢 Send Announcement</button>
+            </div>
+
             <div class="admin-card">
                 <h2>📍 Finish Line</h2>
                 <div class="coord-group">
@@ -137,7 +163,7 @@
                     <div class="form-group"><label>Longitude</label><input type="text" id="finish-lng" placeholder="2.3522" /></div>
                 </div>
             </div>
-            
+
             <div class="admin-card">
                 <h2>🗺️ Start Zone (Rectangle)</h2>
                 <div class="region-group">
@@ -147,7 +173,7 @@
                     <div class="form-group"><label>Max Longitude</label><input type="text" id="max-lng" placeholder="-70" /></div>
                 </div>
             </div>
-            
+
             <div class="admin-card">
                 <h2>📝 Registration Window</h2>
                 <div class="coord-group">
@@ -161,7 +187,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="admin-card">
                 <h2>🏁 Race Schedule</h2>
                 <div class="form-group">
@@ -173,30 +199,31 @@
                     <input type="number" id="race-duration" min="1" max="168" step="1" value="24" />
                 </div>
             </div>
-            
+
             <div class="button-group">
                 <button id="save-config" class="btn-success">💾 Save Race Configuration</button>
                 <button id="force-start" class="btn-danger">🏁 Force Race Start</button>
                 <button id="force-finish" class="btn-danger" style="background:#b91c1c;">🏆 Force Race Finish</button>
             </div>
-            
+
             <div class="admin-card">
                 <h2>📊 Race Statistics</h2>
                 <div class="current-config" id="race-stats">Loading...</div>
             </div>
-            
+
             <div class="admin-card">
                 <h2>📋 Current Race Rules</h2>
                 <div class="current-config" id="current-config">Loading...</div>
             </div>
         </div>
     </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         let socket = null;
         let currentConfig = null;
-        const ADMIN_KEY = "aerostar2024";  // Ключ из server.js
-        
+        const ADMIN_KEY = "aerostar2024";
+
         function login() {
             const adminKey = document.getElementById('admin-key').value;
             if (adminKey === ADMIN_KEY) {
@@ -207,32 +234,34 @@
                 alert('Invalid admin key');
             }
         }
-        
+
         function connectSocket() {
             socket = io({ transports: ['polling', 'websocket'], upgrade: true });
-            
+
             socket.on('connect', () => {
                 console.log('Socket connected');
                 document.getElementById('status-text').innerHTML = 'Connected';
             });
-            
+
             socket.on('disconnect', () => {
                 document.getElementById('status-text').innerHTML = 'Disconnected';
             });
-            
+
             socket.on('fiesta-race-config', (config) => {
+                currentConfig = config;
                 updateCurrentConfig(config);
-                
+                updateStatusDisplay(config.raceStatus || 'idle');
+
                 document.getElementById('finish-lat').value = config.finishCoords?.lat || '';
                 document.getElementById('finish-lng').value = config.finishCoords?.lng || '';
-                
+
                 if (config.allowedStartRegion) {
                     document.getElementById('min-lat').value = config.allowedStartRegion.minLat || '';
                     document.getElementById('max-lat').value = config.allowedStartRegion.maxLat || '';
                     document.getElementById('min-lng').value = config.allowedStartRegion.minLng || '';
                     document.getElementById('max-lng').value = config.allowedStartRegion.maxLng || '';
                 }
-                
+
                 if (config.registrationWindowFrom) {
                     const regFrom = new Date(config.registrationWindowFrom);
                     document.getElementById('reg-from').value = regFrom.toISOString().slice(0, 16);
@@ -241,22 +270,28 @@
                     const regTo = new Date(config.registrationWindowTo);
                     document.getElementById('reg-to').value = regTo.toISOString().slice(0, 16);
                 }
-                
+
                 if (config.raceStartDateTime) {
                     const startTime = new Date(config.raceStartDateTime);
                     document.getElementById('race-start-time').value = startTime.toISOString().slice(0, 16);
                 }
-                
+
                 if (config.raceDurationHours) {
                     document.getElementById('race-duration').value = config.raceDurationHours;
                 }
             });
-            
+
+            socket.on('fiesta-status-changed', (data) => {
+                console.log('Status changed:', data);
+                updateStatusDisplay(data.status);
+                socket.emit('fiesta-get-participants');
+            });
+
             socket.on('fiesta-all-balloons', (balloons) => {
                 const stats = document.getElementById('race-stats');
                 const registered = balloons.length;
                 const finished = balloons.filter(b => b.finished).length;
-                
+
                 if (registered === 0) {
                     stats.innerHTML = 'No participants registered yet';
                 } else {
@@ -269,99 +304,134 @@
                     `;
                 }
             });
-            
+
             socket.on('fiesta-config-saved', (data) => {
                 if (data.success) {
                     alert('✅ Configuration saved successfully!');
                 }
             });
-            
+
             socket.on('fiesta-race-started', (data) => {
                 alert(data.message || '🏁 Race has started!');
                 socket.emit('fiesta-get-participants');
             });
-            
+
             socket.on('fiesta-race-finished', (data) => {
                 alert(data.message || '🏆 Race has been finished!');
                 socket.emit('fiesta-get-participants');
             });
-            
+
             socket.on('fiesta-error', (error) => {
                 console.error('Server error:', error);
                 alert('Error: ' + error);
             });
-            
+
             setTimeout(() => {
                 socket.emit('fiesta-get-participants');
             }, 1000);
         }
-        
+
+        function updateStatusDisplay(status) {
+            const statusMap = {
+                'idle': { text: '⏸️ IDLE', color: '#64748b', badge: 'status-idle' },
+                'registration': { text: '📝 REGISTRATION OPEN', color: '#f59e0b', badge: 'status-registration' },
+                'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981', badge: 'status-racing' },
+                'finished': { text: '🏆 RACE FINISHED', color: '#ef4444', badge: 'status-finished' }
+            };
+
+            const info = statusMap[status] || statusMap['idle'];
+            const displayBox = document.getElementById('status-display-box');
+            const displayText = document.getElementById('status-display-text');
+            const badge = document.getElementById('race-status-badge');
+
+            if (displayBox) {
+                displayBox.textContent = info.text;
+                displayBox.style.background = info.color;
+                displayBox.style.color = '#fff';
+            }
+            if (displayText) displayText.textContent = status;
+            if (badge) {
+                badge.className = `status-badge ${info.badge}`;
+                badge.textContent = info.text;
+            }
+        }
+
         function updateCurrentConfig(config) {
             currentConfig = config;
-            
+
             const formatDate = (date) => {
                 if (!date) return 'Not set';
                 return new Date(date).toLocaleString();
             };
-            
-            const isRaceStarted = config.raceStarted;
-            const isRaceFinished = config.raceFinished;
-            const badge = document.getElementById('race-status-badge');
-            
-            if (isRaceFinished) {
-                badge.className = 'status-badge status-race-finished';
-                badge.innerHTML = '🏆 Race Finished';
-            } else if (isRaceStarted) {
-                badge.className = 'status-badge status-race-started';
-                badge.innerHTML = '🏁 Race In Progress';
-            } else {
-                badge.className = 'status-badge status-race-not-started';
-                badge.innerHTML = '⏳ Race Not Started';
-            }
-            
+
             let startZoneText = 'Not configured';
             if (config.allowedStartRegion) {
                 startZoneText = `Lat: ${config.allowedStartRegion.minLat}°-${config.allowedStartRegion.maxLat}°, Lng: ${config.allowedStartRegion.minLng}°-${config.allowedStartRegion.maxLng}°`;
             }
-            
+
             document.getElementById('current-config').innerHTML = `
                 <strong>🏁 Finish Line:</strong> ${config.finishCoords?.lat?.toFixed(4)}°, ${config.finishCoords?.lng?.toFixed(4)}°<br>
                 <strong>🗺️ Start Zone:</strong> ${startZoneText}<br>
                 <strong>📝 Registration:</strong> ${formatDate(config.registrationWindowFrom)} - ${formatDate(config.registrationWindowTo)}<br>
                 <strong>🚀 Race Start:</strong> ${formatDate(config.raceStartDateTime)}<br>
                 <strong>⏰ Duration:</strong> ${config.raceDurationHours || 24} hours<br>
-                <strong>📊 Status:</strong> ${isRaceFinished ? 'FINISHED' : (isRaceStarted ? 'IN PROGRESS' : 'WAITING')}
+                <strong>📊 Status:</strong> ${config.raceStatus || 'idle'}
             `;
         }
-        
-        // Event listeners
+
+        // Event listeners для кнопок статусов
+        document.getElementById('status-idle').addEventListener('click', () => {
+            if (confirm('Set race status to IDLE? All registrations will be closed.')) {
+                socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'idle' });
+            }
+        });
+
+        document.getElementById('status-registration').addEventListener('click', () => {
+            if (confirm('Open registration? Pilots will be able to register for 7 days.')) {
+                socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'registration' });
+            }
+        });
+
+        document.getElementById('status-racing').addEventListener('click', () => {
+            if (confirm('Start the race? All registered balloons will begin moving.')) {
+                socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'racing' });
+                // Также запускаем симуляцию для всех шаров
+                socket.emit('fiesta-force-race-start');
+            }
+        });
+
+        document.getElementById('status-finished').addEventListener('click', () => {
+            if (confirm('Finish the race? All balloons will stop.')) {
+                socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'finished' });
+                socket.emit('fiesta-force-race-finish');
+            }
+        });
+
+        // Остальные обработчики
         document.getElementById('login-btn').addEventListener('click', login);
-        
         document.getElementById('logout-btn').addEventListener('click', () => {
             if (socket) socket.disconnect();
             location.reload();
         });
-        
+
         document.getElementById('send-announcement').addEventListener('click', () => {
             const message = document.getElementById('admin-message').value.trim();
             if (!message) {
                 alert('Please enter a message');
                 return;
             }
-            
             socket.emit('fiesta-admin-announcement', {
                 message: message,
-                adminKey: ADMIN_KEY  // ← ОТПРАВЛЯЕМ КЛЮЧ!
+                adminKey: ADMIN_KEY
             });
-            
             alert('✅ Announcement sent!');
             document.getElementById('admin-message').value = '';
             document.getElementById('char-count').textContent = '0';
         });
-        
+
         document.getElementById('save-config').addEventListener('click', () => {
             const config = {
-                adminKey: ADMIN_KEY,  // ← ОТПРАВЛЯЕМ КЛЮЧ!
+                adminKey: ADMIN_KEY,
                 finishCoords: {
                     lat: parseFloat(document.getElementById('finish-lat').value),
                     lng: parseFloat(document.getElementById('finish-lng').value)
@@ -377,26 +447,26 @@
                 raceStartDateTime: document.getElementById('race-start-time').value,
                 raceDurationHours: parseInt(document.getElementById('race-duration').value)
             };
-            
+
             socket.emit('fiesta-admin-change-rules', config);
         });
-        
+
         document.getElementById('force-start').addEventListener('click', () => {
             if (confirm('⚠️ Force start the race?')) {
                 socket.emit('fiesta-force-race-start');
             }
         });
-        
+
         document.getElementById('force-finish').addEventListener('click', () => {
             if (confirm('🏆 Force finish the race?')) {
                 socket.emit('fiesta-force-race-finish');
             }
         });
-        
+
         document.getElementById('admin-key').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') login();
         });
-        
+
         setInterval(() => {
             if (socket && socket.connected) {
                 socket.emit('fiesta-get-participants');
