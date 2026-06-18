@@ -899,60 +899,50 @@
             });
             
             // Race config
-            socket.on('fiesta-race-config', (config) => {
-                console.log('Race config received');
-                currentConfig = config;
-                
-                if (config.finishCoords?.lat && config.finishCoords?.lng) {
-                    document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
-                    
-                    if (config.raceStartDateTime) {
-                        const startTime = new Date(config.raceStartDateTime);
-                        document.getElementById('race-start-time').innerHTML = startTime.toLocaleString();
-                        if (config.raceDurationHours) {
-                            const endTime = new Date(startTime);
-                            endTime.setHours(endTime.getHours() + config.raceDurationHours);
-                            document.getElementById('race-deadline').innerHTML = endTime.toLocaleString();
-                        }
-                    }
-                    
-                    const statusMap = {
-                        'idle': { text: '⏸️ No race active', color: '#94a3b8' },
-                        'registration': { text: '📝 Registration open!', color: '#fbbf24' },
-                        'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981' },
-                        'finished': { text: '🏆 RACE FINISHED', color: '#ef4444' }
-                        };
-                    const statusInfo = statusMap[config.raceStatus] || statusMap['idle'];
-                    const statusEl = document.getElementById('race-status');
-                        if (statusEl) {
-                            statusEl.innerHTML = statusInfo.text;
-                            statusEl.style.color = statusInfo.color;
-                                }
-                    
-                        if (myRole === 'pilot' && !flightStartTime) startFlightTimer();
-                    } else if (config.raceFinished) {
-                        statusText = '🏆 RACE FINISHED';
-                        statusColor = '#ef4444';
-                    } else {
-                        statusText = '⏳ WAITING FOR START';
-                        statusColor = '#fbbf24';
-                    }
-                    const statusEl = document.getElementById('race-status');
-                    statusEl.innerHTML = statusText;
-                    statusEl.style.color = statusColor;
-                    
-                    if (finishMarker && map) map.removeLayer(finishMarker);
-                    const finishIcon = L.divIcon({
-                        html: '<span style="font-size: 32px;">🏁</span>',
-                        iconSize: [32, 32],
-                        className: 'finish-marker'
-                    });
-                    finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
-                    finishMarker.bindPopup('<b>🏁 FINISH LINE</b><br>First within 50km wins!');
-                    
-                    updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
-                }
-            });
+           socket.on('fiesta-race-config', (config) => {
+    console.log('Race config received');
+    currentConfig = config;
+    
+    if (config.finishCoords?.lat && config.finishCoords?.lng) {
+        document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
+        
+        if (config.raceStartDateTime) {
+            const startTime = new Date(config.raceStartDateTime);
+            document.getElementById('race-start-time').innerHTML = startTime.toLocaleString();
+            if (config.raceDurationHours) {
+                const endTime = new Date(startTime);
+                endTime.setHours(endTime.getHours() + config.raceDurationHours);
+                document.getElementById('race-deadline').innerHTML = endTime.toLocaleString();
+            }
+        }
+        
+        // Отображение статуса
+        const statusMap = {
+            'idle': { text: '⏸️ No race active', color: '#94a3b8' },
+            'registration': { text: '📝 Registration open!', color: '#fbbf24' },
+            'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981' },
+            'finished': { text: '🏆 RACE FINISHED', color: '#ef4444' }
+        };
+        
+        const statusInfo = statusMap[config.raceStatus] || statusMap['idle'];
+        const statusEl = document.getElementById('race-status');
+        if (statusEl) {
+            statusEl.innerHTML = statusInfo.text;
+            statusEl.style.color = statusInfo.color;
+        }
+        
+        if (finishMarker && map) map.removeLayer(finishMarker);
+        const finishIcon = L.divIcon({
+            html: '<span style="font-size: 32px;">🏁</span>',
+            iconSize: [32, 32],
+            className: 'finish-marker'
+        });
+        finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
+        finishMarker.bindPopup('<b>🏁 FINISH LINE</b><br>First within 50km wins!');
+        
+        updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
+    }
+});
             
             // Balloons updates
             socket.on('fiesta-all-balloons', (balloons) => {
