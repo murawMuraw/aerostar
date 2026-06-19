@@ -943,4 +943,4 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`🔧 Admin page: http://localhost:${PORT}/admin.html`);
     console.log(`👥 Max participants: ${MAX_PARTICIPANTS}`);
     console.log(`🏁 Race start: ${raceConfig.raceStartDateTime.toLocaleString()}`);
-    console.log(`🎯 Finish: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords
+    console.log(`🎯 Finish: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
