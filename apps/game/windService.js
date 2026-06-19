@@ -3,7 +3,7 @@
  * Использует встроенный fetch (Node.js 18+)
  */
 
-const CACHE_TTL =120000;
+const CACHE_TTL =180000;
 const windCache = new Map();
 
 const PRESSURE_LEVELS = [
