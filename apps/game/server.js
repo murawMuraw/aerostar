@@ -31,7 +31,7 @@ const PORT = 3001;
 const CONFIG_FILE = path.join(__dirname, 'race-config.json');
 const PILOTS_FILE = path.join(__dirname, 'pilots.json');
 const MAX_PARTICIPANTS = 10;
-const SIMULATION_INTERVAL = 5000;
+const SIMULATION_INTERVAL = 30000;
 const SALT_ROUNDS = 10;
 
 // Данные игры
