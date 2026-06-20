@@ -139,6 +139,15 @@
         }
         .scheduled-time .label { color: #94a3b8; font-size: 12px; }
         .scheduled-time .value { color: #10b981; font-size: 14px; font-weight: bold; }
+        .button-group-small {
+            display: flex;
+            gap: 10px;
+        }
+        .button-group-small button {
+            flex: 1;
+            padding: 10px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -225,18 +234,28 @@
                 </div>
             </div>
 
-            <!-- БЛОК ОТЛОЖЕННОГО СТАРТА -->
+            <!-- БЛОК ЗАПЛАНИРОВАННОГО СТАРТА (ОБЪЕДИНЕННЫЙ) -->
             <div class="admin-card">
                 <h2>⏰ Scheduled Race Start</h2>
                 <div class="form-group">
-                    <label>Set race start time</label>
+                    <label>Race Start Date & Time</label>
                     <input type="datetime-local" id="scheduled-start-time" />
+                    <div class="info-text">Установите точное время старта гонки</div>
                 </div>
-                <button id="set-scheduled-start" class="btn-success">⏰ Set Scheduled Start</button>
-                <button id="cancel-scheduled-start" class="btn-danger" style="background:#b91c1c;">❌ Cancel Scheduled Start</button>
+                <div class="form-group">
+                    <label>Race Duration (hours)</label>
+                    <input type="number" id="race-duration" min="1" max="168" step="1" value="24" />
+                    <div class="info-text">Продолжительность гонки в часах (макс. 168 часов = 7 дней)</div>
+                </div>
+                <div class="button-group-small">
+                    <button id="set-scheduled-start" class="btn-success">⏰ Set Scheduled Start</button>
+                    <button id="cancel-scheduled-start" class="btn-danger" style="background:#b91c1c;">❌ Cancel</button>
+                </div>
                 <div id="scheduled-display" class="scheduled-time" style="display:none;">
                     <div class="label">⏰ Scheduled start:</div>
                     <div class="value" id="scheduled-value">--</div>
+                    <div class="label" style="margin-top:5px;">⏱️ Duration:</div>
+                    <div class="value" id="scheduled-duration" style="color:#fbbf24;">-- hours</div>
                 </div>
             </div>
 
@@ -283,19 +302,6 @@
                         <label>Registration Closes</label>
                         <input type="datetime-local" id="reg-to" />
                     </div>
-                </div>
-            </div>
-
-            <!-- НАСТРОЙКА РАСПИСАНИЯ -->
-            <div class="admin-card">
-                <h2>🏁 Race Schedule</h2>
-                <div class="form-group">
-                    <label>Exact Race Start Date & Time</label>
-                    <input type="datetime-local" id="race-start-time" />
-                </div>
-                <div class="form-group">
-                    <label>Race Duration (hours)</label>
-                    <input type="number" id="race-duration" min="1" max="168" step="1" value="24" />
                 </div>
             </div>
 
@@ -374,11 +380,6 @@
                     document.getElementById('reg-to').value = regTo.toISOString().slice(0, 16);
                 }
 
-                if (config.raceStartDateTime) {
-                    const startTime = new Date(config.raceStartDateTime);
-                    document.getElementById('race-start-time').value = startTime.toISOString().slice(0, 16);
-                }
-
                 if (config.raceDurationHours) {
                     document.getElementById('race-duration').value = config.raceDurationHours;
                 }
@@ -386,6 +387,7 @@
                 if (config.scheduledStartTime) {
                     document.getElementById('scheduled-display').style.display = 'block';
                     document.getElementById('scheduled-value').textContent = new Date(config.scheduledStartTime).toLocaleString();
+                    document.getElementById('scheduled-duration').textContent = `${config.raceDurationHours || 24} hours`;
                 } else {
                     document.getElementById('scheduled-display').style.display = 'none';
                 }
@@ -476,7 +478,6 @@
                 badge.textContent = info.text;
             }
 
-            // Обновляем кнопки в зависимости от текущего состояния
             updateButtons(status);
         }
 
@@ -488,7 +489,6 @@
                 'status-finished': document.getElementById('status-finished')
             };
 
-            // Разрешенные переходы
             const transitions = {
                 'idle': ['status-registration'],
                 'registration': ['status-racing', 'status-idle'],
@@ -498,9 +498,7 @@
 
             const allowed = transitions[currentStatus] || [];
 
-            // Обновляем состояние кнопок
             for (const [id, btn] of Object.entries(buttons)) {
-                const statusKey = id.replace('status-', '');
                 if (allowed.includes(id)) {
                     btn.disabled = false;
                     btn.className = btn.className.replace('btn-disabled', '').trim();
@@ -531,8 +529,8 @@
                 <strong>🏁 Finish Line:</strong> ${config.finishCoords?.lat?.toFixed(4)}°, ${config.finishCoords?.lng?.toFixed(4)}°<br>
                 <strong>🗺️ Start Zone:</strong> ${startZoneText}<br>
                 <strong>📝 Registration:</strong> ${formatDate(config.registrationWindowFrom)} - ${formatDate(config.registrationWindowTo)}<br>
-                <strong>🚀 Race Start:</strong> ${formatDate(config.raceStartDateTime)}<br>
-                <strong>⏰ Duration:</strong> ${config.raceDurationHours || 24} hours<br>
+                <strong>⏰ Scheduled Start:</strong> ${config.scheduledStartTime ? formatDate(config.scheduledStartTime) : 'Not set'}<br>
+                <strong>⏱️ Duration:</strong> ${config.raceDurationHours || 24} hours<br>
                 <strong>📊 Status:</strong> ${config.raceStatus || 'idle'}
             `;
         }
@@ -588,11 +586,18 @@
             }
         });
 
-        // Отложенный старт
+        // Отложенный старт (объединенный с продолжительностью)
         document.getElementById('set-scheduled-start').addEventListener('click', () => {
             const startTime = document.getElementById('scheduled-start-time').value;
+            const duration = parseInt(document.getElementById('race-duration').value);
+            
             if (!startTime) {
                 alert('Пожалуйста, выберите время старта');
+                return;
+            }
+            
+            if (!duration || duration < 1) {
+                alert('Пожалуйста, укажите продолжительность гонки (минимум 1 час)');
                 return;
             }
             
@@ -607,10 +612,18 @@
                 return;
             }
             
-            if (confirm(`Установить старт гонки на ${startDate.toLocaleString()}?`)) {
+            if (confirm(`Установить старт гонки на ${startDate.toLocaleString()} с продолжительностью ${duration} часов?`)) {
+                // Отправляем и время старта, и продолжительность
                 socket.emit('fiesta-set-scheduled-start', {
                     adminKey: ADMIN_KEY,
-                    startTime: startTime
+                    startTime: startTime,
+                    duration: duration
+                });
+                
+                // Также сохраняем продолжительность в конфигурации
+                socket.emit('fiesta-admin-change-rules', {
+                    adminKey: ADMIN_KEY,
+                    raceDurationHours: duration
                 });
             }
         });
@@ -648,6 +661,7 @@
         });
 
         document.getElementById('save-config').addEventListener('click', () => {
+            const duration = parseInt(document.getElementById('race-duration').value);
             const config = {
                 adminKey: ADMIN_KEY,
                 finishCoords: {
@@ -662,8 +676,7 @@
                 },
                 registrationWindowFrom: document.getElementById('reg-from').value,
                 registrationWindowTo: document.getElementById('reg-to').value,
-                raceStartDateTime: document.getElementById('race-start-time').value,
-                raceDurationHours: parseInt(document.getElementById('race-duration').value)
+                raceDurationHours: duration || 24
             };
 
             socket.emit('fiesta-admin-change-rules', config);
