@@ -1,13 +1,18 @@
 /**
  * КАТАЛОГ ДОСТУПНЫХ МОДЕЛЕЙ АЭРОСТАТОВ
+ * Используются изображения из /apps/frontend/images/
  */
 const BALLOON_STYLES = {
-    'classic_blue': { id: 'classic_blue', name: 'Синий Классик', filter: 'none' },
-    'fire_red':     { id: 'fire_red', name: 'Огненный Рубин', filter: 'hue-rotate(145deg) saturate(2.5) brightness(0.9)' },
-    'emerald_go':  { id: 'emerald_go', name: 'Изумрудный Ветрочет', filter: 'hue-rotate(65deg) saturate(2) brightness(0.9)' },
-    'gold_sunset':  { id: 'gold_sunset', name: 'Золотой Закат', filter: 'hue-rotate(200deg) saturate(3) brightness(1.1)' },
-    'purple_strato':{ id: 'purple_strato', name: 'Пурпурный Стратос', filter: 'hue-rotate(270deg) saturate(2)' },
-    'neon_toxic':   { id: 'neon_toxic', name: 'Неоновый Шторм', filter: 'hue-rotate(100deg) saturate(3) brightness(1.2)' }
+    'bal1': { id: 'bal1', name: 'Шар №1', image: '/images/bal1.png' },
+    'bal2': { id: 'bal2', name: 'Шар №2', image: '/images/bal2.png' },
+    'bal3': { id: 'bal3', name: 'Шар №3', image: '/images/bal3.png' },
+    'bal4': { id: 'bal4', name: 'Шар №4', image: '/images/bal4.png' },
+    'bal5': { id: 'bal5', name: 'Шар №5', image: '/images/bal5.png' },
+    'bal6': { id: 'bal6', name: 'Шар №6', image: '/images/bal6.png' },
+    'bal7': { id: 'bal7', name: 'Шар №7', image: '/images/bal7.png' },
+    'bal8': { id: 'bal8', name: 'Шар №8', image: '/images/bal8.png' },
+    'bal9': { id: 'bal9', name: 'Шар №9', image: '/images/bal9.png' },
+    'bal10': { id: 'bal10', name: 'Шар №10', image: '/images/bal10.png' }
 };
 
 module.exports = BALLOON_STYLES;
