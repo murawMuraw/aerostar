@@ -451,6 +451,8 @@ function restoreSimulations() {
 // ============================================
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
+// Раздаем изображения шаров из папки frontend
+app.use('/images', express.static(path.join(__dirname, '../../frontend/images')));
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'fiesta.html'));
