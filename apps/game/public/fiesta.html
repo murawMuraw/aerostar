@@ -186,6 +186,8 @@
         .btn-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
         .btn-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
         .btn-warning { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .btn-idle { background: #64748b; }
+        .btn-idle:hover { background: #475569; }
         
         /* Map Toggle Button */
         .map-toggle {
@@ -437,6 +439,31 @@
         .altitude-panel .info-text {
             color: #94a3b8 !important;
         }
+        
+        .register-btn {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0284c7;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 30px;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+            transition: all 0.3s;
+            text-decoration: none;
+            display: none;
+        }
+        .register-btn:hover {
+            background: #0369a1;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.6);
+        }
     </style>
 </head>
 <body>
@@ -450,7 +477,7 @@
                 <button id="choose-spectator-btn" class="btn modal-btn">👁️ Watch as Spectator</button>
                 <button id="choose-pilot-btn" class="btn btn-success modal-btn">🎈 Enter as Aeronaut</button>
                 <hr>
-                <a href="register.html" class="btn btn-warning modal-btn" style="display: block; text-decoration: none;">📝 Register New Pilot</a>
+                <a href="register.html" id="register-link" class="btn btn-warning modal-btn" style="display: block; text-decoration: none;">📝 Register New Pilot</a>
             </div>
             
             <div id="modal-pilot-login" style="display: none;">
@@ -467,6 +494,9 @@
     <div class="role-badge" id="role-badge" style="display: none;">
         <span id="role-text">👁️ SPECTATOR</span>
     </div>
+    
+    <!-- Register Button -->
+    <a href="register.html" class="register-btn" id="register-btn">📝 Register for Race</a>
     
     <!-- Map Toggle -->
     <button class="map-toggle" id="layer-toggle">🛰️ Satellite</button>
@@ -545,6 +575,7 @@
         let currentTileLayer;
         let flightStartTime = null;
         let flightTimerInterval = null;
+        let currentGameState = 'idle';
         
         // Tile Layers
         const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -557,6 +588,32 @@
             attribution: 'Tiles &copy; Esri',
             maxZoom: 19
         });
+        
+        // ============================================
+        // МАППИНГ СТАРЫХ СТИЛЕЙ
+        // ============================================
+        const styleMapping = {
+            'classic_blue': 'bal1',
+            'fire_red': 'bal2',
+            'emerald_go': 'bal3',
+            'gold_sunset': 'bal4',
+            'purple_strato': 'bal5',
+            'neon_toxic': 'bal6'
+        };
+        
+        function getImageUrl(balloon) {
+            let imageUrl = '/images/bal1.png';
+            if (balloon.balloonStyle && balloon.balloonStyle.image) {
+                imageUrl = balloon.balloonStyle.image;
+            } else if (balloon.balloonColor) {
+                let imageId = balloon.balloonColor;
+                if (styleMapping[imageId]) {
+                    imageId = styleMapping[imageId];
+                }
+                imageUrl = `/images/${imageId}.png`;
+            }
+            return imageUrl;
+        }
         
         // ============================================
         // ИНИЦИАЛИЗАЦИЯ КАРТЫ
@@ -610,7 +667,7 @@
         }
         
         // ============================================
-        // МАРКЕРЫ ШАРОВ - ОБНОВЛЕНО ДЛЯ PNG
+        // МАРКЕРЫ ШАРОВ
         // ============================================
         function clearBalloons() {
             Object.values(balloonsMarkers).forEach(marker => {
@@ -632,7 +689,7 @@
             let html = '';
             balloons.forEach(b => {
                 const isMe = myBalloonId === b.id;
-                const status = b.finished ? '🏆' : (currentConfig?.raceStarted ? '🎈' : '⏳');
+                const status = b.finished ? '🏆' : (currentGameState === 'racing' ? '🎈' : '⏳');
                 html += `
                     <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
                         <span>${status} <strong>${escapeHtml(b.username)}</strong> ${isMe ? '(you)' : ''}</span>
@@ -655,16 +712,8 @@
             balloons.forEach(b => {
                 if (b && b.lat && b.lng && !isNaN(b.lat) && !isNaN(b.lng)) {
                     const isMyBalloon = myBalloonId === b.id;
+                    const imageUrl = getImageUrl(b);
                     
-                    // Определяем URL изображения
-                    let imageUrl = '/images/bal1.png'; // по умолчанию
-                    if (b.balloonStyle && b.balloonStyle.image) {
-                        imageUrl = b.balloonStyle.image;
-                    } else if (b.balloonColor) {
-                        imageUrl = `/images/${b.balloonColor}.png`;
-                    }
-                    
-                    // Создаем иконку с PNG изображением
                     const icon = L.divIcon({ 
                         html: `<img src="${imageUrl}" style="width: ${isMyBalloon ? '36px' : '30px'}; height: ${isMyBalloon ? '36px' : '30px'}; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.6));">`,
                         iconSize: [isMyBalloon ? 36 : 30, isMyBalloon ? 36 : 30],
@@ -697,7 +746,7 @@
         }
         
         // ============================================
-        // ТРЕК ПОЛЕТА (для своего шара)
+        // ТРЕК ПОЛЕТА
         // ============================================
         function updatePath(balloon) {
             if (!map || !balloon || myBalloonId !== balloon.id) return;
@@ -713,28 +762,18 @@
         // ============================================
         function updatePilotUI(balloon) {
             if (!balloon) return;
-            console.log('🎈 Updating UI for balloon:', balloon.username, 'Speed:', balloon.speed, 'Wind direction:', balloon.windDirection);
+            console.log('🎈 Updating UI for balloon:', balloon.username);
             
             document.getElementById('pilot-name').innerHTML = escapeHtml(balloon.username);
             document.getElementById('race-number').innerHTML = `#${balloon.raceNumber}`;
-            
-            const speedElement = document.getElementById('balloon-speed');
-            const windDirectionElement = document.getElementById('wind-direction');
-    
-            if (speedElement) {
-                speedElement.innerHTML = `${Math.round(balloon.speed || 0)} m/s`;
-            }
-            if (windDirectionElement) {
-                windDirectionElement.innerHTML = balloon.windDirection ? `${balloon.windDirection}°` : '--';
-            }
-            
+            document.getElementById('balloon-speed').innerHTML = `${Math.round(balloon.speed || 0)} m/s`;
+            document.getElementById('wind-direction').innerHTML = balloon.windDirection ? `${balloon.windDirection}°` : '--';
             document.getElementById('altitude-value').innerHTML = `${balloon.altitude || 1000} m`;
             document.getElementById('current-altitude').innerHTML = `${balloon.altitude || 1000} m`;
             
             const slider = document.getElementById('altitude-slider');
             if (slider) slider.value = balloon.altitude || 1000;
             
-            // Layer info
             const alt = balloon.altitude || 1000;
             let layerText = '';
             if (alt < 2000) layerText = 'Surface Layer (0-2km) - Light winds 🌿';
@@ -743,13 +782,11 @@
             else layerText = 'Jet Stream (8km+) - Very fast winds ⚡';
             document.getElementById('layer-info').innerHTML = balloon.layerName || layerText;
             
-            // Distance to finish
             if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng) {
                 const dist = getDistance(balloon.lat, balloon.lng, currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
                 document.getElementById('distance-finish').innerHTML = `${dist.toFixed(1)} km`;
             }
             
-            // Distance traveled
             let totalDist = 0;
             if (balloon.path && balloon.path.length > 1) {
                 for (let i = 1; i < balloon.path.length; i++) {
@@ -833,6 +870,60 @@
         }
         
         // ============================================
+        // ОБНОВЛЕНИЕ UI В ЗАВИСИМОСТИ ОТ СОСТОЯНИЯ
+        // ============================================
+        function updateUIForState(state, config) {
+            currentGameState = state;
+            
+            const statusMap = {
+                'idle': { text: '⏸️ No race active', color: '#94a3b8' },
+                'registration': { text: '📝 Registration open!', color: '#fbbf24' },
+                'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981' },
+                'finished': { text: '🏆 RACE FINISHED', color: '#ef4444' }
+            };
+            
+            const info = statusMap[state] || statusMap['idle'];
+            const statusEl = document.getElementById('race-status');
+            if (statusEl) {
+                statusEl.innerHTML = info.text;
+                statusEl.style.color = info.color;
+            }
+            
+            // Показываем/скрываем кнопку регистрации
+            const registerBtn = document.getElementById('register-btn');
+            if (registerBtn) {
+                if (state === 'registration' || state === 'idle') {
+                    registerBtn.style.display = 'block';
+                } else {
+                    registerBtn.style.display = 'none';
+                }
+            }
+            
+            // Показываем/скрываем ссылку на регистрацию в модальном окне
+            const registerLink = document.getElementById('register-link');
+            if (registerLink) {
+                if (state === 'registration' || state === 'idle') {
+                    registerLink.style.display = 'block';
+                } else {
+                    registerLink.style.display = 'none';
+                }
+            }
+            
+            // Обновляем информацию о времени
+            if (config) {
+                if (config.raceStartDateTime) {
+                    const startTime = new Date(config.raceStartDateTime);
+                    document.getElementById('race-start-time').innerHTML = startTime.toLocaleString();
+                    if (config.raceDurationHours) {
+                        const endTime = new Date(startTime);
+                        endTime.setHours(endTime.getHours() + config.raceDurationHours);
+                        document.getElementById('race-deadline').innerHTML = endTime.toLocaleString();
+                    }
+                }
+            }
+        }
+        
+        // ============================================
         // ПОДКЛЮЧЕНИЕ К СОКЕТАМ
         // ============================================
         function connectSocket() {
@@ -877,7 +968,7 @@
                 const username = document.getElementById('login-username').value.trim();
                 const password = document.getElementById('login-password').value;
                 if (!username || !password) {
-                    displayAnnouncement({ message: 'Please enter both callsign and email', timestamp: Date.now() });
+                    displayAnnouncement({ message: 'Please enter both callsign and password', timestamp: Date.now() });
                     return;
                 }
                 socket.emit('fiesta-auth', { isSpectator: false, username: username, password: password });
@@ -921,31 +1012,6 @@
                 if (config.finishCoords?.lat && config.finishCoords?.lng) {
                     document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
                     
-                    if (config.raceStartDateTime) {
-                        const startTime = new Date(config.raceStartDateTime);
-                        document.getElementById('race-start-time').innerHTML = startTime.toLocaleString();
-                        if (config.raceDurationHours) {
-                            const endTime = new Date(startTime);
-                            endTime.setHours(endTime.getHours() + config.raceDurationHours);
-                            document.getElementById('race-deadline').innerHTML = endTime.toLocaleString();
-                        }
-                    }
-                    
-                    // Отображение статуса
-                    const statusMap = {
-                        'idle': { text: '⏸️ No race active', color: '#94a3b8' },
-                        'registration': { text: '📝 Registration open!', color: '#fbbf24' },
-                        'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981' },
-                        'finished': { text: '🏆 RACE FINISHED', color: '#ef4444' }
-                    };
-                    
-                    const statusInfo = statusMap[config.raceStatus] || statusMap['idle'];
-                    const statusEl = document.getElementById('race-status');
-                    if (statusEl) {
-                        statusEl.innerHTML = statusInfo.text;
-                        statusEl.style.color = statusInfo.color;
-                    }
-                    
                     if (finishMarker && map) map.removeLayer(finishMarker);
                     const finishIcon = L.divIcon({
                         html: '<span style="font-size: 32px;">🏁</span>',
@@ -957,9 +1023,28 @@
                     
                     updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
                 }
+                
+                // Обновляем UI в зависимости от состояния
+                if (config.raceStatus) {
+                    updateUIForState(config.raceStatus, config);
+                }
             });
             
-            // Balloons updates - ОБНОВЛЕНО для PNG
+            // State changed event
+            socket.on('fiesta-state-changed', (data) => {
+                console.log(`🔄 State changed: ${data.oldState} -> ${data.newState}`);
+                if (data.config) {
+                    currentConfig = data.config;
+                }
+                updateUIForState(data.newState, data.config || currentConfig);
+                
+                // Если состояние изменилось на racing, обновляем список шаров
+                if (data.newState === 'racing') {
+                    socket.emit('fiesta-get-participants');
+                }
+            });
+            
+            // Balloons updates
             socket.on('fiesta-all-balloons', (balloons) => {
                 if (balloons && Array.isArray(balloons)) {
                     updateBalloons(balloons);
@@ -972,17 +1057,10 @@
             
             socket.on('fiesta-balloon-updated', (balloon) => {
                 if (balloon && map && balloonsMarkers[balloon.id]) {
-                    // Обновляем позицию маркера
                     balloonsMarkers[balloon.id].setLatLng([balloon.lat, balloon.lng]);
                     
-                    // Обновляем иконку с PNG (на случай, если стиль изменился)
                     const isMyBalloon = myBalloonId === balloon.id;
-                    let imageUrl = '/images/bal1.png';
-                    if (balloon.balloonStyle && balloon.balloonStyle.image) {
-                        imageUrl = balloon.balloonStyle.image;
-                    } else if (balloon.balloonColor) {
-                        imageUrl = `/images/${balloon.balloonColor}.png`;
-                    }
+                    const imageUrl = getImageUrl(balloon);
                     
                     const newIcon = L.divIcon({ 
                         html: `<img src="${imageUrl}" style="width: ${isMyBalloon ? '36px' : '30px'}; height: ${isMyBalloon ? '36px' : '30px'}; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.6));">`,
@@ -1002,18 +1080,14 @@
             
             // Race events
             socket.on('fiesta-race-started', (data) => {
-                if (currentConfig) currentConfig.raceStarted = true;
-                document.getElementById('race-status').innerHTML = '🏁 RACE IN PROGRESS';
-                document.getElementById('race-status').style.color = '#10b981';
-                displayAnnouncement({ message: data.message, timestamp: Date.now() });
+                updateUIForState('racing', currentConfig);
+                displayAnnouncement({ message: data.message || '🏁 Race started!', timestamp: Date.now() });
             });
             
             socket.on('fiesta-race-finished', (data) => {
-                if (currentConfig) currentConfig.raceFinished = true;
-                document.getElementById('race-status').innerHTML = '🏆 RACE FINISHED';
-                document.getElementById('race-status').style.color = '#ef4444';
+                updateUIForState('finished', currentConfig);
                 if (flightTimerInterval) clearInterval(flightTimerInterval);
-                displayAnnouncement({ message: data.message, timestamp: Date.now() });
+                displayAnnouncement({ message: data.message || '🏆 Race finished!', timestamp: Date.now() });
             });
             
             socket.on('fiesta-admin-message', (data) => {
