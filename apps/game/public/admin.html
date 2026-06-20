@@ -70,6 +70,15 @@
         .btn-warning:hover { background: #b45309; }
         .btn-idle { background: #64748b; }
         .btn-idle:hover { background: #475569; }
+        .btn-disabled { 
+            background: #334155; 
+            cursor: not-allowed; 
+            opacity: 0.5; 
+        }
+        .btn-disabled:hover { 
+            background: #334155; 
+            transform: none; 
+        }
         .current-config {
             background: rgba(56,189,248,0.1);
             border-radius: 12px;
@@ -90,13 +99,46 @@
         .status-registration { background: #f59e0b; color: #000; }
         .status-racing { background: #10b981; color: #fff; }
         .status-finished { background: #ef4444; color: #fff; }
-        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 10px; }
         .info-text { font-size: 12px; color: #94a3b8; margin-top: 5px; }
         .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
         .button-group button { flex: 1; min-width: 120px; }
         .status-display { font-size: 18px; font-weight: bold; padding: 10px; border-radius: 10px; text-align: center; margin-top: 10px; }
         .connected-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; margin-right: 8px; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .transition-info {
+            background: rgba(251, 191, 36, 0.1);
+            border-left: 3px solid #fbbf24;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #fbbf24;
+        }
+        .state-rules {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .state-rule {
+            background: rgba(0,0,0,0.3);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            border-left: 3px solid #38bdf8;
+        }
+        .state-rule .from { color: #94a3b8; }
+        .state-rule .to { color: #fbbf24; font-weight: bold; }
+        .state-rule .arrow { color: #38bdf8; }
+        .scheduled-time {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 10px;
+        }
+        .scheduled-time .label { color: #94a3b8; font-size: 12px; }
+        .scheduled-time .value { color: #10b981; font-size: 14px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -138,24 +180,78 @@
                 <div class="status-display" id="status-display-box" style="background: #64748b; color: #fff;">
                     ⏸️ IDLE
                 </div>
-                <div class="info-text" style="margin-top: 10px; font-size: 11px; color: #94a3b8;">
-                    💡 <strong>Idle</strong> — гонка не активна, регистрация закрыта<br>
-                    💡 <strong>Registration</strong> — открыта регистрация <br>
-                    💡 <strong>Racing</strong> — гонка в процессе<br>
-                    💡 <strong>Finished</strong> — гонка завершена
+                
+                <!-- Правила переходов -->
+                <div class="state-rules">
+                    <div class="state-rule">
+                        <span class="from">IDLE</span> 
+                        <span class="arrow">→</span> 
+                        <span class="to">REGISTRATION</span>
+                        <div style="color:#94a3b8;font-size:10px;">Только из IDLE</div>
+                    </div>
+                    <div class="state-rule">
+                        <span class="from">REGISTRATION</span> 
+                        <span class="arrow">→</span> 
+                        <span class="to">RACING</span>
+                        <div style="color:#94a3b8;font-size:10px;">Только из REGISTRATION</div>
+                    </div>
+                    <div class="state-rule">
+                        <span class="from">REGISTRATION</span> 
+                        <span class="arrow">→</span> 
+                        <span class="to">IDLE</span>
+                        <div style="color:#94a3b8;font-size:10px;">Только из REGISTRATION</div>
+                    </div>
+                    <div class="state-rule">
+                        <span class="from">RACING</span> 
+                        <span class="arrow">→</span> 
+                        <span class="to">FINISHED</span>
+                        <div style="color:#94a3b8;font-size:10px;">Только из RACING</div>
+                    </div>
+                    <div class="state-rule" style="grid-column: span 2;">
+                        <span class="from">FINISHED</span> 
+                        <span class="arrow">→</span> 
+                        <span class="to">IDLE</span>
+                        <div style="color:#94a3b8;font-size:10px;">Только из FINISHED (очищает всех пилотов)</div>
+                    </div>
+                </div>
+
+                <div class="transition-info">
+                    💡 <strong>Правила переходов:</strong><br>
+                    • IDLE → REGISTRATION (только из IDLE)<br>
+                    • REGISTRATION → RACING (только из REGISTRATION)<br>
+                    • REGISTRATION → IDLE (только из REGISTRATION)<br>
+                    • RACING → FINISHED (только из RACING)<br>
+                    • FINISHED → IDLE (только из FINISHED, очищает всех пилотов)
                 </div>
             </div>
 
+            <!-- БЛОК ОТЛОЖЕННОГО СТАРТА -->
+            <div class="admin-card">
+                <h2>⏰ Scheduled Race Start</h2>
+                <div class="form-group">
+                    <label>Set race start time</label>
+                    <input type="datetime-local" id="scheduled-start-time" />
+                </div>
+                <button id="set-scheduled-start" class="btn-success">⏰ Set Scheduled Start</button>
+                <button id="cancel-scheduled-start" class="btn-danger" style="background:#b91c1c;">❌ Cancel Scheduled Start</button>
+                <div id="scheduled-display" class="scheduled-time" style="display:none;">
+                    <div class="label">⏰ Scheduled start:</div>
+                    <div class="value" id="scheduled-value">--</div>
+                </div>
+            </div>
+
+            <!-- БЛОК ОБЪЯВЛЕНИЙ -->
             <div class="admin-card">
                 <h2>💬 Admin Announcement</h2>
                 <div class="form-group">
                     <label>Message to all pilots</label>
-                    <textarea id="admin-message" placeholder="Enter your message here..."></textarea>
+                    <textarea id="admin-message" placeholder="Enter your message here..." maxlength="500"></textarea>
                     <div class="char-counter"><span id="char-count">0</span> / 500 characters</div>
                 </div>
                 <button id="send-announcement" class="btn-warning">📢 Send Announcement</button>
             </div>
 
+            <!-- НАСТРОЙКА ФИНИША -->
             <div class="admin-card">
                 <h2>📍 Finish Line</h2>
                 <div class="coord-group">
@@ -164,6 +260,7 @@
                 </div>
             </div>
 
+            <!-- НАСТРОЙКА СТАРТОВОЙ ЗОНЫ -->
             <div class="admin-card">
                 <h2>🗺️ Start Zone (Rectangle)</h2>
                 <div class="region-group">
@@ -174,6 +271,7 @@
                 </div>
             </div>
 
+            <!-- НАСТРОЙКА РЕГИСТРАЦИИ -->
             <div class="admin-card">
                 <h2>📝 Registration Window</h2>
                 <div class="coord-group">
@@ -188,6 +286,7 @@
                 </div>
             </div>
 
+            <!-- НАСТРОЙКА РАСПИСАНИЯ -->
             <div class="admin-card">
                 <h2>🏁 Race Schedule</h2>
                 <div class="form-group">
@@ -200,17 +299,21 @@
                 </div>
             </div>
 
+            <!-- КНОПКИ УПРАВЛЕНИЯ -->
             <div class="button-group">
                 <button id="save-config" class="btn-success">💾 Save Race Configuration</button>
                 <button id="force-start" class="btn-danger">🏁 Force Race Start</button>
                 <button id="force-finish" class="btn-danger" style="background:#b91c1c;">🏆 Force Race Finish</button>
+                <button id="reset-race" class="btn-idle">🔄 Reset Race (IDLE)</button>
             </div>
 
+            <!-- СТАТИСТИКА -->
             <div class="admin-card">
                 <h2>📊 Race Statistics</h2>
                 <div class="current-config" id="race-stats">Loading...</div>
             </div>
 
+            <!-- ТЕКУЩАЯ КОНФИГУРАЦИЯ -->
             <div class="admin-card">
                 <h2>📋 Current Race Rules</h2>
                 <div class="current-config" id="current-config">Loading...</div>
@@ -279,11 +382,22 @@
                 if (config.raceDurationHours) {
                     document.getElementById('race-duration').value = config.raceDurationHours;
                 }
+
+                if (config.scheduledStartTime) {
+                    document.getElementById('scheduled-display').style.display = 'block';
+                    document.getElementById('scheduled-value').textContent = new Date(config.scheduledStartTime).toLocaleString();
+                } else {
+                    document.getElementById('scheduled-display').style.display = 'none';
+                }
             });
 
-            socket.on('fiesta-status-changed', (data) => {
-                console.log('Status changed:', data);
-                updateStatusDisplay(data.status);
+            socket.on('fiesta-state-changed', (data) => {
+                console.log('State changed:', data);
+                updateStatusDisplay(data.newState);
+                if (data.config) {
+                    currentConfig = data.config;
+                    updateCurrentConfig(data.config);
+                }
                 socket.emit('fiesta-get-participants');
             });
 
@@ -321,9 +435,16 @@
                 socket.emit('fiesta-get-participants');
             });
 
+            socket.on('fiesta-scheduled-start-set', (data) => {
+                if (data.success) {
+                    alert(`✅ Scheduled start set to ${new Date(data.startTime).toLocaleString()}`);
+                    socket.emit('fiesta-get-participants');
+                }
+            });
+
             socket.on('fiesta-error', (error) => {
                 console.error('Server error:', error);
-                alert('Error: ' + error);
+                alert('❌ Error: ' + error);
             });
 
             setTimeout(() => {
@@ -354,6 +475,43 @@
                 badge.className = `status-badge ${info.badge}`;
                 badge.textContent = info.text;
             }
+
+            // Обновляем кнопки в зависимости от текущего состояния
+            updateButtons(status);
+        }
+
+        function updateButtons(currentStatus) {
+            const buttons = {
+                'status-idle': document.getElementById('status-idle'),
+                'status-registration': document.getElementById('status-registration'),
+                'status-racing': document.getElementById('status-racing'),
+                'status-finished': document.getElementById('status-finished')
+            };
+
+            // Разрешенные переходы
+            const transitions = {
+                'idle': ['status-registration'],
+                'registration': ['status-racing', 'status-idle'],
+                'racing': ['status-finished'],
+                'finished': ['status-idle']
+            };
+
+            const allowed = transitions[currentStatus] || [];
+
+            // Обновляем состояние кнопок
+            for (const [id, btn] of Object.entries(buttons)) {
+                const statusKey = id.replace('status-', '');
+                if (allowed.includes(id)) {
+                    btn.disabled = false;
+                    btn.className = btn.className.replace('btn-disabled', '').trim();
+                } else if (id !== 'status-' + currentStatus) {
+                    btn.disabled = true;
+                    btn.className += ' btn-disabled';
+                } else {
+                    btn.disabled = false;
+                    btn.className = btn.className.replace('btn-disabled', '').trim();
+                }
+            }
         }
 
         function updateCurrentConfig(config) {
@@ -379,31 +537,91 @@
             `;
         }
 
-        // Event listeners для кнопок статусов
+        // ============================================
+        // ОБРАБОТЧИКИ СОБЫТИЙ
+        // ============================================
+
+        // Кнопки управления статусами
         document.getElementById('status-idle').addEventListener('click', () => {
-            if (confirm('Set race status to IDLE? All registrations will be closed.')) {
-                socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'idle' });
+            if (currentConfig?.raceStatus === 'finished') {
+                if (confirm('⚠️ Переход в IDLE из FINISHED очистит всех пилотов! Продолжить?')) {
+                    socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'idle' });
+                }
+            } else if (currentConfig?.raceStatus === 'registration') {
+                if (confirm('Закрыть регистрацию и перейти в IDLE?')) {
+                    socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'idle' });
+                }
+            } else {
+                alert('❌ Переход в IDLE возможен только из REGISTRATION или FINISHED');
             }
         });
 
         document.getElementById('status-registration').addEventListener('click', () => {
-            if (confirm('Open registration? Pilots will be able to register for 7 days.')) {
-                socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'registration' });
+            if (currentConfig?.raceStatus === 'idle') {
+                if (confirm('Открыть регистрацию? Пилоты смогут регистрироваться в течение 7 дней.')) {
+                    socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'registration' });
+                }
+            } else {
+                alert('❌ Переход в REGISTRATION возможен только из IDLE');
             }
         });
 
         document.getElementById('status-racing').addEventListener('click', () => {
-            if (confirm('Start the race? All registered balloons will begin moving.')) {
-                socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'racing' });
-                // Также запускаем симуляцию для всех шаров
-                socket.emit('fiesta-force-race-start');
+            if (currentConfig?.raceStatus === 'registration') {
+                if (confirm('Запустить гонку? Все зарегистрированные шары начнут движение.')) {
+                    socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'racing' });
+                    socket.emit('fiesta-force-race-start');
+                }
+            } else {
+                alert('❌ Переход в RACING возможен только из REGISTRATION');
             }
         });
 
         document.getElementById('status-finished').addEventListener('click', () => {
-            if (confirm('Finish the race? All balloons will stop.')) {
-                socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'finished' });
-                socket.emit('fiesta-force-race-finish');
+            if (currentConfig?.raceStatus === 'racing') {
+                if (confirm('Завершить гонку? Все шары остановятся.')) {
+                    socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'finished' });
+                    socket.emit('fiesta-force-race-finish');
+                }
+            } else {
+                alert('❌ Переход в FINISHED возможен только из RACING');
+            }
+        });
+
+        // Отложенный старт
+        document.getElementById('set-scheduled-start').addEventListener('click', () => {
+            const startTime = document.getElementById('scheduled-start-time').value;
+            if (!startTime) {
+                alert('Пожалуйста, выберите время старта');
+                return;
+            }
+            
+            const startDate = new Date(startTime);
+            if (startDate <= new Date()) {
+                alert('Время старта должно быть в будущем');
+                return;
+            }
+            
+            if (currentConfig?.raceStatus !== 'registration') {
+                alert('❌ Отложенный старт можно установить только в режиме REGISTRATION');
+                return;
+            }
+            
+            if (confirm(`Установить старт гонки на ${startDate.toLocaleString()}?`)) {
+                socket.emit('fiesta-set-scheduled-start', {
+                    adminKey: ADMIN_KEY,
+                    startTime: startTime
+                });
+            }
+        });
+
+        document.getElementById('cancel-scheduled-start').addEventListener('click', () => {
+            if (confirm('Отменить запланированный старт?')) {
+                socket.emit('fiesta-set-scheduled-start', {
+                    adminKey: ADMIN_KEY,
+                    startTime: null
+                });
+                document.getElementById('scheduled-display').style.display = 'none';
             }
         });
 
@@ -452,21 +670,45 @@
         });
 
         document.getElementById('force-start').addEventListener('click', () => {
-            if (confirm('⚠️ Force start the race?')) {
-                socket.emit('fiesta-force-race-start');
+            if (currentConfig?.raceStatus === 'registration') {
+                if (confirm('⚠️ Принудительно запустить гонку?')) {
+                    socket.emit('fiesta-force-race-start');
+                }
+            } else {
+                alert('❌ Принудительный старт возможен только из режима REGISTRATION');
             }
         });
 
         document.getElementById('force-finish').addEventListener('click', () => {
-            if (confirm('🏆 Force finish the race?')) {
-                socket.emit('fiesta-force-race-finish');
+            if (currentConfig?.raceStatus === 'racing') {
+                if (confirm('🏆 Принудительно завершить гонку?')) {
+                    socket.emit('fiesta-force-race-finish');
+                }
+            } else {
+                alert('❌ Принудительный финиш возможен только из режима RACING');
             }
+        });
+
+        document.getElementById('reset-race').addEventListener('click', () => {
+            if (currentConfig?.raceStatus === 'finished') {
+                if (confirm('🔄 Сбросить гонку? Все пилоты будут удалены.')) {
+                    socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'idle' });
+                }
+            } else {
+                alert('❌ Сброс гонки возможен только из режима FINISHED');
+            }
+        });
+
+        // Счетчик символов
+        document.getElementById('admin-message').addEventListener('input', function() {
+            document.getElementById('char-count').textContent = this.value.length;
         });
 
         document.getElementById('admin-key').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') login();
         });
 
+        // Обновление статистики
         setInterval(() => {
             if (socket && socket.connected) {
                 socket.emit('fiesta-get-participants');
