@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -210,9 +210,13 @@
             transform: scale(1.02);
         }
         
-        /* Маркеры */
-        .my-balloon-marker { filter: drop-shadow(0 0 4px #10b981); }
-        .balloon-marker { filter: drop-shadow(0 0 2px #38bdf8); }
+        /* Маркеры - ОБНОВЛЕНО для PNG */
+        .my-balloon-marker { 
+            filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.8));
+        }
+        .balloon-marker { 
+            filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.5));
+        }
         
         .finish-marker {
             background: none !important;
@@ -391,52 +395,48 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-/* Исправление цветов в Balloon Controls */
-.altitude-panel,
-.altitude-panel div,
-.altitude-panel span,
-.altitude-panel h3 {
-    color: #ffffff !important;
-}
-
-.altitude-panel .info-item span:first-child {
-    color: #94a3b8 !important;
-}
-
-.altitude-panel .info-item span:last-child {
-    color: #fbbf24 !important;
-    font-weight: bold;
-}
-
-.altitude-panel .stat-row span:first-child {
-    color: #94a3b8 !important;
-}
-
-.altitude-panel .stat-row span:last-child {
-    color: #22c55e !important;
-    font-weight: bold;
-}
-
-.altitude-panel .altitude-value {
-    color: #ff9800 !important;
-    font-size: 24px;
-    font-weight: bold;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-}
-
-.altitude-panel .layer-info {
-    color: #a5f3fc !important;
-    background: rgba(0, 0, 0, 0.6);
-}
-
-.altitude-panel .info-text {
-    color: #94a3b8 !important;
-}
-
-
-
-
         
+        /* Исправление цветов в Balloon Controls */
+        .altitude-panel,
+        .altitude-panel div,
+        .altitude-panel span,
+        .altitude-panel h3 {
+            color: #ffffff !important;
+        }
+        
+        .altitude-panel .info-item span:first-child {
+            color: #94a3b8 !important;
+        }
+        
+        .altitude-panel .info-item span:last-child {
+            color: #fbbf24 !important;
+            font-weight: bold;
+        }
+        
+        .altitude-panel .stat-row span:first-child {
+            color: #94a3b8 !important;
+        }
+        
+        .altitude-panel .stat-row span:last-child {
+            color: #22c55e !important;
+            font-weight: bold;
+        }
+        
+        .altitude-panel .altitude-value {
+            color: #ff9800 !important;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        .altitude-panel .layer-info {
+            color: #a5f3fc !important;
+            background: rgba(0, 0, 0, 0.6);
+        }
+        
+        .altitude-panel .info-text {
+            color: #94a3b8 !important;
+        }
     </style>
 </head>
 <body>
@@ -610,7 +610,7 @@
         }
         
         // ============================================
-        // МАРКЕРЫ ШАРОВ
+        // МАРКЕРЫ ШАРОВ - ОБНОВЛЕНО ДЛЯ PNG
         // ============================================
         function clearBalloons() {
             Object.values(balloonsMarkers).forEach(marker => {
@@ -655,18 +655,35 @@
             balloons.forEach(b => {
                 if (b && b.lat && b.lng && !isNaN(b.lat) && !isNaN(b.lng)) {
                     const isMyBalloon = myBalloonId === b.id;
+                    
+                    // Определяем URL изображения
+                    let imageUrl = '/images/bal1.png'; // по умолчанию
+                    if (b.balloonStyle && b.balloonStyle.image) {
+                        imageUrl = b.balloonStyle.image;
+                    } else if (b.balloonColor) {
+                        imageUrl = `/images/${b.balloonColor}.png`;
+                    }
+                    
+                    // Создаем иконку с PNG изображением
                     const icon = L.divIcon({ 
-                        html: `<div style="font-size: ${isMyBalloon ? '28px' : '24px'}; text-align: center;">${isMyBalloon ? '🎈' : '🪁'}</div>`, 
-                        iconSize: [32, 32],
+                        html: `<img src="${imageUrl}" style="width: ${isMyBalloon ? '36px' : '30px'}; height: ${isMyBalloon ? '36px' : '30px'}; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.6));">`,
+                        iconSize: [isMyBalloon ? 36 : 30, isMyBalloon ? 36 : 30],
                         className: isMyBalloon ? 'my-balloon-marker' : 'balloon-marker',
-                        popupAnchor: [0, -10]
+                        popupAnchor: [0, -15]
                     });
                     
                     try {
                         const marker = L.marker([b.lat, b.lng], { icon }).addTo(map);
-                        let popupContent = `<b>${escapeHtml(b.username)}</b><br>#${b.raceNumber}<br>🎯 ${Math.round(b.speed || 0)} km/h`;
+                        let popupContent = `
+                            <div style="font-size:13px;">
+                                <b>${escapeHtml(b.username)}</b><br>
+                                🎈 ${b.balloonStyle?.name || b.balloonColor || 'Balloon'}<br>
+                                #${b.raceNumber}<br>
+                                💨 ${Math.round(b.speed || 0)} m/s
+                        `;
                         if (b.altitude) popupContent += `<br>📈 ${b.altitude}m`;
                         if (b.windDirection) popupContent += `<br>🧭 ${b.windDirection}°`;
+                        popupContent += `</div>`;
                         marker.bindPopup(popupContent);
                         balloonsMarkers[b.id] = marker;
                     } catch(e) {
@@ -754,8 +771,6 @@
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             return R * c;
         }
-        
-  
         
         // ============================================
         // УВЕДОМЛЕНИЯ
@@ -882,7 +897,7 @@
                     document.getElementById('altitude-panel').style.display = 'block';
                     if (data.balloon) {
                         updatePilotUI(data.balloon);
-                 }
+                    }
                     displayAnnouncement({ message: `Welcome back, ${data.balloon?.username || 'Pilot'}!`, timestamp: Date.now() });
                 } else {
                     myRole = 'spectator';
@@ -899,52 +914,52 @@
             });
             
             // Race config
-           socket.on('fiesta-race-config', (config) => {
-    console.log('Race config received');
-    currentConfig = config;
-    
-    if (config.finishCoords?.lat && config.finishCoords?.lng) {
-        document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
-        
-        if (config.raceStartDateTime) {
-            const startTime = new Date(config.raceStartDateTime);
-            document.getElementById('race-start-time').innerHTML = startTime.toLocaleString();
-            if (config.raceDurationHours) {
-                const endTime = new Date(startTime);
-                endTime.setHours(endTime.getHours() + config.raceDurationHours);
-                document.getElementById('race-deadline').innerHTML = endTime.toLocaleString();
-            }
-        }
-        
-        // Отображение статуса
-        const statusMap = {
-            'idle': { text: '⏸️ No race active', color: '#94a3b8' },
-            'registration': { text: '📝 Registration open!', color: '#fbbf24' },
-            'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981' },
-            'finished': { text: '🏆 RACE FINISHED', color: '#ef4444' }
-        };
-        
-        const statusInfo = statusMap[config.raceStatus] || statusMap['idle'];
-        const statusEl = document.getElementById('race-status');
-        if (statusEl) {
-            statusEl.innerHTML = statusInfo.text;
-            statusEl.style.color = statusInfo.color;
-        }
-        
-        if (finishMarker && map) map.removeLayer(finishMarker);
-        const finishIcon = L.divIcon({
-            html: '<span style="font-size: 32px;">🏁</span>',
-            iconSize: [32, 32],
-            className: 'finish-marker'
-        });
-        finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
-        finishMarker.bindPopup('<b>🏁 FINISH LINE</b><br>First within 50km wins!');
-        
-        updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
-    }
-});
+            socket.on('fiesta-race-config', (config) => {
+                console.log('Race config received');
+                currentConfig = config;
+                
+                if (config.finishCoords?.lat && config.finishCoords?.lng) {
+                    document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
+                    
+                    if (config.raceStartDateTime) {
+                        const startTime = new Date(config.raceStartDateTime);
+                        document.getElementById('race-start-time').innerHTML = startTime.toLocaleString();
+                        if (config.raceDurationHours) {
+                            const endTime = new Date(startTime);
+                            endTime.setHours(endTime.getHours() + config.raceDurationHours);
+                            document.getElementById('race-deadline').innerHTML = endTime.toLocaleString();
+                        }
+                    }
+                    
+                    // Отображение статуса
+                    const statusMap = {
+                        'idle': { text: '⏸️ No race active', color: '#94a3b8' },
+                        'registration': { text: '📝 Registration open!', color: '#fbbf24' },
+                        'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981' },
+                        'finished': { text: '🏆 RACE FINISHED', color: '#ef4444' }
+                    };
+                    
+                    const statusInfo = statusMap[config.raceStatus] || statusMap['idle'];
+                    const statusEl = document.getElementById('race-status');
+                    if (statusEl) {
+                        statusEl.innerHTML = statusInfo.text;
+                        statusEl.style.color = statusInfo.color;
+                    }
+                    
+                    if (finishMarker && map) map.removeLayer(finishMarker);
+                    const finishIcon = L.divIcon({
+                        html: '<span style="font-size: 32px;">🏁</span>',
+                        iconSize: [32, 32],
+                        className: 'finish-marker'
+                    });
+                    finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
+                    finishMarker.bindPopup('<b>🏁 FINISH LINE</b><br>First within 50km wins!');
+                    
+                    updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
+                }
+            });
             
-            // Balloons updates
+            // Balloons updates - ОБНОВЛЕНО для PNG
             socket.on('fiesta-all-balloons', (balloons) => {
                 if (balloons && Array.isArray(balloons)) {
                     updateBalloons(balloons);
@@ -957,7 +972,26 @@
             
             socket.on('fiesta-balloon-updated', (balloon) => {
                 if (balloon && map && balloonsMarkers[balloon.id]) {
+                    // Обновляем позицию маркера
                     balloonsMarkers[balloon.id].setLatLng([balloon.lat, balloon.lng]);
+                    
+                    // Обновляем иконку с PNG (на случай, если стиль изменился)
+                    const isMyBalloon = myBalloonId === balloon.id;
+                    let imageUrl = '/images/bal1.png';
+                    if (balloon.balloonStyle && balloon.balloonStyle.image) {
+                        imageUrl = balloon.balloonStyle.image;
+                    } else if (balloon.balloonColor) {
+                        imageUrl = `/images/${balloon.balloonColor}.png`;
+                    }
+                    
+                    const newIcon = L.divIcon({ 
+                        html: `<img src="${imageUrl}" style="width: ${isMyBalloon ? '36px' : '30px'}; height: ${isMyBalloon ? '36px' : '30px'}; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.6));">`,
+                        iconSize: [isMyBalloon ? 36 : 30, isMyBalloon ? 36 : 30],
+                        className: isMyBalloon ? 'my-balloon-marker' : 'balloon-marker',
+                        popupAnchor: [0, -15]
+                    });
+                    balloonsMarkers[balloon.id].setIcon(newIcon);
+                    
                     if (myRole === 'pilot' && myBalloonId === balloon.id) {
                         updatePilotUI(balloon);
                     }
