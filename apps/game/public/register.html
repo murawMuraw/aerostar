@@ -887,28 +887,47 @@
                 checkRegistrationValidation();
             });
             
-            socket.on('fiesta-balloon-catalog', (catalog) => {
-                const grid = document.getElementById('catalog-grid');
-                if (grid && catalog) {
-                    grid.innerHTML = '';
-                    Object.values(catalog).forEach(item => {
-                        const card = document.createElement('div');
-                        card.className = 'skin-card';
-                        card.dataset.id = item.id;
-                        card.innerHTML = `<div class="skin-preview">🎈</div><div class="skin-name">${escapeHtml(item.name)}</div>`;
-                        if (item.id === 'classic') card.classList.add('selected');
-                        card.addEventListener('click', () => {
-                            document.querySelectorAll('.skin-card').forEach(c => c.classList.remove('selected'));
-                            card.classList.add('selected');
-                            selectedStyleId = item.id;
-                            document.getElementById('selected-balloon-info').innerHTML = `Selected: <strong>${escapeHtml(item.name)}</strong>`;
-                            checkRegistrationValidation();
-                        });
-                        grid.appendChild(card);
-                    });
-                }
-            });
             
+           
+socket.on('fiesta-balloon-catalog', (catalog) => {
+    const grid = document.getElementById('catalog-grid');
+    if (grid && catalog) {
+        grid.innerHTML = '';
+        // Преобразуем объект в массив для итерации
+        const styles = Object.values(catalog);
+        styles.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'skin-card';
+            card.dataset.id = item.id;
+            
+            // Определяем, какой шар выбран по умолчанию (первый в списке)
+            if (index === 0) {
+                card.classList.add('selected');
+                // Обновляем информацию о выбранном шаре
+                document.getElementById('selected-balloon-info').innerHTML = `Selected: <strong>${escapeHtml(item.name)}</strong>`;
+                // Устанавливаем первый шар как выбранный по умолчанию
+                selectedStyleId = item.id;
+            }
+            
+            // Создаем HTML для карточки с изображением
+            card.innerHTML = `
+                <div class="skin-preview">
+                    <img src="${item.image}" alt="${escapeHtml(item.name)}" style="width: 48px; height: 48px; object-fit: contain;">
+                </div>
+                <div class="skin-name">${escapeHtml(item.name)}</div>
+            `;
+            
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.skin-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedStyleId = item.id;
+                document.getElementById('selected-balloon-info').innerHTML = `Selected: <strong>${escapeHtml(item.name)}</strong>`;
+                checkRegistrationValidation();
+            });
+            grid.appendChild(card);
+        });
+    }
+});
             socket.on('fiesta-all-balloons', (balloons) => {
                 const container = document.getElementById('participants-container');
                 if (!balloons || balloons.length === 0) {
