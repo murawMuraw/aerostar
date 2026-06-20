@@ -61,24 +61,20 @@
             transition: all 0.3s;
             margin-bottom: 10px;
         }
-        button:hover { background: #0369a1; transform: translateY(-2px); }
+        button:hover:not(:disabled) { background: #0369a1; transform: translateY(-2px); }
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
         .btn-danger { background: #dc2626; }
-        .btn-danger:hover { background: #b91c1c; }
+        .btn-danger:hover:not(:disabled) { background: #b91c1c; }
         .btn-success { background: #059669; }
-        .btn-success:hover { background: #047857; }
+        .btn-success:hover:not(:disabled) { background: #047857; }
         .btn-warning { background: #d97706; }
-        .btn-warning:hover { background: #b45309; }
+        .btn-warning:hover:not(:disabled) { background: #b45309; }
         .btn-idle { background: #64748b; }
-        .btn-idle:hover { background: #475569; }
-        .btn-disabled { 
-            background: #334155; 
-            cursor: not-allowed; 
-            opacity: 0.5; 
-        }
-        .btn-disabled:hover { 
-            background: #334155; 
-            transform: none; 
-        }
+        .btn-idle:hover:not(:disabled) { background: #475569; }
         .current-config {
             background: rgba(56,189,248,0.1);
             border-radius: 12px;
@@ -114,22 +110,6 @@
             font-size: 12px;
             color: #fbbf24;
         }
-        .state-rules {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 15px;
-        }
-        .state-rule {
-            background: rgba(0,0,0,0.3);
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 11px;
-            border-left: 3px solid #38bdf8;
-        }
-        .state-rule .from { color: #94a3b8; }
-        .state-rule .to { color: #fbbf24; font-weight: bold; }
-        .state-rule .arrow { color: #38bdf8; }
         .scheduled-time {
             background: rgba(16, 185, 129, 0.1);
             border: 1px solid rgba(16, 185, 129, 0.3);
@@ -148,6 +128,17 @@
             padding: 10px;
             font-size: 14px;
         }
+        .status-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        .status-info .label { color: #94a3b8; font-size: 12px; }
+        .status-info .value { color: #fbbf24; font-size: 14px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -174,67 +165,23 @@
                 <button id="logout-btn" style="width: auto; padding: 8px 20px; margin-top: 10px;">Logout</button>
             </div>
 
-            <!-- БЛОК УПРАВЛЕНИЯ СТАТУСАМИ -->
+            <!-- БЛОК ТЕКУЩЕГО СТАТУСА -->
             <div class="admin-card">
-                <h2>🎯 Race Status Control</h2>
-                <div class="button-group">
-                    <button id="status-idle" class="btn-idle">⏸️ Idle</button>
-                    <button id="status-registration" class="btn-warning">📝 Registration</button>
-                    <button id="status-racing" class="btn-success">🏁 Racing</button>
-                    <button id="status-finished" class="btn-danger">🏆 Finished</button>
-                </div>
-                <div class="info-text" style="margin-top: 10px;">
-                    Current status: <strong id="status-display-text">unknown</strong>
-                </div>
+                <h2>📊 Race Status</h2>
                 <div class="status-display" id="status-display-box" style="background: #64748b; color: #fff;">
                     ⏸️ IDLE
                 </div>
-                
-                <!-- Правила переходов -->
-                <div class="state-rules">
-                    <div class="state-rule">
-                        <span class="from">IDLE</span> 
-                        <span class="arrow">→</span> 
-                        <span class="to">REGISTRATION</span>
-                        <div style="color:#94a3b8;font-size:10px;">Только из IDLE</div>
-                    </div>
-                    <div class="state-rule">
-                        <span class="from">REGISTRATION</span> 
-                        <span class="arrow">→</span> 
-                        <span class="to">RACING</span>
-                        <div style="color:#94a3b8;font-size:10px;">Только из REGISTRATION</div>
-                    </div>
-                    <div class="state-rule">
-                        <span class="from">REGISTRATION</span> 
-                        <span class="arrow">→</span> 
-                        <span class="to">IDLE</span>
-                        <div style="color:#94a3b8;font-size:10px;">Только из REGISTRATION</div>
-                    </div>
-                    <div class="state-rule">
-                        <span class="from">RACING</span> 
-                        <span class="arrow">→</span> 
-                        <span class="to">FINISHED</span>
-                        <div style="color:#94a3b8;font-size:10px;">Только из RACING</div>
-                    </div>
-                    <div class="state-rule" style="grid-column: span 2;">
-                        <span class="from">FINISHED</span> 
-                        <span class="arrow">→</span> 
-                        <span class="to">IDLE</span>
-                        <div style="color:#94a3b8;font-size:10px;">Только из FINISHED (очищает всех пилотов)</div>
-                    </div>
+                <div class="status-info">
+                    <span class="label">Current status:</span>
+                    <span class="value" id="status-display-text">idle</span>
                 </div>
-
-                <div class="transition-info">
-                    💡 <strong>Правила переходов:</strong><br>
-                    • IDLE → REGISTRATION (только из IDLE)<br>
-                    • REGISTRATION → RACING (только из REGISTRATION)<br>
-                    • REGISTRATION → IDLE (только из REGISTRATION)<br>
-                    • RACING → FINISHED (только из RACING)<br>
-                    • FINISHED → IDLE (только из FINISHED, очищает всех пилотов)
+                <div class="status-info">
+                    <span class="label">Registered pilots:</span>
+                    <span class="value" id="pilot-count-display">0</span>
                 </div>
             </div>
 
-            <!-- БЛОК ЗАПЛАНИРОВАННОГО СТАРТА (ОБЪЕДИНЕННЫЙ) -->
+            <!-- БЛОК ЗАПЛАНИРОВАННОГО СТАРТА -->
             <div class="admin-card">
                 <h2>⏰ Scheduled Race Start</h2>
                 <div class="form-group">
@@ -306,11 +253,18 @@
             </div>
 
             <!-- КНОПКИ УПРАВЛЕНИЯ -->
-            <div class="button-group">
-                <button id="save-config" class="btn-success">💾 Save Race Configuration</button>
-                <button id="force-start" class="btn-danger">🏁 Force Race Start</button>
-                <button id="force-finish" class="btn-danger" style="background:#b91c1c;">🏆 Force Race Finish</button>
-                <button id="reset-race" class="btn-idle">🔄 Reset Race (IDLE)</button>
+            <div class="admin-card">
+                <h2>🎮 Race Controls</h2>
+                <div class="button-group">
+                    <button id="save-config" class="btn-success">💾 Save Configuration</button>
+                    <button id="finish-race" class="btn-danger">🏆 Finish Race</button>
+                    <button id="reset-race" class="btn-idle">🔄 Reset Race</button>
+                </div>
+                <div class="info-text" style="margin-top: 10px;">
+                    💡 <strong>Save Configuration</strong> — сохраняет настройки и запускает гонку по расписанию<br>
+                    💡 <strong>Finish Race</strong> — завершает гонку (активно только в режиме RACING)<br>
+                    💡 <strong>Reset Race</strong> — очищает всех пилотов и переводит в режим IDLE
+                </div>
             </div>
 
             <!-- СТАТИСТИКА -->
@@ -391,6 +345,8 @@
                 } else {
                     document.getElementById('scheduled-display').style.display = 'none';
                 }
+
+                updateButtons(config.raceStatus);
             });
 
             socket.on('fiesta-state-changed', (data) => {
@@ -400,6 +356,7 @@
                     currentConfig = data.config;
                     updateCurrentConfig(data.config);
                 }
+                updateButtons(data.newState);
                 socket.emit('fiesta-get-participants');
             });
 
@@ -407,6 +364,8 @@
                 const stats = document.getElementById('race-stats');
                 const registered = balloons.length;
                 const finished = balloons.filter(b => b.finished).length;
+
+                document.getElementById('pilot-count-display').textContent = registered;
 
                 if (registered === 0) {
                     stats.innerHTML = 'No participants registered yet';
@@ -423,7 +382,7 @@
 
             socket.on('fiesta-config-saved', (data) => {
                 if (data.success) {
-                    alert('✅ Configuration saved successfully!');
+                    alert('✅ Configuration saved successfully! Race will start at scheduled time.');
                 }
             });
 
@@ -477,37 +436,35 @@
                 badge.className = `status-badge ${info.badge}`;
                 badge.textContent = info.text;
             }
-
-            updateButtons(status);
         }
 
         function updateButtons(currentStatus) {
-            const buttons = {
-                'status-idle': document.getElementById('status-idle'),
-                'status-registration': document.getElementById('status-registration'),
-                'status-racing': document.getElementById('status-racing'),
-                'status-finished': document.getElementById('status-finished')
-            };
+            const finishBtn = document.getElementById('finish-race');
+            const resetBtn = document.getElementById('reset-race');
+            const saveBtn = document.getElementById('save-config');
 
-            const transitions = {
-                'idle': ['status-registration'],
-                'registration': ['status-racing', 'status-idle'],
-                'racing': ['status-finished'],
-                'finished': ['status-idle']
-            };
-
-            const allowed = transitions[currentStatus] || [];
-
-            for (const [id, btn] of Object.entries(buttons)) {
-                if (allowed.includes(id)) {
-                    btn.disabled = false;
-                    btn.className = btn.className.replace('btn-disabled', '').trim();
-                } else if (id !== 'status-' + currentStatus) {
-                    btn.disabled = true;
-                    btn.className += ' btn-disabled';
+            // Кнопка "Finish Race" активна только в режиме RACING
+            if (finishBtn) {
+                finishBtn.disabled = (currentStatus !== 'racing');
+                if (currentStatus === 'racing') {
+                    finishBtn.title = 'Завершить гонку';
                 } else {
-                    btn.disabled = false;
-                    btn.className = btn.className.replace('btn-disabled', '').trim();
+                    finishBtn.title = 'Доступно только в режиме RACING';
+                }
+            }
+
+            // Кнопка "Reset Race" активна всегда, но предупреждает
+            if (resetBtn) {
+                resetBtn.disabled = false;
+            }
+
+            // Кнопка "Save Configuration" активна в режимах IDLE и REGISTRATION
+            if (saveBtn) {
+                saveBtn.disabled = (currentStatus === 'racing' || currentStatus === 'finished');
+                if (currentStatus === 'racing' || currentStatus === 'finished') {
+                    saveBtn.title = 'Недоступно во время гонки или после финиша';
+                } else {
+                    saveBtn.title = 'Сохранить настройки и запустить гонку по расписанию';
                 }
             }
         }
@@ -539,54 +496,7 @@
         // ОБРАБОТЧИКИ СОБЫТИЙ
         // ============================================
 
-        // Кнопки управления статусами
-        document.getElementById('status-idle').addEventListener('click', () => {
-            if (currentConfig?.raceStatus === 'finished') {
-                if (confirm('⚠️ Переход в IDLE из FINISHED очистит всех пилотов! Продолжить?')) {
-                    socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'idle' });
-                }
-            } else if (currentConfig?.raceStatus === 'registration') {
-                if (confirm('Закрыть регистрацию и перейти в IDLE?')) {
-                    socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'idle' });
-                }
-            } else {
-                alert('❌ Переход в IDLE возможен только из REGISTRATION или FINISHED');
-            }
-        });
-
-        document.getElementById('status-registration').addEventListener('click', () => {
-            if (currentConfig?.raceStatus === 'idle') {
-                if (confirm('Открыть регистрацию? Пилоты смогут регистрироваться в течение 7 дней.')) {
-                    socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'registration' });
-                }
-            } else {
-                alert('❌ Переход в REGISTRATION возможен только из IDLE');
-            }
-        });
-
-        document.getElementById('status-racing').addEventListener('click', () => {
-            if (currentConfig?.raceStatus === 'registration') {
-                if (confirm('Запустить гонку? Все зарегистрированные шары начнут движение.')) {
-                    socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'racing' });
-                    socket.emit('fiesta-force-race-start');
-                }
-            } else {
-                alert('❌ Переход в RACING возможен только из REGISTRATION');
-            }
-        });
-
-        document.getElementById('status-finished').addEventListener('click', () => {
-            if (currentConfig?.raceStatus === 'racing') {
-                if (confirm('Завершить гонку? Все шары остановятся.')) {
-                    socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'finished' });
-                    socket.emit('fiesta-force-race-finish');
-                }
-            } else {
-                alert('❌ Переход в FINISHED возможен только из RACING');
-            }
-        });
-
-        // Отложенный старт (объединенный с продолжительностью)
+        // Отложенный старт
         document.getElementById('set-scheduled-start').addEventListener('click', () => {
             const startTime = document.getElementById('scheduled-start-time').value;
             const duration = parseInt(document.getElementById('race-duration').value);
@@ -607,23 +517,16 @@
                 return;
             }
             
-            if (currentConfig?.raceStatus !== 'registration') {
-                alert('❌ Отложенный старт можно установить только в режиме REGISTRATION');
+            if (currentConfig?.raceStatus !== 'registration' && currentConfig?.raceStatus !== 'idle') {
+                alert('❌ Отложенный старт можно установить только в режиме REGISTRATION или IDLE');
                 return;
             }
             
             if (confirm(`Установить старт гонки на ${startDate.toLocaleString()} с продолжительностью ${duration} часов?`)) {
-                // Отправляем и время старта, и продолжительность
                 socket.emit('fiesta-set-scheduled-start', {
                     adminKey: ADMIN_KEY,
                     startTime: startTime,
                     duration: duration
-                });
-                
-                // Также сохраняем продолжительность в конфигурации
-                socket.emit('fiesta-admin-change-rules', {
-                    adminKey: ADMIN_KEY,
-                    raceDurationHours: duration
                 });
             }
         });
@@ -635,6 +538,78 @@
                     startTime: null
                 });
                 document.getElementById('scheduled-display').style.display = 'none';
+            }
+        });
+
+        // Save Configuration
+        document.getElementById('save-config').addEventListener('click', () => {
+            if (currentConfig?.raceStatus === 'racing' || currentConfig?.raceStatus === 'finished') {
+                alert('❌ Нельзя сохранить конфигурацию во время гонки или после финиша');
+                return;
+            }
+
+            const duration = parseInt(document.getElementById('race-duration').value);
+            const startTime = document.getElementById('scheduled-start-time').value;
+            
+            if (!startTime) {
+                alert('Пожалуйста, установите время старта перед сохранением');
+                return;
+            }
+
+            const config = {
+                adminKey: ADMIN_KEY,
+                finishCoords: {
+                    lat: parseFloat(document.getElementById('finish-lat').value),
+                    lng: parseFloat(document.getElementById('finish-lng').value)
+                },
+                allowedStartRegion: {
+                    minLat: parseFloat(document.getElementById('min-lat').value),
+                    maxLat: parseFloat(document.getElementById('max-lat').value),
+                    minLng: parseFloat(document.getElementById('min-lng').value),
+                    maxLng: parseFloat(document.getElementById('max-lng').value)
+                },
+                registrationWindowFrom: document.getElementById('reg-from').value,
+                registrationWindowTo: document.getElementById('reg-to').value,
+                raceDurationHours: duration || 24,
+                scheduledStartTime: startTime
+            };
+
+            if (confirm('Сохранить конфигурацию? Гонка начнется автоматически в установленное время.')) {
+                socket.emit('fiesta-admin-change-rules', config);
+                // Также устанавливаем запланированный старт
+                socket.emit('fiesta-set-scheduled-start', {
+                    adminKey: ADMIN_KEY,
+                    startTime: startTime,
+                    duration: duration || 24
+                });
+            }
+        });
+
+        // Finish Race - только из RACING
+        document.getElementById('finish-race').addEventListener('click', () => {
+            if (currentConfig?.raceStatus !== 'racing') {
+                alert('❌ Завершить гонку можно только в режиме RACING');
+                return;
+            }
+            
+            if (confirm('🏆 Завершить гонку? Все шары остановятся.')) {
+                socket.emit('fiesta-force-race-finish');
+                socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'finished' });
+            }
+        });
+
+        // Reset Race - очищает всё и переводит в IDLE
+        document.getElementById('reset-race').addEventListener('click', () => {
+            if (currentConfig?.raceStatus === 'idle') {
+                alert('Гонка уже в режиме IDLE');
+                return;
+            }
+            
+            if (confirm('🔄 Сбросить гонку? Будут удалены все пилоты и очищены настройки.')) {
+                socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'idle' });
+                // Очищаем отображение запланированного старта
+                document.getElementById('scheduled-display').style.display = 'none';
+                alert('✅ Гонка сброшена. Все пилоты удалены.');
             }
         });
 
@@ -660,65 +635,13 @@
             document.getElementById('char-count').textContent = '0';
         });
 
-        document.getElementById('save-config').addEventListener('click', () => {
-            const duration = parseInt(document.getElementById('race-duration').value);
-            const config = {
-                adminKey: ADMIN_KEY,
-                finishCoords: {
-                    lat: parseFloat(document.getElementById('finish-lat').value),
-                    lng: parseFloat(document.getElementById('finish-lng').value)
-                },
-                allowedStartRegion: {
-                    minLat: parseFloat(document.getElementById('min-lat').value),
-                    maxLat: parseFloat(document.getElementById('max-lat').value),
-                    minLng: parseFloat(document.getElementById('min-lng').value),
-                    maxLng: parseFloat(document.getElementById('max-lng').value)
-                },
-                registrationWindowFrom: document.getElementById('reg-from').value,
-                registrationWindowTo: document.getElementById('reg-to').value,
-                raceDurationHours: duration || 24
-            };
-
-            socket.emit('fiesta-admin-change-rules', config);
-        });
-
-        document.getElementById('force-start').addEventListener('click', () => {
-            if (currentConfig?.raceStatus === 'registration') {
-                if (confirm('⚠️ Принудительно запустить гонку?')) {
-                    socket.emit('fiesta-force-race-start');
-                }
-            } else {
-                alert('❌ Принудительный старт возможен только из режима REGISTRATION');
-            }
-        });
-
-        document.getElementById('force-finish').addEventListener('click', () => {
-            if (currentConfig?.raceStatus === 'racing') {
-                if (confirm('🏆 Принудительно завершить гонку?')) {
-                    socket.emit('fiesta-force-race-finish');
-                }
-            } else {
-                alert('❌ Принудительный финиш возможен только из режима RACING');
-            }
-        });
-
-        document.getElementById('reset-race').addEventListener('click', () => {
-            if (currentConfig?.raceStatus === 'finished') {
-                if (confirm('🔄 Сбросить гонку? Все пилоты будут удалены.')) {
-                    socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'idle' });
-                }
-            } else {
-                alert('❌ Сброс гонки возможен только из режима FINISHED');
-            }
+        document.getElementById('admin-key').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
         });
 
         // Счетчик символов
         document.getElementById('admin-message').addEventListener('input', function() {
             document.getElementById('char-count').textContent = this.value.length;
-        });
-
-        document.getElementById('admin-key').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') login();
         });
 
         // Обновление статистики
