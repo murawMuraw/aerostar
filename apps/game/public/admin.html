@@ -139,6 +139,18 @@
         }
         .status-info .label { color: #94a3b8; font-size: 12px; }
         .status-info .value { color: #fbbf24; font-size: 14px; font-weight: bold; }
+        .utc-indicator {
+            background: rgba(56,189,248,0.05);
+            border: 1px solid rgba(56,189,248,0.2);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .utc-indicator .label { color: #94a3b8; font-size: 13px; }
+        .utc-indicator .value { color: #38bdf8; font-size: 14px; font-weight: bold; font-family: monospace; }
     </style>
 </head>
 <body>
@@ -165,6 +177,12 @@
                 <button id="logout-btn" style="width: auto; padding: 8px 20px; margin-top: 10px;">Logout</button>
             </div>
 
+            <!-- Индикатор UTC времени -->
+            <div class="utc-indicator">
+                <span class="label">🕐 Current UTC Time:</span>
+                <span class="value" id="current-utc-time">--:--:--</span>
+            </div>
+
             <!-- БЛОК ТЕКУЩЕГО СТАТУСА -->
             <div class="admin-card">
                 <h2>📊 Race Status</h2>
@@ -181,13 +199,13 @@
                 </div>
             </div>
 
-            <!-- БЛОК ЗАПЛАНИРОВАННОГО СТАРТА -->
+            <!-- БЛОК ЗАПЛАНИРОВАННОГО СТАРТА (UTC) -->
             <div class="admin-card">
-                <h2>⏰ Scheduled Race Start</h2>
+                <h2>⏰ Scheduled Race Start (UTC)</h2>
                 <div class="form-group">
-                    <label>Race Start Date & Time</label>
+                    <label>Race Start Date & Time (UTC)</label>
                     <input type="datetime-local" id="scheduled-start-time" />
-                    <div class="info-text">Установите точное время старта гонки</div>
+                    <div class="info-text">Установите точное время старта гонки в UTC</div>
                 </div>
                 <div class="form-group">
                     <label>Race Duration (hours)</label>
@@ -199,7 +217,7 @@
                     <button id="cancel-scheduled-start" class="btn-danger" style="background:#b91c1c;">❌ Cancel</button>
                 </div>
                 <div id="scheduled-display" class="scheduled-time" style="display:none;">
-                    <div class="label">⏰ Scheduled start:</div>
+                    <div class="label">⏰ Scheduled start (UTC):</div>
                     <div class="value" id="scheduled-value">--</div>
                     <div class="label" style="margin-top:5px;">⏱️ Duration:</div>
                     <div class="value" id="scheduled-duration" style="color:#fbbf24;">-- hours</div>
@@ -237,16 +255,16 @@
                 </div>
             </div>
 
-            <!-- НАСТРОЙКА РЕГИСТРАЦИИ -->
+            <!-- НАСТРОЙКА РЕГИСТРАЦИИ (UTC) -->
             <div class="admin-card">
-                <h2>📝 Registration Window</h2>
+                <h2>📝 Registration Window (UTC)</h2>
                 <div class="coord-group">
                     <div class="form-group">
-                        <label>Registration Opens</label>
+                        <label>Registration Opens (UTC)</label>
                         <input type="datetime-local" id="reg-from" />
                     </div>
                     <div class="form-group">
-                        <label>Registration Closes</label>
+                        <label>Registration Closes (UTC)</label>
                         <input type="datetime-local" id="reg-to" />
                     </div>
                 </div>
@@ -261,7 +279,7 @@
                     <button id="reset-race" class="btn-idle">🔄 Reset Race</button>
                 </div>
                 <div class="info-text" style="margin-top: 10px;">
-                    💡 <strong>Save Configuration</strong> — сохраняет настройки и запускает гонку по расписанию<br>
+                    💡 <strong>Save Configuration</strong> — сохраняет настройки и запускает гонку по расписанию (UTC)<br>
                     💡 <strong>Finish Race</strong> — завершает гонку (активно только в режиме RACING)<br>
                     💡 <strong>Reset Race</strong> — очищает всех пилотов и переводит в режим IDLE
                 </div>
@@ -273,9 +291,9 @@
                 <div class="current-config" id="race-stats">Loading...</div>
             </div>
 
-            <!-- ТЕКУЩАЯ КОНФИГУРАЦИЯ -->
+            <!-- ТЕКУЩАЯ КОНФИГУРАЦИЯ (UTC) -->
             <div class="admin-card">
-                <h2>📋 Current Race Rules</h2>
+                <h2>📋 Current Race Rules (UTC)</h2>
                 <div class="current-config" id="current-config">Loading...</div>
             </div>
         </div>
@@ -287,12 +305,50 @@
         let currentConfig = null;
         const ADMIN_KEY = "aerostar2024";
 
+        // ============================================
+        // ФУНКЦИИ ДЛЯ РАБОТЫ С UTC
+        // ============================================
+
+        function formatUTC(date) {
+            if (!date) return 'Not set';
+            const d = new Date(date);
+            return d.toUTCString();
+        }
+
+        function formatForInput(date) {
+            if (!date) return '';
+            const d = new Date(date);
+            const year = d.getUTCFullYear();
+            const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(d.getUTCDate()).padStart(2, '0');
+            const hours = String(d.getUTCHours()).padStart(2, '0');
+            const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        function getUTCFromInput(inputValue) {
+            if (!inputValue) return null;
+            const date = new Date(inputValue + 'Z');
+            return date.toISOString();
+        }
+
+        function updateCurrentUTC() {
+            const now = new Date();
+            document.getElementById('current-utc-time').textContent = now.toUTCString();
+        }
+
+        // ============================================
+        // ОСТАЛЬНЫЕ ФУНКЦИИ
+        // ============================================
+
         function login() {
             const adminKey = document.getElementById('admin-key').value;
             if (adminKey === ADMIN_KEY) {
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('admin-panel').style.display = 'block';
                 connectSocket();
+                updateCurrentUTC();
+                setInterval(updateCurrentUTC, 1000);
             } else {
                 alert('Invalid admin key');
             }
@@ -326,24 +382,23 @@
                 }
 
                 if (config.registrationWindowFrom) {
-                    const regFrom = new Date(config.registrationWindowFrom);
-                    document.getElementById('reg-from').value = regFrom.toISOString().slice(0, 16);
+                    document.getElementById('reg-from').value = formatForInput(config.registrationWindowFrom);
                 }
                 if (config.registrationWindowTo) {
-                    const regTo = new Date(config.registrationWindowTo);
-                    document.getElementById('reg-to').value = regTo.toISOString().slice(0, 16);
+                    document.getElementById('reg-to').value = formatForInput(config.registrationWindowTo);
+                }
+
+                if (config.scheduledStartTime) {
+                    document.getElementById('scheduled-start-time').value = formatForInput(config.scheduledStartTime);
+                    document.getElementById('scheduled-display').style.display = 'block';
+                    document.getElementById('scheduled-value').textContent = formatUTC(config.scheduledStartTime);
+                    document.getElementById('scheduled-duration').textContent = `${config.raceDurationHours || 24} hours`;
+                } else {
+                    document.getElementById('scheduled-display').style.display = 'none';
                 }
 
                 if (config.raceDurationHours) {
                     document.getElementById('race-duration').value = config.raceDurationHours;
-                }
-
-                if (config.scheduledStartTime) {
-                    document.getElementById('scheduled-display').style.display = 'block';
-                    document.getElementById('scheduled-value').textContent = new Date(config.scheduledStartTime).toLocaleString();
-                    document.getElementById('scheduled-duration').textContent = `${config.raceDurationHours || 24} hours`;
-                } else {
-                    document.getElementById('scheduled-display').style.display = 'none';
                 }
 
                 updateButtons(config.raceStatus);
@@ -382,7 +437,7 @@
 
             socket.on('fiesta-config-saved', (data) => {
                 if (data.success) {
-                    alert('✅ Configuration saved successfully! Race will start at scheduled time.');
+                    alert('✅ Configuration saved successfully! Race will start at scheduled time (UTC).');
                 }
             });
 
@@ -398,7 +453,7 @@
 
             socket.on('fiesta-scheduled-start-set', (data) => {
                 if (data.success) {
-                    alert(`✅ Scheduled start set to ${new Date(data.startTime).toLocaleString()}`);
+                    alert(`✅ Scheduled start set to ${formatUTC(data.startTime)} (UTC)`);
                     socket.emit('fiesta-get-participants');
                 }
             });
@@ -443,7 +498,6 @@
             const resetBtn = document.getElementById('reset-race');
             const saveBtn = document.getElementById('save-config');
 
-            // Кнопка "Finish Race" активна только в режиме RACING
             if (finishBtn) {
                 finishBtn.disabled = (currentStatus !== 'racing');
                 if (currentStatus === 'racing') {
@@ -453,29 +507,22 @@
                 }
             }
 
-            // Кнопка "Reset Race" активна всегда, но предупреждает
             if (resetBtn) {
                 resetBtn.disabled = false;
             }
 
-            // Кнопка "Save Configuration" активна в режимах IDLE и REGISTRATION
             if (saveBtn) {
                 saveBtn.disabled = (currentStatus === 'racing' || currentStatus === 'finished');
                 if (currentStatus === 'racing' || currentStatus === 'finished') {
                     saveBtn.title = 'Недоступно во время гонки или после финиша';
                 } else {
-                    saveBtn.title = 'Сохранить настройки и запустить гонку по расписанию';
+                    saveBtn.title = 'Сохранить настройки и запустить гонку по расписанию (UTC)';
                 }
             }
         }
 
         function updateCurrentConfig(config) {
             currentConfig = config;
-
-            const formatDate = (date) => {
-                if (!date) return 'Not set';
-                return new Date(date).toLocaleString();
-            };
 
             let startZoneText = 'Not configured';
             if (config.allowedStartRegion) {
@@ -485,8 +532,8 @@
             document.getElementById('current-config').innerHTML = `
                 <strong>🏁 Finish Line:</strong> ${config.finishCoords?.lat?.toFixed(4)}°, ${config.finishCoords?.lng?.toFixed(4)}°<br>
                 <strong>🗺️ Start Zone:</strong> ${startZoneText}<br>
-                <strong>📝 Registration:</strong> ${formatDate(config.registrationWindowFrom)} - ${formatDate(config.registrationWindowTo)}<br>
-                <strong>⏰ Scheduled Start:</strong> ${config.scheduledStartTime ? formatDate(config.scheduledStartTime) : 'Not set'}<br>
+                <strong>📝 Registration:</strong> ${formatUTC(config.registrationWindowFrom)} - ${formatUTC(config.registrationWindowTo)}<br>
+                <strong>⏰ Scheduled Start (UTC):</strong> ${config.scheduledStartTime ? formatUTC(config.scheduledStartTime) : 'Not set'}<br>
                 <strong>⏱️ Duration:</strong> ${config.raceDurationHours || 24} hours<br>
                 <strong>📊 Status:</strong> ${config.raceStatus || 'idle'}
             `;
@@ -496,13 +543,12 @@
         // ОБРАБОТЧИКИ СОБЫТИЙ
         // ============================================
 
-        // Отложенный старт
         document.getElementById('set-scheduled-start').addEventListener('click', () => {
-            const startTime = document.getElementById('scheduled-start-time').value;
+            const startTimeInput = document.getElementById('scheduled-start-time').value;
             const duration = parseInt(document.getElementById('race-duration').value);
             
-            if (!startTime) {
-                alert('Пожалуйста, выберите время старта');
+            if (!startTimeInput) {
+                alert('Пожалуйста, выберите время старта (UTC)');
                 return;
             }
             
@@ -511,9 +557,11 @@
                 return;
             }
             
-            const startDate = new Date(startTime);
-            if (startDate <= new Date()) {
-                alert('Время старта должно быть в будущем');
+            const startDate = new Date(startTimeInput + 'Z');
+            const now = new Date();
+            
+            if (startDate <= now) {
+                alert('Время старта должно быть в будущем (UTC)');
                 return;
             }
             
@@ -522,10 +570,10 @@
                 return;
             }
             
-            if (confirm(`Установить старт гонки на ${startDate.toLocaleString()} с продолжительностью ${duration} часов?`)) {
+            if (confirm(`Установить старт гонки на ${startDate.toUTCString()} (UTC) с продолжительностью ${duration} часов?`)) {
                 socket.emit('fiesta-set-scheduled-start', {
                     adminKey: ADMIN_KEY,
-                    startTime: startTime,
+                    startTime: startDate.toISOString(),
                     duration: duration
                 });
             }
@@ -541,7 +589,6 @@
             }
         });
 
-        // Save Configuration
         document.getElementById('save-config').addEventListener('click', () => {
             if (currentConfig?.raceStatus === 'racing' || currentConfig?.raceStatus === 'finished') {
                 alert('❌ Нельзя сохранить конфигурацию во время гонки или после финиша');
@@ -549,12 +596,14 @@
             }
 
             const duration = parseInt(document.getElementById('race-duration').value);
-            const startTime = document.getElementById('scheduled-start-time').value;
+            const startTimeInput = document.getElementById('scheduled-start-time').value;
             
-            if (!startTime) {
-                alert('Пожалуйста, установите время старта перед сохранением');
+            if (!startTimeInput) {
+                alert('Пожалуйста, установите время старта (UTC) перед сохранением');
                 return;
             }
+
+            const startDate = new Date(startTimeInput + 'Z');
 
             const config = {
                 adminKey: ADMIN_KEY,
@@ -568,24 +617,22 @@
                     minLng: parseFloat(document.getElementById('min-lng').value),
                     maxLng: parseFloat(document.getElementById('max-lng').value)
                 },
-                registrationWindowFrom: document.getElementById('reg-from').value,
-                registrationWindowTo: document.getElementById('reg-to').value,
+                registrationWindowFrom: document.getElementById('reg-from').value ? new Date(document.getElementById('reg-from').value + 'Z').toISOString() : null,
+                registrationWindowTo: document.getElementById('reg-to').value ? new Date(document.getElementById('reg-to').value + 'Z').toISOString() : null,
                 raceDurationHours: duration || 24,
-                scheduledStartTime: startTime
+                scheduledStartTime: startDate.toISOString()
             };
 
-            if (confirm('Сохранить конфигурацию? Гонка начнется автоматически в установленное время.')) {
+            if (confirm(`Сохранить конфигурацию? Гонка начнется автоматически в ${startDate.toUTCString()} (UTC).`)) {
                 socket.emit('fiesta-admin-change-rules', config);
-                // Также устанавливаем запланированный старт
                 socket.emit('fiesta-set-scheduled-start', {
                     adminKey: ADMIN_KEY,
-                    startTime: startTime,
+                    startTime: startDate.toISOString(),
                     duration: duration || 24
                 });
             }
         });
 
-        // Finish Race - только из RACING
         document.getElementById('finish-race').addEventListener('click', () => {
             if (currentConfig?.raceStatus !== 'racing') {
                 alert('❌ Завершить гонку можно только в режиме RACING');
@@ -598,7 +645,6 @@
             }
         });
 
-        // Reset Race - очищает всё и переводит в IDLE
         document.getElementById('reset-race').addEventListener('click', () => {
             if (currentConfig?.raceStatus === 'idle') {
                 alert('Гонка уже в режиме IDLE');
@@ -607,13 +653,11 @@
             
             if (confirm('🔄 Сбросить гонку? Будут удалены все пилоты и очищены настройки.')) {
                 socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'idle' });
-                // Очищаем отображение запланированного старта
                 document.getElementById('scheduled-display').style.display = 'none';
                 alert('✅ Гонка сброшена. Все пилоты удалены.');
             }
         });
 
-        // Остальные обработчики
         document.getElementById('login-btn').addEventListener('click', login);
         document.getElementById('logout-btn').addEventListener('click', () => {
             if (socket) socket.disconnect();
@@ -639,12 +683,10 @@
             if (e.key === 'Enter') login();
         });
 
-        // Счетчик символов
         document.getElementById('admin-message').addEventListener('input', function() {
             document.getElementById('char-count').textContent = this.value.length;
         });
 
-        // Обновление статистики
         setInterval(() => {
             if (socket && socket.connected) {
                 socket.emit('fiesta-get-participants');
