@@ -1,6 +1,6 @@
 /**
  * ГЛАВНЫЙ ИГРОВОЙ СЕРВЕР «ФИЕСТА» (Порт 3001)
- * Версия 3.3 - с оптимизированными интервалами и кэшированием
+ * Версия 4.0 - с управлением состояниями
  */
 
 const express = require('express');
@@ -10,19 +10,14 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
 
-// Подключаем модули
 const balloonCatalog = require('./balloonCatalog');
 const windService = require('./windService');
 
 const app = express();
 const server = http.createServer(app);
 
-// Инициализируем сокеты
 const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    },
+    cors: { origin: "*", methods: ["GET", "POST"] },
     transports: ['polling', 'websocket'],
     allowEIO3: true
 });
@@ -31,10 +26,27 @@ const PORT = 3001;
 const CONFIG_FILE = path.join(__dirname, 'race-config.json');
 const PILOTS_FILE = path.join(__dirname, 'pilots.json');
 const MAX_PARTICIPANTS = 10;
-const SIMULATION_INTERVAL = 60000; // 60 секунд 
+const SIMULATION_INTERVAL = 60000;
 const SALT_ROUNDS = 10;
 
-// Данные игры
+// ============================================
+// СОСТОЯНИЯ ИГРЫ
+// ============================================
+const GAME_STATES = {
+    IDLE: 'idle',
+    REGISTRATION: 'registration',
+    RACING: 'racing',
+    FINISHED: 'finished'
+};
+
+// Допустимые переходы между состояниями
+const STATE_TRANSITIONS = {
+    [GAME_STATES.IDLE]: [GAME_STATES.REGISTRATION],
+    [GAME_STATES.REGISTRATION]: [GAME_STATES.RACING, GAME_STATES.IDLE],
+    [GAME_STATES.RACING]: [GAME_STATES.FINISHED],
+    [GAME_STATES.FINISHED]: [GAME_STATES.IDLE]
+};
+
 let raceConfig = {
     finishCoords: { lat: 48.8566, lng: 2.3522 },
     allowedStartRegion: {
@@ -43,19 +55,21 @@ let raceConfig = {
         minLng: -120,
         maxLng: -70
     },
-    registrationWindowFrom: new Date('2024-06-01'),
-    registrationWindowTo: new Date('2024-12-31'),
-    raceStartDateTime: new Date('2024-12-31T12:00:00'),
+    registrationWindowFrom: new Date(),
+    registrationWindowTo: new Date(),
+    raceStartDateTime: new Date(),
     maxParticipants: MAX_PARTICIPANTS,
     raceStarted: false,
     raceFinished: false,
     raceDurationHours: 24,
-    raceStatus: 'idle' // idle | registration | racing | finished
+    raceStatus: GAME_STATES.IDLE,
+    scheduledStartTime: null
 };
 
 let balloons = {};
 let simulationIntervals = new Map();
 let socketToPilot = new Map();
+let raceStartTimer = null;
 
 // ============================================
 // ЗАГРУЗКА И СОХРАНЕНИЕ КОНФИГУРАЦИИ
@@ -71,7 +85,8 @@ function loadConfig() {
                 registrationWindowFrom: saved.registrationWindowFrom ? new Date(saved.registrationWindowFrom) : raceConfig.registrationWindowFrom,
                 registrationWindowTo: saved.registrationWindowTo ? new Date(saved.registrationWindowTo) : raceConfig.registrationWindowTo,
                 raceStartDateTime: saved.raceStartDateTime ? new Date(saved.raceStartDateTime) : raceConfig.raceStartDateTime,
-                raceStatus: saved.raceStatus || 'idle'
+                raceStatus: saved.raceStatus || GAME_STATES.IDLE,
+                scheduledStartTime: saved.scheduledStartTime || null
             };
             console.log('✅ Loaded race config from file');
         } catch(e) {
@@ -93,79 +108,90 @@ function saveConfigToFile() {
         raceStarted: raceConfig.raceStarted,
         raceFinished: raceConfig.raceFinished,
         raceDurationHours: raceConfig.raceDurationHours,
-        raceStatus: raceConfig.raceStatus
+        raceStatus: raceConfig.raceStatus,
+        scheduledStartTime: raceConfig.scheduledStartTime
     };
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(configToSave, null, 2));
 }
 
 // ============================================
-// УПРАВЛЕНИЕ СТАТУСАМИ
+// УПРАВЛЕНИЕ СОСТОЯНИЯМИ
 // ============================================
-function setRaceStatus(status) {
-    const validStatuses = ['idle', 'registration', 'racing', 'finished'];
-    if (!validStatuses.includes(status)) {
-        console.error(`❌ Invalid status: ${status}`);
+function canTransitionTo(newState) {
+    const allowed = STATE_TRANSITIONS[raceConfig.raceStatus] || [];
+    return allowed.includes(newState);
+}
+
+function setRaceStatus(newStatus, options = {}) {
+    if (!canTransitionTo(newStatus)) {
+        console.error(`❌ Invalid transition: ${raceConfig.raceStatus} -> ${newStatus}`);
         return false;
     }
-    
-    raceConfig.raceStatus = status;
-    
-    switch (status) {
-        case 'idle':
+
+    const oldStatus = raceConfig.raceStatus;
+    console.log(`🔄 State transition: ${oldStatus} -> ${newStatus}`);
+
+    // Очищаем таймер автоматического старта
+    if (raceStartTimer) {
+        clearTimeout(raceStartTimer);
+        raceStartTimer = null;
+    }
+
+    switch (newStatus) {
+        case GAME_STATES.IDLE:
             raceConfig.raceStarted = false;
             raceConfig.raceFinished = false;
-            // Закрываем регистрацию
-            raceConfig.registrationWindowFrom = new Date('1970-01-01');
-            raceConfig.registrationWindowTo = new Date('1970-01-01');
-            // Останавливаем все симуляции
+            raceConfig.raceStatus = GAME_STATES.IDLE;
+            // Очищаем всех пилотов при переходе в IDLE из FINISHED
+            if (oldStatus === GAME_STATES.FINISHED) {
+                balloons = {};
+                savePilotsToFile();
+                console.log('🧹 All pilots cleared (FINISHED -> IDLE)');
+            }
             stopAllSimulations();
             break;
-        case 'registration':
+
+        case GAME_STATES.REGISTRATION:
             raceConfig.raceStarted = false;
             raceConfig.raceFinished = false;
+            raceConfig.raceStatus = GAME_STATES.REGISTRATION;
             // Открываем регистрацию на 7 дней
             raceConfig.registrationWindowFrom = new Date();
             raceConfig.registrationWindowTo = new Date();
             raceConfig.registrationWindowTo.setDate(raceConfig.registrationWindowTo.getDate() + 7);
             stopAllSimulations();
             break;
-        case 'racing':
+
+        case GAME_STATES.RACING:
             raceConfig.raceStarted = true;
             raceConfig.raceFinished = false;
+            raceConfig.raceStatus = GAME_STATES.RACING;
             // Закрываем регистрацию
             raceConfig.registrationWindowTo = new Date();
             // Запускаем симуляцию для всех шаров
             startAllSimulations();
             break;
-        case 'finished':
+
+        case GAME_STATES.FINISHED:
             raceConfig.raceStarted = false;
             raceConfig.raceFinished = true;
-            // Останавливаем все симуляции
+            raceConfig.raceStatus = GAME_STATES.FINISHED;
             stopAllSimulations();
             break;
     }
-    
+
     saveConfigToFile();
-    console.log(`📊 Race status changed to: ${status}`);
+    savePilotsToFile();
+    
+    // Уведомляем всех клиентов
+    io.emit('fiesta-state-changed', {
+        oldState: oldStatus,
+        newState: newStatus,
+        config: getConfigForClient()
+    });
+    io.emit('fiesta-race-config', getConfigForClient());
+
     return true;
-}
-
-function startAllSimulations() {
-    console.log('🚀 Starting simulations for all balloons...');
-    for (const [id, balloon] of Object.entries(balloons)) {
-        if (!simulationIntervals.has(id)) {
-            console.log(`▶️ Starting simulation for ${balloon.username || id}`);
-            startBalloonSimulation(id);
-        }
-    }
-}
-
-function stopAllSimulations() {
-    console.log('⏹️ Stopping all simulations...');
-    for (const [id, interval] of simulationIntervals) {
-        clearInterval(interval);
-    }
-    simulationIntervals.clear();
 }
 
 function getConfigForClient() {
@@ -179,7 +205,8 @@ function getConfigForClient() {
         raceStarted: raceConfig.raceStarted,
         raceFinished: raceConfig.raceFinished,
         raceDurationHours: raceConfig.raceDurationHours,
-        raceStatus: raceConfig.raceStatus
+        raceStatus: raceConfig.raceStatus,
+        scheduledStartTime: raceConfig.scheduledStartTime
     };
 }
 
@@ -205,7 +232,8 @@ function savePilotsToFile() {
             speed: balloon.speed || 0,
             layerName: balloon.layerName || 'Surface Layer',
             windDirection: balloon.windDirection || 0,
-            lastUpdate: balloon.lastUpdate || Date.now()
+            lastUpdate: balloon.lastUpdate || Date.now(),
+            path: balloon.path || []
         };
     }
     fs.writeFileSync(PILOTS_FILE, JSON.stringify(pilotsToSave, null, 2));
@@ -219,7 +247,7 @@ function loadPilotsFromFile() {
             for (const [id, pilot] of Object.entries(saved)) {
                 balloons[id] = {
                     ...pilot,
-                    path: [],
+                    path: pilot.path || [],
                     lastUpdate: Date.now(),
                     pilotConnected: false,
                     lastSeen: Date.now(),
@@ -236,7 +264,7 @@ function loadPilotsFromFile() {
 }
 
 // ============================================
-// ОБНОВЛЕНИЕ ВЕТРА ДЛЯ ВСЕХ ШАРОВ
+// ОБНОВЛЕНИЕ ВЕТРА
 // ============================================
 async function updateWeatherForAllBalloons() {
     const balloonIds = Object.keys(balloons);
@@ -244,14 +272,12 @@ async function updateWeatherForAllBalloons() {
     
     console.log(`🌤️ Обновление погоды для ${balloonIds.length} шаров...`);
     
-    // Обновляем ветер для каждого шара
     for (const id of balloonIds) {
         const balloon = balloons[id];
         if (!balloon || balloon.finished) continue;
         
         try {
             const wind = await windService.getWindAtPosition(balloon.lat, balloon.lng, balloon.altitude);
-            // Сохраняем ветер в шаре для использования в симуляции
             balloon._cachedWind = wind;
             console.log(`🌤️ Ветер для ${balloon.username}: ${wind.speed} м/с, ${wind.direction}°`);
         } catch (error) {
@@ -294,8 +320,8 @@ function isRaceTimeExpired() {
 }
 
 function checkAndFinishRaceByTime() {
-    if (raceConfig.raceStatus === 'racing' && isRaceTimeExpired()) {
-        setRaceStatus('finished');
+    if (raceConfig.raceStatus === GAME_STATES.RACING && isRaceTimeExpired()) {
+        setRaceStatus(GAME_STATES.FINISHED);
         io.emit('fiesta-race-finished', {
             message: "🏁 Время гонки истекло! Спасибо за участие! 🏁",
             timestamp: new Date()
@@ -320,8 +346,26 @@ function deg2rad(deg) {
 }
 
 // ============================================
-// СИМУЛЯЦИЯ ДВИЖЕНИЯ ШАРА (С ИСПОЛЬЗОВАНИЕМ КЭШИРОВАННОГО ВЕТРА)
+// СИМУЛЯЦИЯ ДВИЖЕНИЯ ШАРА
 // ============================================
+function startAllSimulations() {
+    console.log('🚀 Starting simulations for all balloons...');
+    for (const [id, balloon] of Object.entries(balloons)) {
+        if (!simulationIntervals.has(id)) {
+            console.log(`▶️ Starting simulation for ${balloon.username || id}`);
+            startBalloonSimulation(id);
+        }
+    }
+}
+
+function stopAllSimulations() {
+    console.log('⏹️ Stopping all simulations...');
+    for (const [id, interval] of simulationIntervals) {
+        clearInterval(interval);
+    }
+    simulationIntervals.clear();
+}
+
 async function startBalloonSimulation(balloonId) {
     if (simulationIntervals.has(balloonId)) {
         console.log(`⏭️ Simulation already running for ${balloonId}`);
@@ -339,7 +383,7 @@ async function startBalloonSimulation(balloonId) {
             return;
         }
         
-        if (raceConfig.raceStatus !== 'racing') {
+        if (raceConfig.raceStatus !== GAME_STATES.RACING) {
             clearInterval(interval);
             simulationIntervals.delete(balloonId);
             console.log(`⏸️ Simulation stopped for ${balloonId} (status: ${raceConfig.raceStatus})`);
@@ -353,7 +397,6 @@ async function startBalloonSimulation(balloonId) {
         }
         
         try {
-            // Используем кэшированный ветер или запрашиваем новый
             let wind = balloon._cachedWind;
             if (!wind) {
                 console.log(`🔄 Нет кэшированного ветра для ${balloon.username}, запрашиваю...`);
@@ -361,7 +404,6 @@ async function startBalloonSimulation(balloonId) {
                 balloon._cachedWind = wind;
             }
             
-            // Расчёт движения
             const speedLatPerSecond = wind.speed / 111000;
             const speedLngPerSecond = wind.speed / (111000 * Math.cos(balloon.lat * Math.PI / 180));
             const intervalSeconds = SIMULATION_INTERVAL / 1000;
@@ -425,21 +467,15 @@ async function startBalloonSimulation(balloonId) {
     simulationIntervals.set(balloonId, interval);
 }
 
-// ============================================
-// ВОССТАНОВЛЕНИЕ СИМУЛЯЦИИ ПРИ СТАРТЕ
-// ============================================
 function restoreSimulations() {
     console.log('🔄 Restoring simulations...');
     console.log(`📊 Current status: ${raceConfig.raceStatus}`);
     console.log(`📊 Balloons loaded: ${Object.keys(balloons).length}`);
     
-    if (raceConfig.raceStatus === 'racing') {
-        // Сначала обновляем погоду для всех шаров
+    if (raceConfig.raceStatus === GAME_STATES.RACING) {
         setTimeout(() => {
             updateWeatherForAllBalloons();
         }, 1000);
-        
-        // Затем запускаем симуляции
         startAllSimulations();
     } else {
         console.log(`⏳ Race status is "${raceConfig.raceStatus}", waiting for start...`);
@@ -451,7 +487,6 @@ function restoreSimulations() {
 // ============================================
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
-// Раздаем изображения шаров из папки frontend
 app.use('/images', express.static(path.join(__dirname, '../frontend/images')));
 
 app.get('/', (req, res) => {
@@ -470,10 +505,9 @@ app.get('/admin.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-// Секретные эндпоинты
 app.get('/reset-race', (req, res) => {
     console.log('🔄 Сброс гонки по запросу /reset-race');
-    setRaceStatus('idle');
+    setRaceStatus(GAME_STATES.IDLE);
     res.send(`
         <h1>✅ Race Reset Successful!</h1>
         <p>Status: <strong>${raceConfig.raceStatus}</strong></p>
@@ -482,8 +516,8 @@ app.get('/reset-race', (req, res) => {
 });
 
 app.get('/force-start-now', (req, res) => {
-    if (raceConfig.raceStatus !== 'racing') {
-        setRaceStatus('racing');
+    if (raceConfig.raceStatus !== GAME_STATES.RACING) {
+        setRaceStatus(GAME_STATES.RACING);
         res.send(`
             <h1>🏁 Race Started!</h1>
             <p>All ${Object.keys(balloons).length} balloons are now moving!</p>
@@ -514,18 +548,22 @@ app.get('/sim-status', (req, res) => {
 io.on('connection', (socket) => {
     console.log('🔌 Client connected:', socket.id);
     
-    // Отправляем конфигурацию новому клиенту
     socket.emit('fiesta-race-config', getConfigForClient());
     socket.emit('fiesta-balloon-catalog', balloonCatalog);
     socket.emit('fiesta-all-balloons', Object.values(balloons));
-    
+    socket.emit('fiesta-state-changed', {
+        oldState: raceConfig.raceStatus,
+        newState: raceConfig.raceStatus,
+        config: getConfigForClient()
+    });
+
     // ============================================
     // РЕГИСТРАЦИЯ НОВОГО ПИЛОТА
     // ============================================
     socket.on('fiesta-start-flight', async (data) => {
         console.log('📝 Registration attempt:', { ...data, password: '***' });
 
-        if (raceConfig.raceStatus !== 'registration' && raceConfig.raceStatus !== 'idle') {
+        if (raceConfig.raceStatus !== GAME_STATES.REGISTRATION && raceConfig.raceStatus !== GAME_STATES.IDLE) {
             socket.emit('fiesta-registration-complete', { 
                 success: false,
                 message: `Registration is not open. Current status: ${raceConfig.raceStatus}` 
@@ -588,14 +626,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        if (raceConfig.raceStatus === 'racing') {
-            socket.emit('fiesta-registration-complete', { 
-                success: false,
-                message: 'Race has already started!' 
-            });
-            return;
-        }
-
         if (!data.password || data.password.length < 4) {
             socket.emit('fiesta-registration-complete', { 
                 success: false,
@@ -609,7 +639,7 @@ io.on('connection', (socket) => {
 
         const pilotId = 'pilot_' + Math.random().toString(36).substr(2, 9);
         const raceNumber = currentPilotsCount + 1;
-        const selectedBalloon = balloonCatalog[data.balloonColor] || balloonCatalog.classic;
+        const selectedBalloon = balloonCatalog[data.balloonColor] || balloonCatalog.bal1;
         
         balloons[pilotId] = {
             id: pilotId,
@@ -636,7 +666,7 @@ io.on('connection', (socket) => {
             lastSeen: Date.now()
         };
 
-        console.log(`✅ New pilot: ${data.username} (Race #${raceNumber}) - Password hashed`);
+        console.log(`✅ New pilot: ${data.username} (Race #${raceNumber})`);
         savePilotsToFile();
         
         socket.join('race-room');
@@ -651,12 +681,11 @@ io.on('connection', (socket) => {
         
         io.to('race-room').emit('fiesta-all-balloons', Object.values(balloons));
         
-        // Если гонка уже идёт - запускаем симуляцию
-        if (raceConfig.raceStatus === 'racing') {
+        if (raceConfig.raceStatus === GAME_STATES.RACING) {
             startBalloonSimulation(pilotId);
         }
     });
-    
+
     // ============================================
     // АУТЕНТИФИКАЦИЯ
     // ============================================
@@ -709,8 +738,7 @@ io.on('connection', (socket) => {
             
             console.log(`✅ Pilot ${balloon.username} authenticated successfully`);
             
-            // Если гонка идёт, но симуляция не запущена - запускаем
-            if (raceConfig.raceStatus === 'racing' && !simulationIntervals.has(balloon.id)) {
+            if (raceConfig.raceStatus === GAME_STATES.RACING && !simulationIntervals.has(balloon.id)) {
                 startBalloonSimulation(balloon.id);
             }
             
@@ -722,7 +750,7 @@ io.on('connection', (socket) => {
             console.log(`❌ Auth failed for ${authData.username} - wrong password`);
         }
     });
-    
+
     // ============================================
     // СМЕНА ПАРОЛЯ
     // ============================================
@@ -752,7 +780,7 @@ io.on('connection', (socket) => {
         socket.emit('fiesta-password-changed', { success: true });
         console.log(`🔐 Password changed for ${balloon.username}`);
     });
-    
+
     // ============================================
     // УПРАВЛЕНИЕ ВЫСОТОЙ
     // ============================================
@@ -773,10 +801,25 @@ io.on('connection', (socket) => {
         io.to('race-room').emit('fiesta-balloon-updated', balloon);
         console.log(`📈 ${balloon.username} altitude → ${newAltitude}m`);
     });
-    
+
     // ============================================
     // АДМИНИСТРАТОРСКИЕ ФУНКЦИИ
     // ============================================
+    socket.on('fiesta-admin-set-status', (data) => {
+        if (data.adminKey === 'aerostar2024') {
+            const success = setRaceStatus(data.status);
+            if (success) {
+                socket.emit('fiesta-status-changed', { status: data.status });
+                io.emit('fiesta-race-config', getConfigForClient());
+                socket.emit('fiesta-config-saved', { success: true });
+            } else {
+                socket.emit('fiesta-error', `Cannot transition from ${raceConfig.raceStatus} to ${data.status}`);
+            }
+        } else {
+            socket.emit('fiesta-error', 'Admin privileges required');
+        }
+    });
+
     socket.on('fiesta-admin-change-rules', (rules) => {
         if (rules.adminKey === 'aerostar2024') {
             if (rules.finishCoords) {
@@ -818,25 +861,10 @@ io.on('connection', (socket) => {
             socket.emit('fiesta-error', 'Admin privileges required');
         }
     });
-    
-    socket.on('fiesta-admin-set-status', (data) => {
-        if (data.adminKey === 'aerostar2024') {
-            const success = setRaceStatus(data.status);
-            if (success) {
-                socket.emit('fiesta-status-changed', { status: data.status });
-                io.to('race-room').emit('fiesta-race-config', getConfigForClient());
-                socket.emit('fiesta-config-saved', { success: true });
-            } else {
-                socket.emit('fiesta-error', 'Invalid status');
-            }
-        } else {
-            socket.emit('fiesta-error', 'Admin privileges required');
-        }
-    });
-    
+
     socket.on('fiesta-force-race-start', () => {
-        if (raceConfig.raceStatus !== 'racing') {
-            setRaceStatus('racing');
+        if (raceConfig.raceStatus === GAME_STATES.REGISTRATION) {
+            setRaceStatus(GAME_STATES.RACING);
             io.to('race-room').emit('fiesta-race-started', { 
                 message: "🏁 АДМИНИСТРАТОР ЗАПУСТИЛ ГОНКУ! 🏁",
                 timestamp: new Date(),
@@ -844,12 +872,14 @@ io.on('connection', (socket) => {
             });
             console.log("🏁 Race force-started by admin");
             socket.emit('fiesta-config-saved', { success: true });
+        } else {
+            socket.emit('fiesta-error', `Cannot start race from ${raceConfig.raceStatus} state`);
         }
     });
-    
+
     socket.on('fiesta-force-race-finish', () => {
-        if (raceConfig.raceStatus !== 'finished') {
-            setRaceStatus('finished');
+        if (raceConfig.raceStatus === GAME_STATES.RACING) {
+            setRaceStatus(GAME_STATES.FINISHED);
             io.to('race-room').emit('fiesta-race-finished', {
                 message: "🏁 АДМИНИСТРАТОР ЗАВЕРШИЛ ГОНКУ! 🏁",
                 timestamp: new Date(),
@@ -857,9 +887,11 @@ io.on('connection', (socket) => {
             });
             console.log("🏁 Race force-finished by admin");
             socket.emit('fiesta-config-saved', { success: true });
+        } else {
+            socket.emit('fiesta-error', `Cannot finish race from ${raceConfig.raceStatus} state`);
         }
     });
-    
+
     socket.on('fiesta-admin-announcement', (data) => {
         io.to('race-room').emit('fiesta-admin-message', {
             message: data.message,
@@ -871,6 +903,52 @@ io.on('connection', (socket) => {
     
     socket.on('fiesta-get-participants', () => {
         socket.emit('fiesta-all-balloons', Object.values(balloons));
+    });
+
+    socket.on('fiesta-set-scheduled-start', (data) => {
+        if (data.adminKey === 'aerostar2024') {
+            const startTime = new Date(data.startTime);
+            if (isNaN(startTime.getTime())) {
+                socket.emit('fiesta-error', 'Invalid start time');
+                return;
+            }
+            
+            if (raceStartTimer) {
+                clearTimeout(raceStartTimer);
+                raceStartTimer = null;
+            }
+            
+            const now = Date.now();
+            const delay = startTime.getTime() - now;
+            
+            if (delay <= 0) {
+                socket.emit('fiesta-error', 'Start time must be in the future');
+                return;
+            }
+            
+            raceConfig.scheduledStartTime = startTime.toISOString();
+            saveConfigToFile();
+            
+            raceStartTimer = setTimeout(() => {
+                if (raceConfig.raceStatus === GAME_STATES.REGISTRATION) {
+                    setRaceStatus(GAME_STATES.RACING);
+                    io.emit('fiesta-race-started', {
+                        message: "🏁 ГОНКА НАЧАЛАСЬ ПО РАСПИСАНИЮ! 🏁",
+                        timestamp: new Date(),
+                        scheduled: true
+                    });
+                }
+            }, delay);
+            
+            socket.emit('fiesta-scheduled-start-set', {
+                success: true,
+                startTime: startTime.toISOString()
+            });
+            
+            console.log(`⏰ Scheduled race start at ${startTime.toLocaleString()}`);
+        } else {
+            socket.emit('fiesta-error', 'Admin privileges required');
+        }
     });
     
     socket.on('disconnect', () => {
@@ -896,32 +974,27 @@ io.on('connection', (socket) => {
 // ============================================
 // ЗАПУСК СЕРВЕРА
 // ============================================
-
 loadConfig();
 loadPilotsFromFile();
 
-// Восстанавливаем симуляции
 setTimeout(() => {
     restoreSimulations();
 }, 2000);
 
-// Периодическое обновление ветра для всех шаров (каждые 60 секунд)
 setInterval(() => {
-    if (raceConfig.raceStatus === 'racing' && Object.keys(balloons).length > 0) {
+    if (raceConfig.raceStatus === GAME_STATES.RACING && Object.keys(balloons).length > 0) {
         updateWeatherForAllBalloons();
     }
-}, 60000); // 1 минута
+}, 60000);
 
-// Автоматическая проверка окончания гонки
 setInterval(checkAndFinishRaceByTime, 60000);
 
-// Автоматический старт по расписанию
 setInterval(() => {
-    if (raceConfig.raceStatus !== 'racing' && 
-        raceConfig.raceStatus !== 'finished' &&
+    if (raceConfig.raceStatus !== GAME_STATES.RACING && 
+        raceConfig.raceStatus !== GAME_STATES.FINISHED &&
         isRaceStarted() && 
         !raceConfig.raceFinished) {
-        setRaceStatus('racing');
+        setRaceStatus(GAME_STATES.RACING);
         io.to('race-room').emit('fiesta-race-started', { 
             message: "🏁 ГОНКА НАЧАЛАСЬ АВТОМАТИЧЕСКИ! 🏁",
             timestamp: raceConfig.raceStartDateTime
@@ -930,20 +1003,18 @@ setInterval(() => {
     }
 }, 1000);
 
-// Периодическое сохранение пилотов (каждые 30 секунд)
 setInterval(() => {
     if (Object.keys(balloons).length > 0) {
         savePilotsToFile();
     }
 }, 30000);
 
-// Запуск сервера
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🎮 Fiesta Game Server running on port ${PORT}`);
     console.log(`📍 Race page: http://localhost:${PORT}/fiesta.html`);
     console.log(`📝 Register page: http://localhost:${PORT}/register.html`);
     console.log(`🔧 Admin page: http://localhost:${PORT}/admin.html`);
     console.log(`👥 Max participants: ${MAX_PARTICIPANTS}`);
-    console.log(`🏁 Race start: ${raceConfig.raceStartDateTime.toLocaleString()}`);
+    console.log(`🏁 Race status: ${raceConfig.raceStatus}`);
     console.log(`🎯 Finish: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
 });
