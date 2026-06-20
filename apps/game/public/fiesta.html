@@ -504,8 +504,8 @@
     <!-- Info Panel -->
     <div class="info-panel">
         <h3>🏁 Race Information</h3>
-        <div class="info-item"><span>⏰ Race Start:</span><span id="race-start-time">--</span></div>
-        <div class="info-item"><span>🏁 Race End:</span><span class="deadline" id="race-deadline">--</span></div>
+        <div class="info-item"><span>⏰ Race Start:</span><span id="race-start-time">--/--</span></div>
+        <div class="info-item"><span>🏁 Race End:</span><span class="deadline" id="race-deadline">--/--</span></div>
         <div class="info-item"><span>🏆 Finish Line:</span><span id="finish-coords">--</span></div>
         <div class="info-item"><span>📊 Status:</span><span id="race-status">Waiting...</span></div>
         
@@ -908,19 +908,6 @@
                     registerLink.style.display = 'none';
                 }
             }
-            
-            // Обновляем информацию о времени
-            if (config) {
-                if (config.raceStartDateTime) {
-                    const startTime = new Date(config.raceStartDateTime);
-                    document.getElementById('race-start-time').innerHTML = startTime.toLocaleString();
-                    if (config.raceDurationHours) {
-                        const endTime = new Date(startTime);
-                        endTime.setHours(endTime.getHours() + config.raceDurationHours);
-                        document.getElementById('race-deadline').innerHTML = endTime.toLocaleString();
-                    }
-                }
-            }
         }
         
         // ============================================
@@ -1004,13 +991,50 @@
                 displayAnnouncement({ message: `Login failed: ${data.message}`, timestamp: Date.now() });
             });
             
-            // Race config
+            // Race config - ОБНОВЛЕННЫЙ БЛОК
             socket.on('fiesta-race-config', (config) => {
                 console.log('Race config received');
                 currentConfig = config;
                 
                 if (config.finishCoords?.lat && config.finishCoords?.lng) {
                     document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
+                    
+                    // ОБНОВЛЕННАЯ ЛОГИКА ДЛЯ ВРЕМЕНИ СТАРТА И ОКОНЧАНИЯ
+                    // Используем scheduledStartTime если есть, иначе raceStartDateTime
+                    let startTime = null;
+                    if (config.scheduledStartTime) {
+                        startTime = new Date(config.scheduledStartTime);
+                    } else if (config.raceStartDateTime) {
+                        startTime = new Date(config.raceStartDateTime);
+                    }
+                    
+                    if (startTime && !isNaN(startTime.getTime())) {
+                        document.getElementById('race-start-time').innerHTML = startTime.toLocaleString();
+                        
+                        // Вычисляем время окончания
+                        const duration = config.raceDurationHours || 24;
+                        const endTime = new Date(startTime);
+                        endTime.setHours(endTime.getHours() + duration);
+                        document.getElementById('race-deadline').innerHTML = endTime.toLocaleString();
+                    } else {
+                        document.getElementById('race-start-time').innerHTML = '--/--';
+                        document.getElementById('race-deadline').innerHTML = '--/--';
+                    }
+                    
+                    // Отображение статуса
+                    const statusMap = {
+                        'idle': { text: '⏸️ No race active', color: '#94a3b8' },
+                        'registration': { text: '📝 Registration open!', color: '#fbbf24' },
+                        'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981' },
+                        'finished': { text: '🏆 RACE FINISHED', color: '#ef4444' }
+                    };
+                    
+                    const statusInfo = statusMap[config.raceStatus] || statusMap['idle'];
+                    const statusEl = document.getElementById('race-status');
+                    if (statusEl) {
+                        statusEl.innerHTML = statusInfo.text;
+                        statusEl.style.color = statusInfo.color;
+                    }
                     
                     if (finishMarker && map) map.removeLayer(finishMarker);
                     const finishIcon = L.divIcon({
