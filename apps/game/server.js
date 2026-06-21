@@ -1,6 +1,6 @@
 /**
  * ГЛАВНЫЙ ИГРОВОЙ СЕРВЕР «ФИЕСТА» (Порт 3001)
- * Версия 5.1 - с правильной трансляцией событий
+ * Версия 6.0 - с единой конфигурацией
  */
 
 const express = require('express');
@@ -163,6 +163,10 @@ function setRaceStatus(newStatus, options = {}) {
             raceConfig.raceFinished = false;
             raceConfig.raceStatus = GAME_STATES.RACING;
             raceConfig.registrationWindowTo = new Date();
+            // Устанавливаем время старта, если его нет
+            if (raceConfig.raceStartDateTime.getTime() === new Date('1970-01-01').getTime()) {
+                raceConfig.raceStartDateTime = new Date();
+            }
             startAllSimulations();
             console.log('🏁 Race started!');
             break;
@@ -903,6 +907,125 @@ io.on('connection', (socket) => {
     // ============================================
     // АДМИНИСТРАТОРСКИЕ ФУНКЦИИ
     // ============================================
+    
+    // ============================================
+    // НОВАЯ ФУНКЦИЯ: СОХРАНЕНИЕ ПОЛНОЙ КОНФИГУРАЦИИ
+    // ============================================
+    socket.on('fiesta-save-full-config', (fullConfig) => {
+        if (fullConfig.adminKey !== 'aerostar2024') {
+            socket.emit('fiesta-error', 'Admin privileges required');
+            return;
+        }
+
+        console.log('📝 Received full configuration from admin');
+        let announcementSent = false;
+
+        // 1. Обновляем правила гонки
+        if (fullConfig.finishCoords) {
+            raceConfig.finishCoords = { 
+                lat: parseFloat(fullConfig.finishCoords.lat) || 0, 
+                lng: parseFloat(fullConfig.finishCoords.lng) || 0
+            };
+        }
+
+        if (fullConfig.allowedStartRegion) {
+            raceConfig.allowedStartRegion = {
+                minLat: parseFloat(fullConfig.allowedStartRegion.minLat) || 0,
+                maxLat: parseFloat(fullConfig.allowedStartRegion.maxLat) || 0,
+                minLng: parseFloat(fullConfig.allowedStartRegion.minLng) || 0,
+                maxLng: parseFloat(fullConfig.allowedStartRegion.maxLng) || 0
+            };
+        }
+
+        if (fullConfig.raceDurationHours) {
+            raceConfig.raceDurationHours = fullConfig.raceDurationHours;
+        }
+
+        // 2. Обновляем окно регистрации
+        if (fullConfig.registrationWindowFrom && fullConfig.registrationWindowTo) {
+            const fromDate = new Date(fullConfig.registrationWindowFrom);
+            const toDate = new Date(fullConfig.registrationWindowTo);
+            
+            if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime()) && toDate > fromDate) {
+                raceConfig.registrationWindowFrom = fromDate;
+                raceConfig.registrationWindowTo = toDate;
+                console.log(`📝 Registration window set: ${fromDate.toUTCString()} — ${toDate.toUTCString()}`);
+            } else {
+                console.warn('⚠️ Invalid registration window dates, skipping');
+            }
+        } else {
+            // Если регистрация не задана - очищаем
+            raceConfig.registrationWindowFrom = new Date('1970-01-01');
+            raceConfig.registrationWindowTo = new Date('1970-01-01');
+            console.log('📝 Registration window cleared');
+        }
+
+        // 3. Обновляем запланированный старт
+        if (fullConfig.scheduledStartTime) {
+            const startTime = new Date(fullConfig.scheduledStartTime);
+            if (!isNaN(startTime.getTime())) {
+                const now = new Date();
+                const nowUTC = new Date(now.toUTCString());
+                const startUTC = new Date(startTime.toUTCString());
+                
+                if (startUTC > nowUTC) {
+                    raceConfig.scheduledStartTime = startTime.toISOString();
+                    console.log(`⏰ Scheduled start set: ${startUTC.toUTCString()}`);
+                } else {
+                    console.warn('⚠️ Start time is in the past, ignoring');
+                    raceConfig.scheduledStartTime = null;
+                }
+            }
+        } else {
+            raceConfig.scheduledStartTime = null;
+            console.log('⏰ Scheduled start cleared');
+        }
+
+        // Сохраняем конфигурацию
+        saveConfigToFile();
+
+        // 4. Проверяем, нужно ли открыть регистрацию
+        const registrationOpened = checkAndOpenRegistration();
+
+        // 5. Проверяем, нужно ли запустить гонку
+        const raceStarted = checkAndStartRace();
+
+        // 6. Отправляем объявление, если есть
+        if (fullConfig.announcement && fullConfig.announcement.trim()) {
+            io.to('race-room').emit('fiesta-admin-message', {
+                message: fullConfig.announcement.trim(),
+                timestamp: new Date().toISOString(),
+                admin: 'Race Administrator'
+            });
+            announcementSent = true;
+            console.log(`📢 Announcement sent: ${fullConfig.announcement.trim()}`);
+        }
+
+        // 7. Отправляем обновленную конфигурацию всем
+        io.emit('fiesta-race-config', getConfigForClient());
+        io.emit('fiesta-state-changed', {
+            oldState: raceConfig.raceStatus,
+            newState: raceConfig.raceStatus,
+            config: getConfigForClient()
+        });
+
+        // 8. Подтверждение админу
+        socket.emit('fiesta-config-saved', { 
+            success: true,
+            announcementSent: announcementSent,
+            registrationOpened: registrationOpened,
+            raceStarted: raceStarted
+        });
+
+        console.log('✅ Full configuration applied successfully');
+        if (registrationOpened) console.log('📝 Registration was opened automatically');
+        if (raceStarted) console.log('🏁 Race was started automatically');
+    });
+
+    // ============================================
+    // СТАРЫЕ АДМИН-ФУНКЦИИ (оставляем для совместимости)
+    // ============================================
+    
     socket.on('fiesta-admin-set-status', (data) => {
         if (data.adminKey === 'aerostar2024') {
             const success = setRaceStatus(data.status);
@@ -976,7 +1099,7 @@ io.on('connection', (socket) => {
     });
 
     // ============================================
-    // УСТАНОВКА ОКНА РЕГИСТРАЦИИ
+    // УСТАНОВКА ОКНА РЕГИСТРАЦИИ (устаревшая, но оставляем)
     // ============================================
     socket.on('fiesta-set-registration-window', (data) => {
         if (data.adminKey !== 'aerostar2024') {
@@ -1047,7 +1170,7 @@ io.on('connection', (socket) => {
     });
 
     // ============================================
-    // УСТАНОВКА СТАРТА ГОНКИ
+    // УСТАНОВКА СТАРТА ГОНКИ (устаревшая, но оставляем)
     // ============================================
     socket.on('fiesta-set-scheduled-start', (data) => {
         if (data.adminKey !== 'aerostar2024') {
