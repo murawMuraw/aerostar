@@ -1,6 +1,6 @@
 /**
  * ГЛАВНЫЙ ИГРОВОЙ СЕРВЕР «ФИЕСТА» (Порт 3001)
- * Версия 5.0 - очищен от дублирования
+ * Версия 5.1 - с правильной трансляцией событий
  */
 
 const express = require('express');
@@ -149,7 +149,6 @@ function setRaceStatus(newStatus, options = {}) {
             raceConfig.raceStarted = false;
             raceConfig.raceFinished = false;
             raceConfig.raceStatus = GAME_STATES.REGISTRATION;
-            // Если не установлено окно регистрации, устанавливаем на 7 дней
             if (raceConfig.registrationWindowFrom.getTime() === new Date('1970-01-01').getTime()) {
                 raceConfig.registrationWindowFrom = new Date();
                 raceConfig.registrationWindowTo = new Date();
@@ -239,11 +238,10 @@ function isRaceTimeExpired() {
 }
 
 // ============================================
-// АВТОМАТИЧЕСКИЕ ПРОВЕРКИ (ЕДИНЫЕ ФУНКЦИИ)
+// АВТОМАТИЧЕСКИЕ ПРОВЕРКИ
 // ============================================
 
 function checkAndOpenRegistration() {
-    // Проверяем, что сервер в IDLE и есть окно регистрации
     if (raceConfig.raceStatus !== GAME_STATES.IDLE) {
         return false;
     }
@@ -910,7 +908,6 @@ io.on('connection', (socket) => {
             const success = setRaceStatus(data.status);
             if (success) {
                 socket.emit('fiesta-status-changed', { status: data.status });
-                io.emit('fiesta-race-config', getConfigForClient());
                 socket.emit('fiesta-config-saved', { success: true });
             } else {
                 socket.emit('fiesta-error', `Cannot transition from ${raceConfig.raceStatus} to ${data.status}`);
@@ -957,12 +954,25 @@ io.on('connection', (socket) => {
         
         saveConfigToFile();
         
-        io.to('race-room').emit('fiesta-race-config', getConfigForClient());
+        io.emit('fiesta-race-config', getConfigForClient());
+        io.emit('fiesta-state-changed', {
+            oldState: raceConfig.raceStatus,
+            newState: raceConfig.raceStatus,
+            config: getConfigForClient()
+        });
+        
         socket.emit('fiesta-config-saved', { success: true });
         console.log('🔧 Race config updated by admin');
         
-        // Пытаемся открыть регистрацию
-        checkAndOpenRegistration();
+        const opened = checkAndOpenRegistration();
+        if (opened) {
+            io.emit('fiesta-race-config', getConfigForClient());
+            io.emit('fiesta-state-changed', {
+                oldState: GAME_STATES.IDLE,
+                newState: GAME_STATES.REGISTRATION,
+                config: getConfigForClient()
+            });
+        }
     });
 
     // ============================================
@@ -975,11 +985,17 @@ io.on('connection', (socket) => {
         }
         
         if (data.registrationFrom === null || data.registrationTo === null) {
-            // Очищаем окно регистрации
             raceConfig.registrationWindowFrom = new Date('1970-01-01');
             raceConfig.registrationWindowTo = new Date('1970-01-01');
             saveConfigToFile();
+            
             io.emit('fiesta-race-config', getConfigForClient());
+            io.emit('fiesta-state-changed', {
+                oldState: raceConfig.raceStatus,
+                newState: raceConfig.raceStatus,
+                config: getConfigForClient()
+            });
+            
             socket.emit('fiesta-registration-window-set', {
                 success: true,
                 registrationFrom: null,
@@ -1002,15 +1018,19 @@ io.on('connection', (socket) => {
             return;
         }
         
-        // Сохраняем окно регистрации
         raceConfig.registrationWindowFrom = fromDate;
         raceConfig.registrationWindowTo = toDate;
         saveConfigToFile();
         
-        // Пытаемся открыть регистрацию сразу
         const opened = checkAndOpenRegistration();
         
         io.emit('fiesta-race-config', getConfigForClient());
+        io.emit('fiesta-state-changed', {
+            oldState: raceConfig.raceStatus,
+            newState: raceConfig.raceStatus,
+            config: getConfigForClient()
+        });
+        
         socket.emit('fiesta-registration-window-set', {
             success: true,
             registrationFrom: fromDate.toISOString(),
@@ -1038,6 +1058,14 @@ io.on('connection', (socket) => {
         if (data.startTime === null) {
             raceConfig.scheduledStartTime = null;
             saveConfigToFile();
+            
+            io.emit('fiesta-race-config', getConfigForClient());
+            io.emit('fiesta-state-changed', {
+                oldState: raceConfig.raceStatus,
+                newState: raceConfig.raceStatus,
+                config: getConfigForClient()
+            });
+            
             socket.emit('fiesta-scheduled-start-set', {
                 success: true,
                 startTime: null
@@ -1066,6 +1094,13 @@ io.on('connection', (socket) => {
             raceConfig.raceDurationHours = data.duration;
         }
         saveConfigToFile();
+        
+        io.emit('fiesta-race-config', getConfigForClient());
+        io.emit('fiesta-state-changed', {
+            oldState: raceConfig.raceStatus,
+            newState: raceConfig.raceStatus,
+            config: getConfigForClient()
+        });
         
         socket.emit('fiesta-scheduled-start-set', {
             success: true,
@@ -1155,7 +1190,7 @@ savePilotsToFile();
 loadConfig();
 loadPilotsFromFile();
 
-// Пытаемся открыть регистрацию при запуске
+// Проверяем, нужно ли открыть регистрацию при запуске
 checkAndOpenRegistration();
 
 setTimeout(() => {
