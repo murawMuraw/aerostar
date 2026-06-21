@@ -1,6 +1,6 @@
 /**
  * ГЛАВНЫЙ ИГРОВОЙ СЕРВЕР «ФИЕСТА» (Порт 3001)
- * Версия 4.0 - с управлением состояниями и UTC
+ * Версия 4.2 - с исправленной логикой ветра
  */
 
 const express = require('express');
@@ -322,6 +322,12 @@ async function updateWeatherForAllBalloons() {
             console.log(`🌤️ Ветер для ${balloon.username}: ${wind.speed} м/с, ${wind.direction}°`);
         } catch (error) {
             console.error(`❌ Ошибка получения ветра для ${balloon.username}:`, error.message);
+            // Если ошибка - оставляем старый ветер, не подставляем случайный
+            if (!balloon._cachedWind) {
+                console.warn(`⚠️ Нет кэшированного ветра для ${balloon.username}, оставляем без изменений`);
+            } else {
+                console.log(`📦 Используем кэшированный ветер для ${balloon.username}`);
+            }
         }
     }
 }
@@ -361,6 +367,12 @@ function deg2rad(deg) {
 // ============================================
 function startAllSimulations() {
     console.log('🚀 Starting simulations for all balloons...');
+    
+    // Сначала обновляем ветер для всех шаров
+    setTimeout(() => {
+        updateWeatherForAllBalloons();
+    }, 1000);
+    
     for (const [id, balloon] of Object.entries(balloons)) {
         if (!simulationIntervals.has(id)) {
             console.log(`▶️ Starting simulation for ${balloon.username || id}`);
@@ -385,6 +397,33 @@ async function startBalloonSimulation(balloonId) {
     
     console.log(`🎈 Starting simulation for balloon ${balloonId}`);
     
+    const balloon = balloons[balloonId];
+    if (!balloon) {
+        console.error(`❌ Balloon ${balloonId} not found`);
+        return;
+    }
+    
+    // Получаем начальный ветер, если его нет
+    if (!balloon._cachedWind) {
+        try {
+            console.log(`🌤️ Getting initial wind for ${balloon.username}...`);
+            const wind = await windService.getWindAtPosition(balloon.lat, balloon.lng, balloon.altitude);
+            balloon._cachedWind = wind;
+            balloon.speed = wind.speed;
+            balloon.windDirection = wind.direction;
+            balloon.layerName = wind.layerName;
+            console.log(`✅ Initial wind for ${balloon.username}: ${wind.speed} m/s, ${wind.direction}°`);
+            
+            io.to('race-room').emit('fiesta-balloon-updated', balloon);
+        } catch (error) {
+            console.error(`❌ Error getting initial wind for ${balloon.username}:`, error.message);
+            // Если ошибка - оставляем без ветра, не используем fallback
+            console.warn(`⚠️ No wind data for ${balloon.username}, waiting for next update`);
+        }
+    } else {
+        console.log(`📦 Using cached wind for ${balloon.username}: ${balloon._cachedWind.speed} m/s`);
+    }
+    
     const interval = setInterval(async () => {
         const balloon = balloons[balloonId];
         
@@ -408,13 +447,29 @@ async function startBalloonSimulation(balloonId) {
         }
         
         try {
+            // Получаем ветер, если его нет или он устарел (старше 5 минут)
             let wind = balloon._cachedWind;
-            if (!wind) {
-                console.log(`🔄 Нет кэшированного ветра для ${balloon.username}, запрашиваю...`);
-                wind = await windService.getWindAtPosition(balloon.lat, balloon.lng, balloon.altitude);
-                balloon._cachedWind = wind;
+            if (!wind || (Date.now() - wind.timestamp) > 300000) {
+                console.log(`🔄 Обновление ветра для ${balloon.username}...`);
+                try {
+                    wind = await windService.getWindAtPosition(balloon.lat, balloon.lng, balloon.altitude);
+                    balloon._cachedWind = wind;
+                } catch (error) {
+                    console.error(`❌ Ошибка получения ветра для ${balloon.username}:`, error.message);
+                    // Если ошибка и нет старого ветра - пропускаем обновление
+                    if (!wind) {
+                        console.warn(`⚠️ Нет данных о ветре для ${balloon.username}, пропускаем обновление`);
+                        return;
+                    }
+                }
             }
             
+            if (!wind) {
+                console.warn(`⚠️ Нет данных о ветре для ${balloon.username}, пропускаем обновление`);
+                return;
+            }
+            
+            // Расчёт движения
             const speedLatPerSecond = wind.speed / 111000;
             const speedLngPerSecond = wind.speed / (111000 * Math.cos(balloon.lat * Math.PI / 180));
             const intervalSeconds = SIMULATION_INTERVAL / 1000;
@@ -427,7 +482,7 @@ async function startBalloonSimulation(balloonId) {
             balloon.lat += latChange;
             balloon.lng += lngChange;
             balloon.speed = wind.speed;
-            balloon.layerName = wind.layerName;
+            balloon.layerName = wind.layerName || balloon.layerName || 'Default Layer';
             balloon.windDirection = wind.direction;
             balloon.lastWindUpdate = wind.timestamp;
             
@@ -917,7 +972,6 @@ io.on('connection', (socket) => {
 
     socket.on('fiesta-set-scheduled-start', (data) => {
         if (data.adminKey === 'aerostar2024') {
-            // Если startTime === null, отменяем
             if (data.startTime === null) {
                 raceConfig.scheduledStartTime = null;
                 if (raceStartTimer) {
@@ -1034,7 +1088,7 @@ setInterval(() => {
     }
 }, 60000);
 
-// Автоматический старт по расписанию (UTC)
+// Автоматический старт по расписанию (UTC) - БЕЗ СООБЩЕНИЯ
 setInterval(() => {
     if (raceConfig.raceStatus !== GAME_STATES.RACING && 
         raceConfig.raceStatus !== GAME_STATES.FINISHED &&
@@ -1052,12 +1106,8 @@ setInterval(() => {
         
         if (scheduledUTC <= nowUTC) {
             setRaceStatus(GAME_STATES.RACING);
-            io.to('race-room').emit('fiesta-race-started', { 
-                message: "🏁 ГОНКА НАЧАЛАСЬ АВТОМАТИЧЕСКИ! 🏁",
-                timestamp: scheduledTime,
-                scheduled: true
-            });
-            console.log(`🏁 Race started automatically at ${scheduledUTC.toUTCString()}!`);
+            // НЕ ОТПРАВЛЯЕМ СООБЩЕНИЕ ПРИ АВТОМАТИЧЕСКОМ СТАРТЕ
+            console.log(`🏁 Race started automatically at ${scheduledUTC.toUTCString()}`);
             
             raceConfig.scheduledStartTime = null;
             saveConfigToFile();
