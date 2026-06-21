@@ -1,6 +1,6 @@
 /**
  * ГЛАВНЫЙ ИГРОВОЙ СЕРВЕР «ФИЕСТА» (Порт 3001)
- * Версия 4.2 - с исправленной логикой ветра
+ * Версия 4.3 - с правильным управлением состояниями
  */
 
 const express = require('express');
@@ -141,30 +141,39 @@ function setRaceStatus(newStatus, options = {}) {
             raceConfig.raceStarted = false;
             raceConfig.raceFinished = false;
             raceConfig.raceStatus = GAME_STATES.IDLE;
-            if (oldStatus === GAME_STATES.FINISHED) {
-                balloons = {};
-                savePilotsToFile();
-                console.log('🧹 All pilots cleared (FINISHED -> IDLE)');
-            }
+            // Очищаем все настройки времени
+            raceConfig.scheduledStartTime = null;
+            raceConfig.registrationWindowFrom = new Date('1970-01-01');
+            raceConfig.registrationWindowTo = new Date('1970-01-01');
+            raceConfig.raceStartDateTime = new Date('1970-01-01');
+            // Очищаем всех пилотов
+            balloons = {};
+            savePilotsToFile();
             stopAllSimulations();
+            console.log('🧹 All pilots cleared, config reset to IDLE');
             break;
 
         case GAME_STATES.REGISTRATION:
             raceConfig.raceStarted = false;
             raceConfig.raceFinished = false;
             raceConfig.raceStatus = GAME_STATES.REGISTRATION;
+            // Открываем регистрацию на 7 дней
             raceConfig.registrationWindowFrom = new Date();
             raceConfig.registrationWindowTo = new Date();
             raceConfig.registrationWindowTo.setDate(raceConfig.registrationWindowTo.getDate() + 7);
             stopAllSimulations();
+            console.log('📝 Registration opened for 7 days');
             break;
 
         case GAME_STATES.RACING:
             raceConfig.raceStarted = true;
             raceConfig.raceFinished = false;
             raceConfig.raceStatus = GAME_STATES.RACING;
+            // Закрываем регистрацию
             raceConfig.registrationWindowTo = new Date();
+            // Запускаем симуляцию для всех шаров
             startAllSimulations();
+            console.log('🏁 Race started!');
             break;
 
         case GAME_STATES.FINISHED:
@@ -172,12 +181,14 @@ function setRaceStatus(newStatus, options = {}) {
             raceConfig.raceFinished = true;
             raceConfig.raceStatus = GAME_STATES.FINISHED;
             stopAllSimulations();
+            console.log('🏆 Race finished!');
             break;
     }
 
     saveConfigToFile();
     savePilotsToFile();
     
+    // Уведомляем всех клиентов
     io.emit('fiesta-state-changed', {
         oldState: oldStatus,
         newState: newStatus,
@@ -322,9 +333,8 @@ async function updateWeatherForAllBalloons() {
             console.log(`🌤️ Ветер для ${balloon.username}: ${wind.speed} м/с, ${wind.direction}°`);
         } catch (error) {
             console.error(`❌ Ошибка получения ветра для ${balloon.username}:`, error.message);
-            // Если ошибка - оставляем старый ветер, не подставляем случайный
             if (!balloon._cachedWind) {
-                console.warn(`⚠️ Нет кэшированного ветра для ${balloon.username}, оставляем без изменений`);
+                console.warn(`⚠️ Нет кэшированного ветра для ${balloon.username}`);
             } else {
                 console.log(`📦 Используем кэшированный ветер для ${balloon.username}`);
             }
@@ -368,7 +378,6 @@ function deg2rad(deg) {
 function startAllSimulations() {
     console.log('🚀 Starting simulations for all balloons...');
     
-    // Сначала обновляем ветер для всех шаров
     setTimeout(() => {
         updateWeatherForAllBalloons();
     }, 1000);
@@ -403,7 +412,6 @@ async function startBalloonSimulation(balloonId) {
         return;
     }
     
-    // Получаем начальный ветер, если его нет
     if (!balloon._cachedWind) {
         try {
             console.log(`🌤️ Getting initial wind for ${balloon.username}...`);
@@ -417,8 +425,6 @@ async function startBalloonSimulation(balloonId) {
             io.to('race-room').emit('fiesta-balloon-updated', balloon);
         } catch (error) {
             console.error(`❌ Error getting initial wind for ${balloon.username}:`, error.message);
-            // Если ошибка - оставляем без ветра, не используем fallback
-            console.warn(`⚠️ No wind data for ${balloon.username}, waiting for next update`);
         }
     } else {
         console.log(`📦 Using cached wind for ${balloon.username}: ${balloon._cachedWind.speed} m/s`);
@@ -447,7 +453,6 @@ async function startBalloonSimulation(balloonId) {
         }
         
         try {
-            // Получаем ветер, если его нет или он устарел (старше 5 минут)
             let wind = balloon._cachedWind;
             if (!wind || (Date.now() - wind.timestamp) > 300000) {
                 console.log(`🔄 Обновление ветра для ${balloon.username}...`);
@@ -456,7 +461,6 @@ async function startBalloonSimulation(balloonId) {
                     balloon._cachedWind = wind;
                 } catch (error) {
                     console.error(`❌ Ошибка получения ветра для ${balloon.username}:`, error.message);
-                    // Если ошибка и нет старого ветра - пропускаем обновление
                     if (!wind) {
                         console.warn(`⚠️ Нет данных о ветре для ${balloon.username}, пропускаем обновление`);
                         return;
@@ -469,7 +473,6 @@ async function startBalloonSimulation(balloonId) {
                 return;
             }
             
-            // Расчёт движения
             const speedLatPerSecond = wind.speed / 111000;
             const speedLngPerSecond = wind.speed / (111000 * Math.cos(balloon.lat * Math.PI / 180));
             const intervalSeconds = SIMULATION_INTERVAL / 1000;
@@ -629,7 +632,8 @@ io.on('connection', (socket) => {
     socket.on('fiesta-start-flight', async (data) => {
         console.log('📝 Registration attempt:', { ...data, password: '***' });
 
-        if (raceConfig.raceStatus !== GAME_STATES.REGISTRATION && raceConfig.raceStatus !== GAME_STATES.IDLE) {
+        // Регистрация возможна только в REGISTRATION
+        if (raceConfig.raceStatus !== GAME_STATES.REGISTRATION) {
             socket.emit('fiesta-registration-complete', { 
                 success: false,
                 message: `Registration is not open. Current status: ${raceConfig.raceStatus}` 
@@ -746,10 +750,6 @@ io.on('connection', (socket) => {
         });
         
         io.to('race-room').emit('fiesta-all-balloons', Object.values(balloons));
-        
-        if (raceConfig.raceStatus === GAME_STATES.RACING) {
-            startBalloonSimulation(pilotId);
-        }
     });
 
     // ============================================
@@ -1015,8 +1015,7 @@ io.on('connection', (socket) => {
             saveConfigToFile();
             
             raceStartTimer = setTimeout(() => {
-                if (raceConfig.raceStatus === GAME_STATES.REGISTRATION || 
-                    raceConfig.raceStatus === GAME_STATES.IDLE) {
+                if (raceConfig.raceStatus === GAME_STATES.REGISTRATION) {
                     setRaceStatus(GAME_STATES.RACING);
                     io.emit('fiesta-race-started', {
                         message: "🏁 ГОНКА НАЧАЛАСЬ ПО РАСПИСАНИЮ! 🏁",
@@ -1062,6 +1061,17 @@ io.on('connection', (socket) => {
 // ЗАПУСК СЕРВЕРА
 // ============================================
 
+// Принудительно сбрасываем в IDLE при запуске
+console.log('🔄 Initializing server in IDLE state...');
+raceConfig.raceStatus = GAME_STATES.IDLE;
+raceConfig.scheduledStartTime = null;
+raceConfig.registrationWindowFrom = new Date('1970-01-01');
+raceConfig.registrationWindowTo = new Date('1970-01-01');
+raceConfig.raceStartDateTime = new Date('1970-01-01');
+balloons = {};
+saveConfigToFile();
+savePilotsToFile();
+
 loadConfig();
 loadPilotsFromFile();
 
@@ -1088,7 +1098,7 @@ setInterval(() => {
     }
 }, 60000);
 
-// Автоматический старт по расписанию (UTC) - БЕЗ СООБЩЕНИЯ
+// Автоматический старт по расписанию (UTC)
 setInterval(() => {
     if (raceConfig.raceStatus !== GAME_STATES.RACING && 
         raceConfig.raceStatus !== GAME_STATES.FINISHED &&
@@ -1106,9 +1116,7 @@ setInterval(() => {
         
         if (scheduledUTC <= nowUTC) {
             setRaceStatus(GAME_STATES.RACING);
-            // НЕ ОТПРАВЛЯЕМ СООБЩЕНИЕ ПРИ АВТОМАТИЧЕСКОМ СТАРТЕ
             console.log(`🏁 Race started automatically at ${scheduledUTC.toUTCString()}`);
-            
             raceConfig.scheduledStartTime = null;
             saveConfigToFile();
         }
@@ -1134,4 +1142,5 @@ server.listen(PORT, '0.0.0.0', () => {
     if (raceConfig.scheduledStartTime) {
         console.log(`⏰ Scheduled start: ${new Date(raceConfig.scheduledStartTime).toUTCString()}`);
     }
+    console.log(`👥 Pilots: ${Object.keys(balloons).length}`);
 });
