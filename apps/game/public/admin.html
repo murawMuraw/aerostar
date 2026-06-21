@@ -212,21 +212,28 @@
                 </div>
             </div>
 
-            <!-- БЛОК ЗАПЛАНИРОВАННОГО СТАРТА РЕГИСТРАЦИИ -->
+            <!-- БЛОК НАСТРОЙКИ РЕГИСТРАЦИИ (ОБЪЕДИНЕННЫЙ) -->
             <div class="admin-card">
-                <h2>📝 Scheduled Registration Open (UTC)</h2>
-                <div class="form-group">
-                    <label>Registration Open Date & Time (UTC)</label>
-                    <input type="datetime-local" id="scheduled-registration-time" />
-                    <div class="info-text">Установите время автоматического открытия регистрации в UTC</div>
+                <h2>📝 Registration Window (UTC)</h2>
+                <div class="coord-group">
+                    <div class="form-group">
+                        <label>Registration Opens (UTC)</label>
+                        <input type="datetime-local" id="reg-from" />
+                        <div class="info-text">Время автоматического открытия регистрации</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Registration Closes (UTC)</label>
+                        <input type="datetime-local" id="reg-to" />
+                        <div class="info-text">Время автоматического закрытия регистрации</div>
+                    </div>
                 </div>
                 <div class="button-group-small">
-                    <button id="set-scheduled-registration" class="btn-success">📝 Set Registration Time</button>
-                    <button id="cancel-scheduled-registration" class="btn-danger" style="background:#b91c1c;">❌ Cancel</button>
+                    <button id="set-registration-window" class="btn-success">📝 Set Registration Window</button>
+                    <button id="clear-registration-window" class="btn-danger" style="background:#b91c1c;">❌ Clear</button>
                 </div>
-                <div id="registration-display" class="scheduled-time" style="display:none;">
-                    <div class="label">📝 Scheduled registration open (UTC):</div>
-                    <div class="value" id="scheduled-registration-value">--</div>
+                <div id="registration-window-display" class="scheduled-time" style="display:none;">
+                    <div class="label">📝 Registration window (UTC):</div>
+                    <div class="value" id="registration-window-value">--</div>
                 </div>
             </div>
 
@@ -286,21 +293,6 @@
                 </div>
             </div>
 
-            <!-- НАСТРОЙКА РЕГИСТРАЦИИ -->
-            <div class="admin-card">
-                <h2>📝 Registration Window (UTC)</h2>
-                <div class="coord-group">
-                    <div class="form-group">
-                        <label>Registration Opens (UTC)</label>
-                        <input type="datetime-local" id="reg-from" />
-                    </div>
-                    <div class="form-group">
-                        <label>Registration Closes (UTC)</label>
-                        <input type="datetime-local" id="reg-to" />
-                    </div>
-                </div>
-            </div>
-
             <!-- КНОПКИ УПРАВЛЕНИЯ -->
             <div class="admin-card">
                 <h2>🎮 Race Controls</h2>
@@ -355,12 +347,6 @@
             const hours = String(d.getUTCHours()).padStart(2, '0');
             const minutes = String(d.getUTCMinutes()).padStart(2, '0');
             return `${year}-${month}-${day}T${hours}:${minutes}`;
-        }
-
-        function getUTCFromInput(inputValue) {
-            if (!inputValue) return null;
-            const date = new Date(inputValue + 'Z');
-            return date.toISOString();
         }
 
         function updateCurrentUTC() {
@@ -444,6 +430,7 @@
                     document.getElementById('max-lng').value = config.allowedStartRegion.maxLng || '';
                 }
 
+                // Заполняем поля регистрации
                 if (config.registrationWindowFrom) {
                     document.getElementById('reg-from').value = formatForInput(config.registrationWindowFrom);
                 }
@@ -451,12 +438,13 @@
                     document.getElementById('reg-to').value = formatForInput(config.registrationWindowTo);
                 }
 
-                if (config.scheduledRegistrationTime) {
-                    document.getElementById('scheduled-registration-time').value = formatForInput(config.scheduledRegistrationTime);
-                    document.getElementById('registration-display').style.display = 'block';
-                    document.getElementById('scheduled-registration-value').textContent = formatUTC(config.scheduledRegistrationTime);
+                // Показываем окно регистрации если оно установлено
+                if (config.registrationWindowFrom && config.registrationWindowTo) {
+                    document.getElementById('registration-window-display').style.display = 'block';
+                    document.getElementById('registration-window-value').textContent = 
+                        `${formatUTC(config.registrationWindowFrom)} — ${formatUTC(config.registrationWindowTo)}`;
                 } else {
-                    document.getElementById('registration-display').style.display = 'none';
+                    document.getElementById('registration-window-display').style.display = 'none';
                 }
 
                 if (config.scheduledStartTime) {
@@ -530,17 +518,14 @@
                 }
             });
 
-            socket.on('fiesta-scheduled-registration-set', (data) => {
+            socket.on('fiesta-registration-window-set', (data) => {
                 if (data.success) {
-                    if (data.registrationTime) {
-                        const regDate = new Date(data.registrationTime);
-                        document.getElementById('registration-display').style.display = 'block';
-                        document.getElementById('scheduled-registration-value').textContent = regDate.toUTCString();
-                        alert(`✅ Открытие регистрации запланировано на ${regDate.toUTCString()} (UTC)`);
-                    } else {
-                        document.getElementById('registration-display').style.display = 'none';
-                        alert('✅ Запланированное открытие регистрации отменено');
-                    }
+                    const from = new Date(data.registrationFrom);
+                    const to = new Date(data.registrationTo);
+                    document.getElementById('registration-window-display').style.display = 'block';
+                    document.getElementById('registration-window-value').textContent = 
+                        `${from.toUTCString()} — ${to.toUTCString()}`;
+                    alert(`✅ Registration window set: ${from.toUTCString()} — ${to.toUTCString()} (UTC)`);
                     socket.emit('fiesta-get-participants');
                 }
             });
@@ -587,11 +572,6 @@
 
             if (finishBtn) {
                 finishBtn.disabled = (currentStatus !== 'racing');
-                if (currentStatus === 'racing') {
-                    finishBtn.title = 'Завершить гонку';
-                } else {
-                    finishBtn.title = 'Доступно только в режиме RACING';
-                }
             }
 
             if (resetBtn) {
@@ -600,11 +580,6 @@
 
             if (saveBtn) {
                 saveBtn.disabled = (currentStatus === 'racing' || currentStatus === 'finished');
-                if (currentStatus === 'racing' || currentStatus === 'finished') {
-                    saveBtn.title = 'Недоступно во время гонки или после финиша';
-                } else {
-                    saveBtn.title = 'Сохранить настройки (все время в UTC)';
-                }
             }
         }
 
@@ -619,8 +594,7 @@
             document.getElementById('current-config').innerHTML = `
                 <strong>🏁 Finish Line:</strong> ${config.finishCoords?.lat?.toFixed(4)}°, ${config.finishCoords?.lng?.toFixed(4)}°<br>
                 <strong>🗺️ Start Zone:</strong> ${startZoneText}<br>
-                <strong>📝 Registration:</strong> ${formatUTC(config.registrationWindowFrom)} - ${formatUTC(config.registrationWindowTo)}<br>
-                <strong>📝 Scheduled Registration:</strong> ${config.scheduledRegistrationTime ? formatUTC(config.scheduledRegistrationTime) : 'Not set'}<br>
+                <strong>📝 Registration:</strong> ${formatUTC(config.registrationWindowFrom)} — ${formatUTC(config.registrationWindowTo)}<br>
                 <strong>⏰ Scheduled Start:</strong> ${config.scheduledStartTime ? formatUTC(config.scheduledStartTime) : 'Not set'}<br>
                 <strong>⏱️ Duration:</strong> ${config.raceDurationHours || 24} hours<br>
                 <strong>📊 Status:</strong> ${config.raceStatus || 'idle'}
@@ -631,45 +605,56 @@
         // ОБРАБОТЧИКИ СОБЫТИЙ
         // ============================================
 
-        // Set Registration Time
-        document.getElementById('set-scheduled-registration').addEventListener('click', () => {
-            const regTimeInput = document.getElementById('scheduled-registration-time').value;
+        // Set Registration Window
+        document.getElementById('set-registration-window').addEventListener('click', () => {
+            const fromInput = document.getElementById('reg-from').value;
+            const toInput = document.getElementById('reg-to').value;
             
-            if (!regTimeInput) {
-                alert('Пожалуйста, выберите время открытия регистрации (UTC)');
+            if (!fromInput || !toInput) {
+                alert('Пожалуйста, укажите время открытия и закрытия регистрации (UTC)');
                 return;
             }
             
-            const regDate = new Date(regTimeInput + 'Z');
+            const fromDate = new Date(fromInput + 'Z');
+            const toDate = new Date(toInput + 'Z');
             const now = new Date();
             const nowUTC = new Date(now.toUTCString());
             
-            if (regDate <= nowUTC) {
+            if (fromDate <= nowUTC) {
                 alert('Время открытия регистрации должно быть в будущем (UTC)');
                 return;
             }
             
-            if (currentConfig?.raceStatus !== 'idle') {
-                alert('❌ Открытие регистрации можно запланировать только в режиме IDLE');
+            if (toDate <= fromDate) {
+                alert('Время закрытия регистрации должно быть позже времени открытия');
                 return;
             }
             
-            if (confirm(`Запланировать открытие регистрации на ${regDate.toUTCString()} (UTC)?`)) {
-                socket.emit('fiesta-set-scheduled-registration', {
+            if (currentConfig?.raceStatus !== 'idle') {
+                alert('❌ Окно регистрации можно установить только в режиме IDLE');
+                return;
+            }
+            
+            if (confirm(`Установить окно регистрации: ${fromDate.toUTCString()} — ${toDate.toUTCString()} (UTC)?`)) {
+                socket.emit('fiesta-set-registration-window', {
                     adminKey: ADMIN_KEY,
-                    registrationTime: regDate.toISOString()
+                    registrationFrom: fromDate.toISOString(),
+                    registrationTo: toDate.toISOString()
                 });
             }
         });
 
-        // Cancel Registration
-        document.getElementById('cancel-scheduled-registration').addEventListener('click', () => {
-            if (confirm('Отменить запланированное открытие регистрации?')) {
-                socket.emit('fiesta-set-scheduled-registration', {
+        // Clear Registration Window
+        document.getElementById('clear-registration-window').addEventListener('click', () => {
+            if (confirm('Очистить окно регистрации?')) {
+                socket.emit('fiesta-set-registration-window', {
                     adminKey: ADMIN_KEY,
-                    registrationTime: null
+                    registrationFrom: null,
+                    registrationTo: null
                 });
-                document.getElementById('registration-display').style.display = 'none';
+                document.getElementById('registration-window-display').style.display = 'none';
+                document.getElementById('reg-from').value = '';
+                document.getElementById('reg-to').value = '';
             }
         });
 
@@ -730,7 +715,8 @@
 
             const duration = parseInt(document.getElementById('race-duration').value);
             const startTimeInput = document.getElementById('scheduled-start-time').value;
-            const regTimeInput = document.getElementById('scheduled-registration-time').value;
+            const fromInput = document.getElementById('reg-from').value;
+            const toInput = document.getElementById('reg-to').value;
             
             const config = {
                 adminKey: ADMIN_KEY,
@@ -744,16 +730,15 @@
                     minLng: parseFloat(document.getElementById('min-lng').value),
                     maxLng: parseFloat(document.getElementById('max-lng').value)
                 },
-                registrationWindowFrom: document.getElementById('reg-from').value ? new Date(document.getElementById('reg-from').value + 'Z').toISOString() : null,
-                registrationWindowTo: document.getElementById('reg-to').value ? new Date(document.getElementById('reg-to').value + 'Z').toISOString() : null,
+                registrationWindowFrom: fromInput ? new Date(fromInput + 'Z').toISOString() : null,
+                registrationWindowTo: toInput ? new Date(toInput + 'Z').toISOString() : null,
                 raceDurationHours: duration || 24,
-                scheduledStartTime: startTimeInput ? new Date(startTimeInput + 'Z').toISOString() : null,
-                scheduledRegistrationTime: regTimeInput ? new Date(regTimeInput + 'Z').toISOString() : null
+                scheduledStartTime: startTimeInput ? new Date(startTimeInput + 'Z').toISOString() : null
             };
 
             if (confirm('Сохранить конфигурацию? Все время в UTC.')) {
                 socket.emit('fiesta-admin-change-rules', config);
-                // Если установлено время старта - отправляем отдельно
+                
                 if (config.scheduledStartTime) {
                     socket.emit('fiesta-set-scheduled-start', {
                         adminKey: ADMIN_KEY,
@@ -761,11 +746,12 @@
                         duration: duration || 24
                     });
                 }
-                // Если установлено время регистрации - отправляем отдельно
-                if (config.scheduledRegistrationTime) {
-                    socket.emit('fiesta-set-scheduled-registration', {
+                
+                if (config.registrationWindowFrom && config.registrationWindowTo) {
+                    socket.emit('fiesta-set-registration-window', {
                         adminKey: ADMIN_KEY,
-                        registrationTime: config.scheduledRegistrationTime
+                        registrationFrom: config.registrationWindowFrom,
+                        registrationTo: config.registrationWindowTo
                     });
                 }
             }
@@ -794,7 +780,9 @@
             if (confirm('🔄 Сбросить гонку? Будут удалены все пилоты и очищены настройки.')) {
                 socket.emit('fiesta-admin-set-status', { adminKey: ADMIN_KEY, status: 'idle' });
                 document.getElementById('scheduled-display').style.display = 'none';
-                document.getElementById('registration-display').style.display = 'none';
+                document.getElementById('registration-window-display').style.display = 'none';
+                document.getElementById('reg-from').value = '';
+                document.getElementById('reg-to').value = '';
                 alert('✅ Гонка сброшена. Все пилоты удалены.');
             }
         });
