@@ -30,7 +30,6 @@
             z-index: 1;
         }
         
-        /* Role Badge */
         .role-badge {
             position: absolute;
             top: 20px;
@@ -58,7 +57,6 @@
             color: white;
         }
         
-        /* Info Panel */
         .info-panel {
             position: absolute;
             top: 20px;
@@ -114,7 +112,6 @@
             font-size: 11px;
         }
         
-        /* Altitude Panel (только для пилота) */
         .altitude-panel {
             position: absolute;
             bottom: 20px;
@@ -169,7 +166,6 @@
             font-size: 11px;
         }
         
-        /* Control Buttons */
         .control-panel {
             position: absolute;
             bottom: 20px;
@@ -200,7 +196,6 @@
         .btn-idle { background: #64748b; }
         .btn-idle:hover { background: #475569; }
         
-        /* Map Toggle Button */
         .map-toggle {
             position: absolute;
             top: 75px;
@@ -223,7 +218,6 @@
             transform: scale(1.02);
         }
         
-        /* Маркеры - ОБНОВЛЕНО для PNG */
         .my-balloon-marker { 
             filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.8));
         }
@@ -238,7 +232,6 @@
             text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
         
-        /* Модальное окно */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -310,7 +303,6 @@
             margin: 15px 0;
         }
         
-        /* Announcements */
         .announcements-panel {
             position: absolute;
             top: 20px;
@@ -355,7 +347,6 @@
             margin-top: 5px;
         }
         
-        /* Responsive */
         @media (max-width: 768px) {
             .info-panel { width: 280px; padding: 10px; font-size: 11px; }
             .altitude-panel { width: 240px; padding: 12px; }
@@ -365,7 +356,6 @@
             .announcements-panel { width: 90%; }
         }
         
-        /* Scrollbar */
         .info-panel::-webkit-scrollbar {
             width: 4px;
         }
@@ -409,7 +399,6 @@
             50% { opacity: 0.5; }
         }
         
-        /* Исправление цветов в Balloon Controls */
         .altitude-panel,
         .altitude-panel div,
         .altitude-panel span,
@@ -476,7 +465,6 @@
             box-shadow: 0 6px 20px rgba(2, 132, 199, 0.6);
         }
         
-        /* Стили для статуса регистрации */
         .reg-status-open { color: #22c55e; }
         .reg-status-closed { color: #ef4444; }
         .reg-status-racing { color: #f59e0b; }
@@ -507,15 +495,12 @@
         </div>
     </div>
     
-    <!-- Role Badge -->
     <div class="role-badge" id="role-badge" style="display: none;">
         <span id="role-text">👁️ SPECTATOR</span>
     </div>
     
-    <!-- Register Button -->
     <a href="register.html" class="register-btn" id="register-btn">📝 Register for Race</a>
     
-    <!-- Map Toggle -->
     <button class="map-toggle" id="layer-toggle">🛰️ Satellite</button>
     
     <!-- Info Panel -->
@@ -557,7 +542,6 @@
         </div>
     </div>
     
-    <!-- Altitude Panel (только для пилотов) -->
     <div class="altitude-panel" id="altitude-panel" style="display: none;">
         <h3>🎈 Balloon Controls</h3>
         <div class="info-item"><span>🏷️ Callsign:</span><span id="pilot-name">--</span></div>
@@ -579,16 +563,13 @@
         </div>
     </div>
     
-    <!-- Control Buttons -->
     <div class="control-panel">
         <button class="btn" id="focus-finish-btn" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">🎯 Focus Finish</button>
         <button class="btn btn-danger" id="logout-btn">🚪 Exit</button>
     </div>
     
-    <!-- Announcements -->
     <div class="announcements-panel" id="announcements-panel"></div>
     
-    <!-- Connection Status -->
     <div class="connection-status" id="connection-status">
         <span class="connected-indicator"></span>
         <span id="status-text">Connecting...</span>
@@ -614,7 +595,6 @@
         let currentGameState = 'idle';
         let lastPilotUIUpdate = null;
         
-        // Tile Layers
         const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
             subdomains: 'abcd',
@@ -673,8 +653,9 @@
             const from = config?.registrationWindowFrom;
             const to = config?.registrationWindowTo;
 
+            // Регистрация открыта только в состоянии REGISTRATION
             if (raceStatus === 'registration') {
-                if (from && to) {
+                if (from && to && from.getTime() !== new Date('1970-01-01').getTime()) {
                     const fromStr = formatUTC(from);
                     const toStr = formatUTC(to);
                     if (fromStr !== '--/--' && toStr !== '--/--') {
@@ -693,15 +674,11 @@
                 statusEl.style.color = '#f59e0b';
                 statusEl.className = 'value reg-status-racing';
             }
-            else if (raceStatus === 'finished' || raceStatus === 'idle') {
+            else {
+                // idle, finished или любой другой статус - регистрация закрыта
                 statusEl.innerHTML = '❌ НЕТ РЕГИСТРАЦИИ';
                 statusEl.style.color = '#ef4444';
                 statusEl.className = 'value reg-status-closed';
-            } 
-            else {
-                statusEl.innerHTML = '❌ НЕТ РЕГИСТРАЦИИ';
-                statusEl.style.color = '#94a3b8';
-                statusEl.className = 'value reg-status-none';
             }
         }
         
@@ -848,7 +825,7 @@
         }
         
         // ============================================
-        // ИНТЕРФЕЙС ПИЛОТА (с защитой от дублирования)
+        // ИНТЕРФЕЙС ПИЛОТА
         // ============================================
         function updatePilotUI(balloon) {
             if (!balloon) return;
@@ -986,25 +963,17 @@
                 statusEl.style.color = info.color;
             }
             
+            // Кнопка регистрации видна только в IDLE и REGISTRATION
             const registerBtn = document.getElementById('register-btn');
             if (registerBtn) {
-                if (state === 'registration' || state === 'idle') {
-                    registerBtn.style.display = 'block';
-                } else {
-                    registerBtn.style.display = 'none';
-                }
+                registerBtn.style.display = (state === 'registration' || state === 'idle') ? 'block' : 'none';
             }
             
             const registerLink = document.getElementById('register-link');
             if (registerLink) {
-                if (state === 'registration' || state === 'idle') {
-                    registerLink.style.display = 'block';
-                } else {
-                    registerLink.style.display = 'none';
-                }
+                registerLink.style.display = (state === 'registration' || state === 'idle') ? 'block' : 'none';
             }
             
-            // Обновляем статус регистрации
             if (config) {
                 updateRegistrationStatus(config);
             }
@@ -1061,7 +1030,6 @@
                 socket.emit('fiesta-auth', { isSpectator: false, username: username, password: password });
             };
             
-            // Auth response
             socket.on('fiesta-auth-success', (data) => {
                 console.log('Auth success:', data);
                 const modal = document.getElementById('role-modal');
@@ -1091,7 +1059,6 @@
                 displayAnnouncement({ message: `Login failed: ${data.message}`, timestamp: Date.now() });
             });
             
-            // Race config
             socket.on('fiesta-race-config', (config) => {
                 console.log('Race config received');
                 currentConfig = config;
@@ -1099,12 +1066,8 @@
                 if (config.finishCoords?.lat && config.finishCoords?.lng) {
                     document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
                     
-                    let startTime = null;
-                    if (config.scheduledStartTime) {
-                        startTime = new Date(config.scheduledStartTime);
-                    } else if (config.raceStartDateTime) {
-                        startTime = new Date(config.raceStartDateTime);
-                    }
+                    // Используем только scheduledStartTime
+                    let startTime = config.scheduledStartTime ? new Date(config.scheduledStartTime) : null;
                     
                     if (startTime && !isNaN(startTime.getTime())) {
                         document.getElementById('race-start-time').innerHTML = formatUTC(startTime);
@@ -1132,7 +1095,6 @@
                         statusEl.style.color = statusInfo.color;
                     }
                     
-                    // Обновляем статус регистрации
                     updateRegistrationStatus(config);
                     
                     if (finishMarker && map) map.removeLayer(finishMarker);
@@ -1152,7 +1114,6 @@
                 }
             });
             
-            // State changed event
             socket.on('fiesta-state-changed', (data) => {
                 console.log(`🔄 State changed: ${data.oldState} -> ${data.newState}`);
                 if (data.config) {
@@ -1166,7 +1127,6 @@
                 }
             });
             
-            // Balloons updates
             socket.on('fiesta-all-balloons', (balloons) => {
                 if (balloons && Array.isArray(balloons)) {
                     updateBalloons(balloons);
@@ -1200,7 +1160,6 @@
                 }
             });
             
-            // Race events
             socket.on('fiesta-race-started', (data) => {
                 updateUIForState('racing', currentConfig);
                 displayAnnouncement({ message: data.message || '🏁 Race started!', timestamp: Date.now() });
