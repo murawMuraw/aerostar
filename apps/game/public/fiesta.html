@@ -514,7 +514,7 @@
             <span class="label">🏁 Race End (UTC):</span>
             <span class="value deadline" id="race-deadline">--/--</span>
         </div>
-        <div class="info-item">
+        <div class="info-item" id="registration-info-item">
             <span class="label">📝 Registration:</span>
             <span class="value" id="registration-status" style="font-weight: bold;">--</span>
         </div>
@@ -653,9 +653,13 @@
             const from = config?.registrationWindowFrom;
             const to = config?.registrationWindowTo;
 
+            // Проверяем, что даты валидные (не 1970-01-01)
+            const hasValidFrom = from && from.getTime && from.getTime() !== new Date('1970-01-01').getTime();
+            const hasValidTo = to && to.getTime && to.getTime() !== new Date('1970-01-01').getTime();
+
             // Регистрация открыта только в состоянии REGISTRATION
             if (raceStatus === 'registration') {
-                if (from && to && from.getTime() !== new Date('1970-01-01').getTime()) {
+                if (hasValidFrom && hasValidTo) {
                     const fromStr = formatUTC(from);
                     const toStr = formatUTC(to);
                     if (fromStr !== '--/--' && toStr !== '--/--') {
@@ -1063,10 +1067,11 @@
                 console.log('Race config received');
                 currentConfig = config;
                 
+                // Всегда показываем finish line сразу
                 if (config.finishCoords?.lat && config.finishCoords?.lng) {
                     document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
                     
-                    // Используем только scheduledStartTime
+                    // Отображаем время старта и окончания
                     let startTime = config.scheduledStartTime ? new Date(config.scheduledStartTime) : null;
                     
                     if (startTime && !isNaN(startTime.getTime())) {
@@ -1097,6 +1102,7 @@
                     
                     updateRegistrationStatus(config);
                     
+                    // Всегда показываем маркер финиша
                     if (finishMarker && map) map.removeLayer(finishMarker);
                     const finishIcon = L.divIcon({
                         html: '<span style="font-size: 32px;">🏁</span>',
