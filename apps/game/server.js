@@ -1,6 +1,6 @@
 /**
  * ГЛАВНЫЙ ИГРОВОЙ СЕРВЕР «ФИЕСТА» (Порт 3001)
- * Версия 4.4 - с автоматическим переходом в REGISTRATION
+ * Версия 4.5 - с автоматическим открытием регистрации
  */
 
 const express = require('express');
@@ -1038,6 +1038,70 @@ io.on('connection', (socket) => {
             });
             
             console.log(`⏰ Scheduled race start at ${scheduledUTC.toUTCString()} (in ${Math.round(delay/60000)} minutes)`);
+        } else {
+            socket.emit('fiesta-error', 'Admin privileges required');
+        }
+    });
+    
+    // ============================================
+    // УСТАНОВКА ВРЕМЕНИ ОТКРЫТИЯ РЕГИСТРАЦИИ
+    // ============================================
+    socket.on('fiesta-set-scheduled-registration', (data) => {
+        if (data.adminKey === 'aerostar2024') {
+            if (data.registrationTime === null) {
+                raceConfig.scheduledRegistrationTime = null;
+                if (registrationStartTimer) {
+                    clearTimeout(registrationStartTimer);
+                    registrationStartTimer = null;
+                }
+                saveConfigToFile();
+                socket.emit('fiesta-scheduled-registration-set', {
+                    success: true,
+                    registrationTime: null
+                });
+                console.log('📝 Scheduled registration cancelled');
+                return;
+            }
+            
+            const registrationTime = new Date(data.registrationTime);
+            if (isNaN(registrationTime.getTime())) {
+                socket.emit('fiesta-error', 'Invalid registration time');
+                return;
+            }
+            
+            if (registrationStartTimer) {
+                clearTimeout(registrationStartTimer);
+                registrationStartTimer = null;
+            }
+            
+            const now = new Date();
+            const nowUTC = new Date(now.toUTCString());
+            const scheduledUTC = new Date(registrationTime.toUTCString());
+            const delay = scheduledUTC.getTime() - nowUTC.getTime();
+            
+            if (delay <= 0) {
+                socket.emit('fiesta-error', 'Registration time must be in the future (UTC)');
+                return;
+            }
+            
+            raceConfig.scheduledRegistrationTime = registrationTime.toISOString();
+            saveConfigToFile();
+            
+            registrationStartTimer = setTimeout(() => {
+                if (raceConfig.raceStatus === GAME_STATES.IDLE) {
+                    setRaceStatus(GAME_STATES.REGISTRATION);
+                    console.log(`📝 Registration opened automatically at ${scheduledUTC.toUTCString()}`);
+                } else {
+                    console.log(`⚠️ Cannot open registration - current status: ${raceConfig.raceStatus}`);
+                }
+            }, delay);
+            
+            socket.emit('fiesta-scheduled-registration-set', {
+                success: true,
+                registrationTime: registrationTime.toISOString()
+            });
+            
+            console.log(`📝 Scheduled registration at ${scheduledUTC.toUTCString()} (in ${Math.round(delay/60000)} minutes)`);
         } else {
             socket.emit('fiesta-error', 'Admin privileges required');
         }
