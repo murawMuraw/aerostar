@@ -101,15 +101,6 @@
         .status-display { font-size: 18px; font-weight: bold; padding: 10px; border-radius: 10px; text-align: center; margin-top: 10px; }
         .connected-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; margin-right: 8px; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        .transition-info {
-            background: rgba(251, 191, 36, 0.1);
-            border-left: 3px solid #fbbf24;
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 6px;
-            font-size: 12px;
-            color: #fbbf24;
-        }
         .scheduled-time {
             background: rgba(16, 185, 129, 0.1);
             border: 1px solid rgba(16, 185, 129, 0.3);
@@ -335,12 +326,20 @@
         function formatUTC(date) {
             if (!date) return 'Not set';
             const d = new Date(date);
+            // Проверяем, что дата не 1970-01-01 (пустая)
+            if (d.getTime() === new Date('1970-01-01').getTime()) {
+                return 'Not set';
+            }
             return d.toUTCString();
         }
 
         function formatForInput(date) {
             if (!date) return '';
             const d = new Date(date);
+            // Проверяем, что дата не 1970-01-01
+            if (d.getTime() === new Date('1970-01-01').getTime()) {
+                return '';
+            }
             const year = d.getUTCFullYear();
             const month = String(d.getUTCMonth() + 1).padStart(2, '0');
             const day = String(d.getUTCDate()).padStart(2, '0');
@@ -365,19 +364,21 @@
             const from = config?.registrationWindowFrom;
             const to = config?.registrationWindowTo;
 
-            if (status === 'registration') {
-                if (from && to) {
-                    display.innerHTML = `✅ ОТКРЫТА: ${formatUTC(from)} — ${formatUTC(to)}`;
-                    display.className = 'value registration-open';
-                } else {
-                    display.innerHTML = '✅ ОТКРЫТА';
-                    display.className = 'value registration-open';
-                }
-            } else if (status === 'idle' || status === 'finished') {
-                display.innerHTML = '❌ НЕТ РЕГИСТРАЦИИ';
-                display.className = 'value registration-closed';
+            // Проверяем, что даты существуют и не пустые
+            const hasValidFrom = from && from.getTime() !== new Date('1970-01-01').getTime();
+            const hasValidTo = to && to.getTime() !== new Date('1970-01-01').getTime();
+
+            if (status === 'registration' && hasValidFrom && hasValidTo) {
+                display.innerHTML = `✅ ОТКРЫТА: ${formatUTC(from)} — ${formatUTC(to)}`;
+                display.className = 'value registration-open';
+            } else if (status === 'registration') {
+                display.innerHTML = '✅ ОТКРЫТА';
+                display.className = 'value registration-open';
             } else if (status === 'racing') {
                 display.innerHTML = '🔒 ЗАКРЫТА (гонка идет)';
+                display.className = 'value registration-closed';
+            } else if (status === 'finished' || status === 'idle') {
+                display.innerHTML = '❌ НЕТ РЕГИСТРАЦИИ';
                 display.className = 'value registration-closed';
             } else {
                 display.innerHTML = '❌ НЕТ РЕГИСТРАЦИИ';
@@ -439,7 +440,12 @@
                 }
 
                 // Показываем окно регистрации если оно установлено
-                if (config.registrationWindowFrom && config.registrationWindowTo) {
+                const hasValidFrom = config.registrationWindowFrom && 
+                    config.registrationWindowFrom.getTime() !== new Date('1970-01-01').getTime();
+                const hasValidTo = config.registrationWindowTo && 
+                    config.registrationWindowTo.getTime() !== new Date('1970-01-01').getTime();
+
+                if (hasValidFrom && hasValidTo) {
                     document.getElementById('registration-window-display').style.display = 'block';
                     document.getElementById('registration-window-value').textContent = 
                         `${formatUTC(config.registrationWindowFrom)} — ${formatUTC(config.registrationWindowTo)}`;
@@ -520,12 +526,17 @@
 
             socket.on('fiesta-registration-window-set', (data) => {
                 if (data.success) {
-                    const from = new Date(data.registrationFrom);
-                    const to = new Date(data.registrationTo);
-                    document.getElementById('registration-window-display').style.display = 'block';
-                    document.getElementById('registration-window-value').textContent = 
-                        `${from.toUTCString()} — ${to.toUTCString()}`;
-                    alert(`✅ Registration window set: ${from.toUTCString()} — ${to.toUTCString()} (UTC)`);
+                    const from = data.registrationFrom ? new Date(data.registrationFrom) : null;
+                    const to = data.registrationTo ? new Date(data.registrationTo) : null;
+                    if (from && to) {
+                        document.getElementById('registration-window-display').style.display = 'block';
+                        document.getElementById('registration-window-value').textContent = 
+                            `${from.toUTCString()} — ${to.toUTCString()}`;
+                        alert(`✅ Registration window set: ${from.toUTCString()} — ${to.toUTCString()} (UTC)`);
+                    } else {
+                        document.getElementById('registration-window-display').style.display = 'none';
+                        alert('✅ Registration window cleared');
+                    }
                     socket.emit('fiesta-get-participants');
                 }
             });
@@ -591,10 +602,16 @@
                 startZoneText = `Lat: ${config.allowedStartRegion.minLat}°-${config.allowedStartRegion.maxLat}°, Lng: ${config.allowedStartRegion.minLng}°-${config.allowedStartRegion.maxLng}°`;
             }
 
+            // Проверяем, что даты не пустые
+            const hasValidFrom = config.registrationWindowFrom && 
+                config.registrationWindowFrom.getTime() !== new Date('1970-01-01').getTime();
+            const hasValidTo = config.registrationWindowTo && 
+                config.registrationWindowTo.getTime() !== new Date('1970-01-01').getTime();
+
             document.getElementById('current-config').innerHTML = `
                 <strong>🏁 Finish Line:</strong> ${config.finishCoords?.lat?.toFixed(4)}°, ${config.finishCoords?.lng?.toFixed(4)}°<br>
                 <strong>🗺️ Start Zone:</strong> ${startZoneText}<br>
-                <strong>📝 Registration:</strong> ${formatUTC(config.registrationWindowFrom)} — ${formatUTC(config.registrationWindowTo)}<br>
+                <strong>📝 Registration:</strong> ${hasValidFrom && hasValidTo ? `${formatUTC(config.registrationWindowFrom)} — ${formatUTC(config.registrationWindowTo)}` : 'Not set'}<br>
                 <strong>⏰ Scheduled Start:</strong> ${config.scheduledStartTime ? formatUTC(config.scheduledStartTime) : 'Not set'}<br>
                 <strong>⏱️ Duration:</strong> ${config.raceDurationHours || 24} hours<br>
                 <strong>📊 Status:</strong> ${config.raceStatus || 'idle'}
@@ -658,7 +675,7 @@
             }
         });
 
-        // Set Scheduled Start
+        // Set Scheduled Start (только из REGISTRATION)
         document.getElementById('set-scheduled-start').addEventListener('click', () => {
             const startTimeInput = document.getElementById('scheduled-start-time').value;
             const duration = parseInt(document.getElementById('race-duration').value);
@@ -682,8 +699,9 @@
                 return;
             }
             
-            if (currentConfig?.raceStatus !== 'registration' && currentConfig?.raceStatus !== 'idle') {
-                alert('❌ Отложенный старт можно установить только в режиме REGISTRATION или IDLE');
+            // Старт можно установить ТОЛЬКО из REGISTRATION (согласно логике server.js)
+            if (currentConfig?.raceStatus !== 'registration') {
+                alert('❌ Отложенный старт можно установить только в режиме REGISTRATION');
                 return;
             }
             
