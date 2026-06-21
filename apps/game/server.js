@@ -1,6 +1,6 @@
 /**
  * ГЛАВНЫЙ ИГРОВОЙ СЕРВЕР «ФИЕСТА» (Порт 3001)
- * Версия 4.0 - с управлением состояниями
+ * Версия 4.0 - с управлением состояниями и UTC
  */
 
 const express = require('express');
@@ -131,7 +131,6 @@ function setRaceStatus(newStatus, options = {}) {
     const oldStatus = raceConfig.raceStatus;
     console.log(`🔄 State transition: ${oldStatus} -> ${newStatus}`);
 
-    // Очищаем таймер автоматического старта
     if (raceStartTimer) {
         clearTimeout(raceStartTimer);
         raceStartTimer = null;
@@ -142,7 +141,6 @@ function setRaceStatus(newStatus, options = {}) {
             raceConfig.raceStarted = false;
             raceConfig.raceFinished = false;
             raceConfig.raceStatus = GAME_STATES.IDLE;
-            // Очищаем всех пилотов при переходе в IDLE из FINISHED
             if (oldStatus === GAME_STATES.FINISHED) {
                 balloons = {};
                 savePilotsToFile();
@@ -155,7 +153,6 @@ function setRaceStatus(newStatus, options = {}) {
             raceConfig.raceStarted = false;
             raceConfig.raceFinished = false;
             raceConfig.raceStatus = GAME_STATES.REGISTRATION;
-            // Открываем регистрацию на 7 дней
             raceConfig.registrationWindowFrom = new Date();
             raceConfig.registrationWindowTo = new Date();
             raceConfig.registrationWindowTo.setDate(raceConfig.registrationWindowTo.getDate() + 7);
@@ -166,9 +163,7 @@ function setRaceStatus(newStatus, options = {}) {
             raceConfig.raceStarted = true;
             raceConfig.raceFinished = false;
             raceConfig.raceStatus = GAME_STATES.RACING;
-            // Закрываем регистрацию
             raceConfig.registrationWindowTo = new Date();
-            // Запускаем симуляцию для всех шаров
             startAllSimulations();
             break;
 
@@ -183,7 +178,6 @@ function setRaceStatus(newStatus, options = {}) {
     saveConfigToFile();
     savePilotsToFile();
     
-    // Уведомляем всех клиентов
     io.emit('fiesta-state-changed', {
         oldState: oldStatus,
         newState: newStatus,
@@ -208,6 +202,52 @@ function getConfigForClient() {
         raceStatus: raceConfig.raceStatus,
         scheduledStartTime: raceConfig.scheduledStartTime
     };
+}
+
+// ============================================
+// ФУНКЦИИ ДЛЯ РАБОТЫ С ВРЕМЕНЕМ (UTC)
+// ============================================
+
+function isRaceStarted() {
+    const now = new Date();
+    const nowUTC = new Date(now.toUTCString());
+    
+    let scheduledTime = raceConfig.scheduledStartTime 
+        ? new Date(raceConfig.scheduledStartTime) 
+        : raceConfig.raceStartDateTime;
+    
+    if (!scheduledTime) return false;
+    const scheduledUTC = new Date(scheduledTime.toUTCString());
+    
+    return nowUTC >= scheduledUTC;
+}
+
+function isRegistrationOpen() {
+    const now = new Date();
+    const nowUTC = new Date(now.toUTCString());
+    
+    const fromUTC = new Date(raceConfig.registrationWindowFrom.toUTCString());
+    const toUTC = new Date(raceConfig.registrationWindowTo.toUTCString());
+    
+    return nowUTC >= fromUTC && nowUTC <= toUTC;
+}
+
+function isRaceTimeExpired() {
+    if (!raceConfig.raceStarted) return false;
+    
+    const now = new Date();
+    const nowUTC = new Date(now.toUTCString());
+    
+    const startTime = raceConfig.scheduledStartTime 
+        ? new Date(raceConfig.scheduledStartTime) 
+        : raceConfig.raceStartDateTime;
+    
+    if (!startTime) return false;
+    const startUTC = new Date(startTime.toUTCString());
+    const raceEndTime = new Date(startUTC);
+    raceEndTime.setHours(raceEndTime.getHours() + raceConfig.raceDurationHours);
+    
+    return nowUTC >= raceEndTime;
 }
 
 // ============================================
@@ -299,35 +339,6 @@ function isInStartZone(lat, lng) {
     }
     return lat >= zone.minLat && lat <= zone.maxLat && 
            lng >= zone.minLng && lng <= zone.maxLng;
-}
-
-function isRegistrationOpen() {
-    const now = new Date();
-    return now >= raceConfig.registrationWindowFrom && now <= raceConfig.registrationWindowTo;
-}
-
-function isRaceStarted() {
-    const now = new Date();
-    return now >= raceConfig.raceStartDateTime;
-}
-
-function isRaceTimeExpired() {
-    if (!raceConfig.raceStarted) return false;
-    const now = new Date();
-    const raceEndTime = new Date(raceConfig.raceStartDateTime);
-    raceEndTime.setHours(raceEndTime.getHours() + raceConfig.raceDurationHours);
-    return now >= raceEndTime;
-}
-
-function checkAndFinishRaceByTime() {
-    if (raceConfig.raceStatus === GAME_STATES.RACING && isRaceTimeExpired()) {
-        setRaceStatus(GAME_STATES.FINISHED);
-        io.emit('fiesta-race-finished', {
-            message: "🏁 Время гонки истекло! Спасибо за участие! 🏁",
-            timestamp: new Date()
-        });
-        console.log("🏁 Race finished automatically due to time limit");
-    }
 }
 
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
@@ -844,12 +855,11 @@ io.on('connection', (socket) => {
             if (rules.registrationWindowTo) {
                 raceConfig.registrationWindowTo = new Date(rules.registrationWindowTo);
             }
-            if (rules.raceStartDateTime) {
-                raceConfig.raceStartDateTime = new Date(rules.raceStartDateTime);
-                raceConfig.raceStarted = false;
-            }
             if (rules.raceDurationHours) {
                 raceConfig.raceDurationHours = rules.raceDurationHours;
+            }
+            if (rules.scheduledStartTime) {
+                raceConfig.scheduledStartTime = rules.scheduledStartTime;
             }
             
             saveConfigToFile();
@@ -907,6 +917,22 @@ io.on('connection', (socket) => {
 
     socket.on('fiesta-set-scheduled-start', (data) => {
         if (data.adminKey === 'aerostar2024') {
+            // Если startTime === null, отменяем
+            if (data.startTime === null) {
+                raceConfig.scheduledStartTime = null;
+                if (raceStartTimer) {
+                    clearTimeout(raceStartTimer);
+                    raceStartTimer = null;
+                }
+                saveConfigToFile();
+                socket.emit('fiesta-scheduled-start-set', {
+                    success: true,
+                    startTime: null
+                });
+                console.log('⏰ Scheduled start cancelled');
+                return;
+            }
+            
             const startTime = new Date(data.startTime);
             if (isNaN(startTime.getTime())) {
                 socket.emit('fiesta-error', 'Invalid start time');
@@ -918,25 +944,32 @@ io.on('connection', (socket) => {
                 raceStartTimer = null;
             }
             
-            const now = Date.now();
-            const delay = startTime.getTime() - now;
+            const now = new Date();
+            const nowUTC = new Date(now.toUTCString());
+            const scheduledUTC = new Date(startTime.toUTCString());
+            const delay = scheduledUTC.getTime() - nowUTC.getTime();
             
             if (delay <= 0) {
-                socket.emit('fiesta-error', 'Start time must be in the future');
+                socket.emit('fiesta-error', 'Start time must be in the future (UTC)');
                 return;
             }
             
             raceConfig.scheduledStartTime = startTime.toISOString();
+            if (data.duration) {
+                raceConfig.raceDurationHours = data.duration;
+            }
             saveConfigToFile();
             
             raceStartTimer = setTimeout(() => {
-                if (raceConfig.raceStatus === GAME_STATES.REGISTRATION) {
+                if (raceConfig.raceStatus === GAME_STATES.REGISTRATION || 
+                    raceConfig.raceStatus === GAME_STATES.IDLE) {
                     setRaceStatus(GAME_STATES.RACING);
                     io.emit('fiesta-race-started', {
                         message: "🏁 ГОНКА НАЧАЛАСЬ ПО РАСПИСАНИЮ! 🏁",
                         timestamp: new Date(),
                         scheduled: true
                     });
+                    console.log(`🏁 Scheduled race started at ${scheduledUTC.toUTCString()}`);
                 }
             }, delay);
             
@@ -945,7 +978,7 @@ io.on('connection', (socket) => {
                 startTime: startTime.toISOString()
             });
             
-            console.log(`⏰ Scheduled race start at ${startTime.toLocaleString()}`);
+            console.log(`⏰ Scheduled race start at ${scheduledUTC.toUTCString()} (in ${Math.round(delay/60000)} minutes)`);
         } else {
             socket.emit('fiesta-error', 'Admin privileges required');
         }
@@ -974,6 +1007,7 @@ io.on('connection', (socket) => {
 // ============================================
 // ЗАПУСК СЕРВЕРА
 // ============================================
+
 loadConfig();
 loadPilotsFromFile();
 
@@ -981,34 +1015,64 @@ setTimeout(() => {
     restoreSimulations();
 }, 2000);
 
+// Обновление ветра каждую минуту
 setInterval(() => {
     if (raceConfig.raceStatus === GAME_STATES.RACING && Object.keys(balloons).length > 0) {
         updateWeatherForAllBalloons();
     }
 }, 60000);
 
-setInterval(checkAndFinishRaceByTime, 60000);
+// Автоматическая проверка окончания гонки (UTC)
+setInterval(() => {
+    if (raceConfig.raceStatus === GAME_STATES.RACING && isRaceTimeExpired()) {
+        setRaceStatus(GAME_STATES.FINISHED);
+        io.emit('fiesta-race-finished', {
+            message: "🏁 Время гонки истекло! Спасибо за участие! 🏁",
+            timestamp: new Date()
+        });
+        console.log("🏁 Race finished automatically due to time limit (UTC)");
+    }
+}, 60000);
 
+// Автоматический старт по расписанию (UTC)
 setInterval(() => {
     if (raceConfig.raceStatus !== GAME_STATES.RACING && 
         raceConfig.raceStatus !== GAME_STATES.FINISHED &&
-        isRaceStarted() && 
         !raceConfig.raceFinished) {
-        setRaceStatus(GAME_STATES.RACING);
-        io.to('race-room').emit('fiesta-race-started', { 
-            message: "🏁 ГОНКА НАЧАЛАСЬ АВТОМАТИЧЕСКИ! 🏁",
-            timestamp: raceConfig.raceStartDateTime
-        });
-        console.log("🏁 Race started automatically!");
+        
+        let scheduledTime = raceConfig.scheduledStartTime 
+            ? new Date(raceConfig.scheduledStartTime) 
+            : raceConfig.raceStartDateTime;
+        
+        if (!scheduledTime) return;
+        
+        const now = new Date();
+        const nowUTC = new Date(now.toUTCString());
+        const scheduledUTC = new Date(scheduledTime.toUTCString());
+        
+        if (scheduledUTC <= nowUTC) {
+            setRaceStatus(GAME_STATES.RACING);
+            io.to('race-room').emit('fiesta-race-started', { 
+                message: "🏁 ГОНКА НАЧАЛАСЬ АВТОМАТИЧЕСКИ! 🏁",
+                timestamp: scheduledTime,
+                scheduled: true
+            });
+            console.log(`🏁 Race started automatically at ${scheduledUTC.toUTCString()}!`);
+            
+            raceConfig.scheduledStartTime = null;
+            saveConfigToFile();
+        }
     }
 }, 1000);
 
+// Периодическое сохранение пилотов
 setInterval(() => {
     if (Object.keys(balloons).length > 0) {
         savePilotsToFile();
     }
 }, 30000);
 
+// Запуск сервера
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🎮 Fiesta Game Server running on port ${PORT}`);
     console.log(`📍 Race page: http://localhost:${PORT}/fiesta.html`);
@@ -1017,4 +1081,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`👥 Max participants: ${MAX_PARTICIPANTS}`);
     console.log(`🏁 Race status: ${raceConfig.raceStatus}`);
     console.log(`🎯 Finish: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
+    if (raceConfig.scheduledStartTime) {
+        console.log(`⏰ Scheduled start: ${new Date(raceConfig.scheduledStartTime).toUTCString()}`);
+    }
 });
