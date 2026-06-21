@@ -197,13 +197,9 @@
                     <span class="label">Registered pilots:</span>
                     <span class="value" id="pilot-count-display">0</span>
                 </div>
-                <div class="status-info">
-                    <span class="label">📝 Registration period:</span>
-                    <span class="value" id="registration-period-display">НЕТ РЕГИСТРАЦИИ</span>
-                </div>
             </div>
 
-            <!-- БЛОК НАСТРОЙКИ РЕГИСТРАЦИИ (ОБЪЕДИНЕННЫЙ) -->
+            <!-- БЛОК НАСТРОЙКИ РЕГИСТРАЦИИ -->
             <div class="admin-card">
                 <h2>📝 Registration Window (UTC)</h2>
                 <div class="coord-group">
@@ -217,10 +213,6 @@
                         <input type="datetime-local" id="reg-to" />
                         <div class="info-text">Время автоматического закрытия регистрации</div>
                     </div>
-                </div>
-                <div class="button-group-small">
-                    <button id="set-registration-window" class="btn-success">📝 Set Registration Window</button>
-                    <button id="clear-registration-window" class="btn-danger" style="background:#b91c1c;">❌ Clear</button>
                 </div>
                 <div id="registration-window-display" class="scheduled-time" style="display:none;">
                     <div class="label">📝 Registration window (UTC):</div>
@@ -241,10 +233,6 @@
                     <input type="number" id="race-duration" min="1" max="168" step="1" value="24" />
                     <div class="info-text">Продолжительность гонки в часах (макс. 168 часов = 7 дней)</div>
                 </div>
-                <div class="button-group-small">
-                    <button id="set-scheduled-start" class="btn-success">⏰ Set Scheduled Start</button>
-                    <button id="cancel-scheduled-start" class="btn-danger" style="background:#b91c1c;">❌ Cancel</button>
-                </div>
                 <div id="scheduled-display" class="scheduled-time" style="display:none;">
                     <div class="label">⏰ Scheduled start (UTC):</div>
                     <div class="value" id="scheduled-value">--</div>
@@ -261,7 +249,6 @@
                     <textarea id="admin-message" placeholder="Enter your message here..." maxlength="500"></textarea>
                     <div class="char-counter"><span id="char-count">0</span> / 500 characters</div>
                 </div>
-                <button id="send-announcement" class="btn-warning">📢 Send Announcement</button>
             </div>
 
             <!-- НАСТРОЙКА ФИНИША -->
@@ -293,7 +280,7 @@
                     <button id="reset-race" class="btn-idle">🔄 Reset Race</button>
                 </div>
                 <div class="info-text" style="margin-top: 10px;">
-                    💡 <strong>Save Configuration</strong> — сохраняет настройки (все время в UTC)<br>
+                    💡 <strong>Save Configuration</strong> — сохраняет все настройки (регистрация, старт, сообщение) в UTC<br>
                     💡 <strong>Finish Race</strong> — завершает гонку (активно только в режиме RACING)<br>
                     💡 <strong>Reset Race</strong> — очищает всех пилотов и переводит в режим IDLE
                 </div>
@@ -326,7 +313,6 @@
         function formatUTC(date) {
             if (!date) return 'Not set';
             const d = new Date(date);
-            // Проверяем, что дата не 1970-01-01 (пустая)
             if (d.getTime() === new Date('1970-01-01').getTime()) {
                 return 'Not set';
             }
@@ -336,7 +322,6 @@
         function formatForInput(date) {
             if (!date) return '';
             const d = new Date(date);
-            // Проверяем, что дата не 1970-01-01
             if (d.getTime() === new Date('1970-01-01').getTime()) {
                 return '';
             }
@@ -354,53 +339,73 @@
         }
 
         // ============================================
-        // ФУНКЦИЯ ОТОБРАЖЕНИЯ ПЕРИОДА РЕГИСТРАЦИИ
+        // ФУНКЦИИ ОТОБРАЖЕНИЯ
         // ============================================
-        function updateRegistrationPeriodDisplay(config) {
-            const display = document.getElementById('registration-period-display');
-            if (!display) return;
 
-            const status = config?.raceStatus || 'idle';
-            const from = config?.registrationWindowFrom;
-            const to = config?.registrationWindowTo;
+        function updateStatusDisplay(status) {
+            const statusMap = {
+                'idle': { text: '⏸️ IDLE', color: '#64748b', badge: 'status-idle' },
+                'registration': { text: '📝 REGISTRATION OPEN', color: '#f59e0b', badge: 'status-registration' },
+                'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981', badge: 'status-racing' },
+                'finished': { text: '🏆 RACE FINISHED', color: '#ef4444', badge: 'status-finished' }
+            };
 
-            // Проверяем, что даты существуют и не пустые
-            const hasValidFrom = from && from.getTime() !== new Date('1970-01-01').getTime();
-            const hasValidTo = to && to.getTime() !== new Date('1970-01-01').getTime();
+            const info = statusMap[status] || statusMap['idle'];
+            const displayBox = document.getElementById('status-display-box');
+            const displayText = document.getElementById('status-display-text');
+            const badge = document.getElementById('race-status-badge');
 
-            if (status === 'registration' && hasValidFrom && hasValidTo) {
-                display.innerHTML = `✅ ОТКРЫТА: ${formatUTC(from)} — ${formatUTC(to)}`;
-                display.className = 'value registration-open';
-            } else if (status === 'registration') {
-                display.innerHTML = '✅ ОТКРЫТА';
-                display.className = 'value registration-open';
-            } else if (status === 'racing') {
-                display.innerHTML = '🔒 ЗАКРЫТА (гонка идет)';
-                display.className = 'value registration-closed';
-            } else if (status === 'finished' || status === 'idle') {
-                display.innerHTML = '❌ НЕТ РЕГИСТРАЦИИ';
-                display.className = 'value registration-closed';
-            } else {
-                display.innerHTML = '❌ НЕТ РЕГИСТРАЦИИ';
-                display.className = 'value registration-none';
+            if (displayBox) {
+                displayBox.textContent = info.text;
+                displayBox.style.background = info.color;
+                displayBox.style.color = '#fff';
+            }
+            if (displayText) displayText.textContent = status;
+            if (badge) {
+                badge.className = `status-badge ${info.badge}`;
+                badge.textContent = info.text;
             }
         }
 
-        // ============================================
-        // ОСТАЛЬНЫЕ ФУНКЦИИ
-        // ============================================
+        function updateButtons(currentStatus) {
+            const finishBtn = document.getElementById('finish-race');
+            const resetBtn = document.getElementById('reset-race');
+            const saveBtn = document.getElementById('save-config');
 
-        function login() {
-            const adminKey = document.getElementById('admin-key').value;
-            if (adminKey === ADMIN_KEY) {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('admin-panel').style.display = 'block';
-                connectSocket();
-                updateCurrentUTC();
-                setInterval(updateCurrentUTC, 1000);
-            } else {
-                alert('Invalid admin key');
+            if (finishBtn) {
+                finishBtn.disabled = (currentStatus !== 'racing');
             }
+
+            if (resetBtn) {
+                resetBtn.disabled = false;
+            }
+
+            if (saveBtn) {
+                saveBtn.disabled = (currentStatus === 'racing' || currentStatus === 'finished');
+            }
+        }
+
+        function updateCurrentConfig(config) {
+            currentConfig = config;
+
+            let startZoneText = 'Not configured';
+            if (config.allowedStartRegion) {
+                startZoneText = `Lat: ${config.allowedStartRegion.minLat}°-${config.allowedStartRegion.maxLat}°, Lng: ${config.allowedStartRegion.minLng}°-${config.allowedStartRegion.maxLng}°`;
+            }
+
+            const hasValidFrom = config.registrationWindowFrom && 
+                config.registrationWindowFrom.getTime() !== new Date('1970-01-01').getTime();
+            const hasValidTo = config.registrationWindowTo && 
+                config.registrationWindowTo.getTime() !== new Date('1970-01-01').getTime();
+
+            document.getElementById('current-config').innerHTML = `
+                <strong>🏁 Finish Line:</strong> ${config.finishCoords?.lat?.toFixed(4)}°, ${config.finishCoords?.lng?.toFixed(4)}°<br>
+                <strong>🗺️ Start Zone:</strong> ${startZoneText}<br>
+                <strong>📝 Registration:</strong> ${hasValidFrom && hasValidTo ? `${formatUTC(config.registrationWindowFrom)} — ${formatUTC(config.registrationWindowTo)}` : 'Not set'}<br>
+                <strong>⏰ Scheduled Start:</strong> ${config.scheduledStartTime ? formatUTC(config.scheduledStartTime) : 'Not set'}<br>
+                <strong>⏱️ Duration:</strong> ${config.raceDurationHours || 24} hours<br>
+                <strong>📊 Status:</strong> ${config.raceStatus || 'idle'}
+            `;
         }
 
         function connectSocket() {
@@ -419,7 +424,6 @@
                 currentConfig = config;
                 updateCurrentConfig(config);
                 updateStatusDisplay(config.raceStatus || 'idle');
-                updateRegistrationPeriodDisplay(config);
 
                 document.getElementById('finish-lat').value = config.finishCoords?.lat || '';
                 document.getElementById('finish-lng').value = config.finishCoords?.lng || '';
@@ -431,7 +435,6 @@
                     document.getElementById('max-lng').value = config.allowedStartRegion.maxLng || '';
                 }
 
-                // Заполняем поля регистрации
                 if (config.registrationWindowFrom) {
                     document.getElementById('reg-from').value = formatForInput(config.registrationWindowFrom);
                 }
@@ -439,7 +442,6 @@
                     document.getElementById('reg-to').value = formatForInput(config.registrationWindowTo);
                 }
 
-                // Показываем окно регистрации если оно установлено
                 const hasValidFrom = config.registrationWindowFrom && 
                     config.registrationWindowFrom.getTime() !== new Date('1970-01-01').getTime();
                 const hasValidTo = config.registrationWindowTo && 
@@ -472,7 +474,6 @@
             socket.on('fiesta-state-changed', (data) => {
                 console.log('State changed:', data);
                 updateStatusDisplay(data.newState);
-                updateRegistrationPeriodDisplay(data.config || currentConfig);
                 if (data.config) {
                     currentConfig = data.config;
                     updateCurrentConfig(data.config);
@@ -551,180 +552,11 @@
             }, 1000);
         }
 
-        function updateStatusDisplay(status) {
-            const statusMap = {
-                'idle': { text: '⏸️ IDLE', color: '#64748b', badge: 'status-idle' },
-                'registration': { text: '📝 REGISTRATION OPEN', color: '#f59e0b', badge: 'status-registration' },
-                'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981', badge: 'status-racing' },
-                'finished': { text: '🏆 RACE FINISHED', color: '#ef4444', badge: 'status-finished' }
-            };
-
-            const info = statusMap[status] || statusMap['idle'];
-            const displayBox = document.getElementById('status-display-box');
-            const displayText = document.getElementById('status-display-text');
-            const badge = document.getElementById('race-status-badge');
-
-            if (displayBox) {
-                displayBox.textContent = info.text;
-                displayBox.style.background = info.color;
-                displayBox.style.color = '#fff';
-            }
-            if (displayText) displayText.textContent = status;
-            if (badge) {
-                badge.className = `status-badge ${info.badge}`;
-                badge.textContent = info.text;
-            }
-        }
-
-        function updateButtons(currentStatus) {
-            const finishBtn = document.getElementById('finish-race');
-            const resetBtn = document.getElementById('reset-race');
-            const saveBtn = document.getElementById('save-config');
-
-            if (finishBtn) {
-                finishBtn.disabled = (currentStatus !== 'racing');
-            }
-
-            if (resetBtn) {
-                resetBtn.disabled = false;
-            }
-
-            if (saveBtn) {
-                saveBtn.disabled = (currentStatus === 'racing' || currentStatus === 'finished');
-            }
-        }
-
-        function updateCurrentConfig(config) {
-            currentConfig = config;
-
-            let startZoneText = 'Not configured';
-            if (config.allowedStartRegion) {
-                startZoneText = `Lat: ${config.allowedStartRegion.minLat}°-${config.allowedStartRegion.maxLat}°, Lng: ${config.allowedStartRegion.minLng}°-${config.allowedStartRegion.maxLng}°`;
-            }
-
-            // Проверяем, что даты не пустые
-            const hasValidFrom = config.registrationWindowFrom && 
-                config.registrationWindowFrom.getTime() !== new Date('1970-01-01').getTime();
-            const hasValidTo = config.registrationWindowTo && 
-                config.registrationWindowTo.getTime() !== new Date('1970-01-01').getTime();
-
-            document.getElementById('current-config').innerHTML = `
-                <strong>🏁 Finish Line:</strong> ${config.finishCoords?.lat?.toFixed(4)}°, ${config.finishCoords?.lng?.toFixed(4)}°<br>
-                <strong>🗺️ Start Zone:</strong> ${startZoneText}<br>
-                <strong>📝 Registration:</strong> ${hasValidFrom && hasValidTo ? `${formatUTC(config.registrationWindowFrom)} — ${formatUTC(config.registrationWindowTo)}` : 'Not set'}<br>
-                <strong>⏰ Scheduled Start:</strong> ${config.scheduledStartTime ? formatUTC(config.scheduledStartTime) : 'Not set'}<br>
-                <strong>⏱️ Duration:</strong> ${config.raceDurationHours || 24} hours<br>
-                <strong>📊 Status:</strong> ${config.raceStatus || 'idle'}
-            `;
-        }
-
         // ============================================
         // ОБРАБОТЧИКИ СОБЫТИЙ
         // ============================================
 
-        // Set Registration Window
-        document.getElementById('set-registration-window').addEventListener('click', () => {
-            const fromInput = document.getElementById('reg-from').value;
-            const toInput = document.getElementById('reg-to').value;
-            
-            if (!fromInput || !toInput) {
-                alert('Пожалуйста, укажите время открытия и закрытия регистрации (UTC)');
-                return;
-            }
-            
-            const fromDate = new Date(fromInput + 'Z');
-            const toDate = new Date(toInput + 'Z');
-            const now = new Date();
-            const nowUTC = new Date(now.toUTCString());
-            
-            if (fromDate <= nowUTC) {
-                alert('Время открытия регистрации должно быть в будущем (UTC)');
-                return;
-            }
-            
-            if (toDate <= fromDate) {
-                alert('Время закрытия регистрации должно быть позже времени открытия');
-                return;
-            }
-            
-            if (currentConfig?.raceStatus !== 'idle') {
-                alert('❌ Окно регистрации можно установить только в режиме IDLE');
-                return;
-            }
-            
-            if (confirm(`Установить окно регистрации: ${fromDate.toUTCString()} — ${toDate.toUTCString()} (UTC)?`)) {
-                socket.emit('fiesta-set-registration-window', {
-                    adminKey: ADMIN_KEY,
-                    registrationFrom: fromDate.toISOString(),
-                    registrationTo: toDate.toISOString()
-                });
-            }
-        });
-
-        // Clear Registration Window
-        document.getElementById('clear-registration-window').addEventListener('click', () => {
-            if (confirm('Очистить окно регистрации?')) {
-                socket.emit('fiesta-set-registration-window', {
-                    adminKey: ADMIN_KEY,
-                    registrationFrom: null,
-                    registrationTo: null
-                });
-                document.getElementById('registration-window-display').style.display = 'none';
-                document.getElementById('reg-from').value = '';
-                document.getElementById('reg-to').value = '';
-            }
-        });
-
-        // Set Scheduled Start (только из REGISTRATION)
-        document.getElementById('set-scheduled-start').addEventListener('click', () => {
-            const startTimeInput = document.getElementById('scheduled-start-time').value;
-            const duration = parseInt(document.getElementById('race-duration').value);
-            
-            if (!startTimeInput) {
-                alert('Пожалуйста, выберите время старта (UTC)');
-                return;
-            }
-            
-            if (!duration || duration < 1) {
-                alert('Пожалуйста, укажите продолжительность гонки (минимум 1 час)');
-                return;
-            }
-            
-            const startDate = new Date(startTimeInput + 'Z');
-            const now = new Date();
-            const nowUTC = new Date(now.toUTCString());
-            
-            if (startDate <= nowUTC) {
-                alert('Время старта должно быть в будущем (UTC)');
-                return;
-            }
-            
-            // Старт можно установить ТОЛЬКО из REGISTRATION (согласно логике server.js)
-            if (currentConfig?.raceStatus !== 'registration') {
-                alert('❌ Отложенный старт можно установить только в режиме REGISTRATION');
-                return;
-            }
-            
-            if (confirm(`Установить старт гонки на ${startDate.toUTCString()} (UTC) с продолжительностью ${duration} часов?`)) {
-                socket.emit('fiesta-set-scheduled-start', {
-                    adminKey: ADMIN_KEY,
-                    startTime: startDate.toISOString(),
-                    duration: duration
-                });
-            }
-        });
-
-        document.getElementById('cancel-scheduled-start').addEventListener('click', () => {
-            if (confirm('Отменить запланированный старт?')) {
-                socket.emit('fiesta-set-scheduled-start', {
-                    adminKey: ADMIN_KEY,
-                    startTime: null
-                });
-                document.getElementById('scheduled-display').style.display = 'none';
-            }
-        });
-
-        // Save Configuration
+        // Save Configuration - ЕДИНАЯ КНОПКА ДЛЯ ВСЕХ НАСТРОЕК
         document.getElementById('save-config').addEventListener('click', () => {
             if (currentConfig?.raceStatus === 'racing' || currentConfig?.raceStatus === 'finished') {
                 alert('❌ Нельзя сохранить конфигурацию во время гонки или после финиша');
@@ -735,7 +567,38 @@
             const startTimeInput = document.getElementById('scheduled-start-time').value;
             const fromInput = document.getElementById('reg-from').value;
             const toInput = document.getElementById('reg-to').value;
+            const announcement = document.getElementById('admin-message').value.trim();
             
+            // Проверяем корректность дат
+            const startDate = startTimeInput ? new Date(startTimeInput + 'Z') : null;
+            const fromDate = fromInput ? new Date(fromInput + 'Z') : null;
+            const toDate = toInput ? new Date(toInput + 'Z') : null;
+            const now = new Date();
+            const nowUTC = new Date(now.toUTCString());
+
+            // Валидация
+            if (fromInput && toInput) {
+                if (fromDate <= nowUTC) {
+                    alert('Время открытия регистрации должно быть в будущем (UTC)');
+                    return;
+                }
+                if (toDate <= fromDate) {
+                    alert('Время закрытия регистрации должно быть позже времени открытия');
+                    return;
+                }
+            }
+
+            if (startTimeInput && startDate <= nowUTC) {
+                alert('Время старта должно быть в будущем (UTC)');
+                return;
+            }
+
+            if (startTimeInput && currentConfig?.raceStatus !== 'registration') {
+                alert('❌ Отложенный старт можно установить только в режиме REGISTRATION');
+                return;
+            }
+
+            // Формируем конфигурацию
             const config = {
                 adminKey: ADMIN_KEY,
                 finishCoords: {
@@ -748,15 +611,27 @@
                     minLng: parseFloat(document.getElementById('min-lng').value),
                     maxLng: parseFloat(document.getElementById('max-lng').value)
                 },
-                registrationWindowFrom: fromInput ? new Date(fromInput + 'Z').toISOString() : null,
-                registrationWindowTo: toInput ? new Date(toInput + 'Z').toISOString() : null,
+                registrationWindowFrom: fromInput ? fromDate.toISOString() : null,
+                registrationWindowTo: toInput ? toDate.toISOString() : null,
                 raceDurationHours: duration || 24,
-                scheduledStartTime: startTimeInput ? new Date(startTimeInput + 'Z').toISOString() : null
+                scheduledStartTime: startTimeInput ? startDate.toISOString() : null,
+                announcement: announcement || null
             };
 
-            if (confirm('Сохранить конфигурацию? Все время в UTC.')) {
+            if (confirm('Сохранить все настройки? (Регистрация, старт, сообщение)')) {
+                // Отправляем все настройки на сервер
                 socket.emit('fiesta-admin-change-rules', config);
                 
+                // Отправляем окно регистрации
+                if (config.registrationWindowFrom && config.registrationWindowTo) {
+                    socket.emit('fiesta-set-registration-window', {
+                        adminKey: ADMIN_KEY,
+                        registrationFrom: config.registrationWindowFrom,
+                        registrationTo: config.registrationWindowTo
+                    });
+                }
+                
+                // Отправляем запланированный старт
                 if (config.scheduledStartTime) {
                     socket.emit('fiesta-set-scheduled-start', {
                         adminKey: ADMIN_KEY,
@@ -765,12 +640,14 @@
                     });
                 }
                 
-                if (config.registrationWindowFrom && config.registrationWindowTo) {
-                    socket.emit('fiesta-set-registration-window', {
-                        adminKey: ADMIN_KEY,
-                        registrationFrom: config.registrationWindowFrom,
-                        registrationTo: config.registrationWindowTo
+                // Отправляем объявление
+                if (announcement) {
+                    socket.emit('fiesta-admin-announcement', {
+                        message: announcement,
+                        adminKey: ADMIN_KEY
                     });
+                    document.getElementById('admin-message').value = '';
+                    document.getElementById('char-count').textContent = '0';
                 }
             }
         });
@@ -801,6 +678,9 @@
                 document.getElementById('registration-window-display').style.display = 'none';
                 document.getElementById('reg-from').value = '';
                 document.getElementById('reg-to').value = '';
+                document.getElementById('scheduled-start-time').value = '';
+                document.getElementById('admin-message').value = '';
+                document.getElementById('char-count').textContent = '0';
                 alert('✅ Гонка сброшена. Все пилоты удалены.');
             }
         });
@@ -810,22 +690,6 @@
         document.getElementById('logout-btn').addEventListener('click', () => {
             if (socket) socket.disconnect();
             location.reload();
-        });
-
-        // Announcement
-        document.getElementById('send-announcement').addEventListener('click', () => {
-            const message = document.getElementById('admin-message').value.trim();
-            if (!message) {
-                alert('Please enter a message');
-                return;
-            }
-            socket.emit('fiesta-admin-announcement', {
-                message: message,
-                adminKey: ADMIN_KEY
-            });
-            alert('✅ Announcement sent!');
-            document.getElementById('admin-message').value = '';
-            document.getElementById('char-count').textContent = '0';
         });
 
         document.getElementById('admin-key').addEventListener('keypress', (e) => {
@@ -842,6 +706,19 @@
                 socket.emit('fiesta-get-participants');
             }
         }, 10000);
+
+        function login() {
+            const adminKey = document.getElementById('admin-key').value;
+            if (adminKey === ADMIN_KEY) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                connectSocket();
+                updateCurrentUTC();
+                setInterval(updateCurrentUTC, 1000);
+            } else {
+                alert('Invalid admin key');
+            }
+        }
     </script>
 </body>
 </html>
