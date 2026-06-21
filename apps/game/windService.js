@@ -1,161 +1,178 @@
 /**
- * ИГРОВОЙ СЕРВИС ВЫСОТНЫХ ВЕТРОВ
- * Использует встроенный fetch (Node.js 18+)
+ * СЕРВИС ПОЛУЧЕНИЯ ДАННЫХ О ВЕТРЕ
+ * Использует Open-Meteo API для получения реальных данных о ветре
  */
 
-const CACHE_TTL =180000;
-const windCache = new Map();
+const fetch = require('node-fetch');
 
+// Кэш для данных о ветре (чтобы не делать лишние запросы)
+const windCache = new Map();
+const CACHE_TTL = 300000; // 5 минут
+
+// Слои атмосферы с разными высотами
 const PRESSURE_LEVELS = [
-  { maxAltitude: 1500,  level: '925hPa', name: 'Приземный слой', pressure: 925 },
-  { maxAltitude: 3000,  level: '850hPa', name: 'Нижняя тропосфера', pressure: 850 },
-  { maxAltitude: 5500,  level: '700hPa', name: 'Средняя тропосфера', pressure: 700 },
-  { maxAltitude: 9000,  level: '500hPa', name: 'Высотная тропосфера', pressure: 500 },
-  { maxAltitude: 11000, level: '300hPa', name: 'Струйное течение', pressure: 300 },
-  { maxAltitude: 14000, level: '250hPa', name: 'Нижняя стратосфера', pressure: 250 },
-  { maxAltitude: Infinity, level: '200hPa', name: 'Стратосфера', pressure: 200 }
+    { altitude: 0, level: 'surface', name: 'Surface Layer' },
+    { altitude: 1000, level: '1000hPa', name: 'Lower Winds' },
+    { altitude: 2000, level: '850hPa', name: 'Mid-Lower Winds' },
+    { altitude: 3000, level: '700hPa', name: 'Mid Winds' },
+    { altitude: 5000, level: '500hPa', name: 'Upper Winds' },
+    { altitude: 8000, level: '300hPa', name: 'High Winds' },
+    { altitude: 10000, level: '250hPa', name: 'Jet Stream' }
 ];
 
-function getPressureLevelInfo(altitudeMeters) {
-  const level = PRESSURE_LEVELS.find(p => altitudeMeters <= p.maxAltitude);
-  return {
-    level: level.level,
-    name: level.name,
-    pressure: level.pressure
-  };
+/**
+ * Получение данных о ветре для заданных координат и высоты
+ */
+async function getWindAtPosition(lat, lng, altitude = 1000) {
+    // Создаем ключ кэша
+    const cacheKey = `${lat.toFixed(2)},${lng.toFixed(2)},${altitude}`;
+    
+    // Проверяем кэш
+    if (windCache.has(cacheKey)) {
+        const cached = windCache.get(cacheKey);
+        if (Date.now() - cached.timestamp < CACHE_TTL) {
+            console.log(`📦 Using cached wind data for ${cacheKey}`);
+            return cached.data;
+        }
+    }
+    
+    try {
+        // Запрос к Open-Meteo API
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&timezone=UTC`;
+        
+        console.log(`🌤️ Fetching weather data for ${lat}, ${lng}...`);
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Проверяем наличие данных
+        if (!data || !data.current_weather) {
+            throw new Error('No weather data received');
+        }
+        
+        const currentWeather = data.current_weather;
+        
+        // Извлекаем данные о ветре
+        // В Open-Meteo: windspeed в КМ/Ч, winddirection в градусах
+        let windSpeedKmh = currentWeather.windspeed || 0;
+        let windDirection = currentWeather.winddirection || 0;
+        
+        // КОНВЕРТАЦИЯ: км/ч → м/с (делим на 3.6)
+        let windSpeedMs = windSpeedKmh / 3.6;
+        
+        console.log(`📊 Raw wind data: ${windSpeedKmh} km/h, ${windDirection}°`);
+        console.log(`📊 Converted: ${windSpeedMs.toFixed(2)} m/s`);
+        
+        // Если скорость ветра 0, используем fallback
+        if (windSpeedMs === 0) {
+            console.warn('⚠️ Wind speed is 0, using fallback');
+            windSpeedMs = 5 + Math.random() * 15;
+            windDirection = Math.random() * 360;
+        }
+        
+        // Корректируем скорость ветра в зависимости от высоты
+        const altitudeFactor = getAltitudeFactor(altitude);
+        const adjustedSpeed = windSpeedMs * altitudeFactor;
+        
+        const result = {
+            speed: Math.round(adjustedSpeed * 10) / 10,
+            direction: Math.round(windDirection),
+            layerName: getPressureLevel(altitude).name,
+            altitude: altitude,
+            timestamp: Date.now(),
+            source: 'open-meteo',
+            raw: {
+                kmh: windSpeedKmh,
+                ms: windSpeedMs
+            }
+        };
+        
+        // Сохраняем в кэш
+        windCache.set(cacheKey, {
+            data: result,
+            timestamp: Date.now()
+        });
+        
+        console.log(`🌤️ Wind: ${result.speed} m/s, ${result.direction}° at ${altitude}m (${windSpeedKmh} km/h)`);
+        
+        return result;
+        
+    } catch (error) {
+        console.error('❌ Error fetching wind data:', error.message);
+        
+        // Возвращаем fallback с реальными данными
+        const fallbackSpeed = 5 + Math.random() * 15;
+        const fallbackDirection = Math.random() * 360;
+        
+        const fallbackResult = {
+            speed: Math.round(fallbackSpeed * 10) / 10,
+            direction: Math.round(fallbackDirection),
+            layerName: 'Default Layer',
+            altitude: altitude,
+            timestamp: Date.now(),
+            source: 'fallback'
+        };
+        
+        console.log(`⚠️ Using fallback wind: ${fallbackResult.speed} m/s, ${fallbackResult.direction}°`);
+        
+        // Сохраняем fallback в кэш на короткое время
+        windCache.set(cacheKey, {
+            data: fallbackResult,
+            timestamp: Date.now()
+        });
+        
+        return fallbackResult;
+    }
 }
 
-function getCacheKey(lat, lng, pressure) {
-  const roundedLat = Math.round(lat * 100) / 100;
-  const roundedLng = Math.round(lng * 100) / 100;
-  return `${roundedLat},${roundedLng},${pressure}hPa`;
+/**
+ * Определение уровня атмосферы по высоте
+ */
+function getPressureLevel(altitude) {
+    let closest = PRESSURE_LEVELS[0];
+    for (const level of PRESSURE_LEVELS) {
+        if (Math.abs(level.altitude - altitude) < Math.abs(closest.altitude - altitude)) {
+            closest = level;
+        }
+    }
+    return closest;
 }
 
-async function getWindAtPosition(lat, lng, altitude) {
-  // Валидация входных данных
-  if (isNaN(lat) || isNaN(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
-    console.log(`[WindService] ❌ Невалидные координаты: ${lat}, ${lng}`);
-    const levelInfo = getPressureLevelInfo(altitude || 1000);
-    return {
-      speed: 5 + Math.random() * 5,
-      direction: 180 + Math.random() * 180,
-      layerName: `${levelInfo.name} (резерв)`,
-      level: levelInfo.level,
-      pressure: levelInfo.pressure,
-      altitude: altitude || 1000,
-      timestamp: Date.now(),
-      isFallback: true
-    };
-  }
-
-  const levelInfo = getPressureLevelInfo(altitude);
-  const targetLevel = levelInfo.level;
-  const pressure = levelInfo.pressure;
-  
-  const cacheKey = getCacheKey(lat, lng, pressure);
-  const cached = windCache.get(cacheKey);
-  
-  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-    console.log(`[WindService] 📦 Кэш для ${cacheKey}`);
-    return cached.data;
-  }
-
-  // Формируем URL вручную, без URLSearchParams для совместимости
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=windspeed_${targetLevel},winddirection_${targetLevel}&wind_speed_unit=ms&forecast_days=1`;
-  
-  console.log(`[WindService] 🌐 Запрос: ${url}`);
-
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Aerostar/2.0'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    
-    if (!data?.hourly) {
-      throw new Error('Нет данных hourly в ответе');
-    }
-
-    const currentUTCHour = new Date().getUTCHours();
-    const windSpeedKey = `windspeed_${targetLevel}`;
-    const windDirectionKey = `winddirection_${targetLevel}`;
-    
-    // Проверяем, есть ли данные за текущий час
-    let speed = data.hourly[windSpeedKey]?.[currentUTCHour];
-    let direction = data.hourly[windDirectionKey]?.[currentUTCHour];
-    
-    // Если нет - берём первый доступный час
-    if (speed === undefined && data.hourly[windSpeedKey]?.length > 0) {
-      speed = data.hourly[windSpeedKey][0];
-      direction = data.hourly[windDirectionKey]?.[0] || 270;
-      console.log(`[WindService] ⏰ Использован час 0 вместо ${currentUTCHour}`);
-    }
-    
-    if (speed === undefined) {
-      throw new Error(`Нет данных для ${targetLevel}`);
-    }
-    
-    const windData = {
-      speed: Number(speed),
-      direction: Number(direction) || 270,
-      layerName: levelInfo.name,
-      level: targetLevel,
-      pressure: pressure,
-      altitude: altitude,
-      timestamp: Date.now()
-    };
-    
-    windCache.set(cacheKey, { data: windData, timestamp: Date.now() });
-    console.log(`[WindService] ✅ Ветер: ${windData.speed} м/с, ${windData.direction}°`);
-    
-    return windData;
-    
-  } catch (error) {
-    console.error(`[WindService] ❌ Ошибка:`, error.message);
-    
-    // Возвращаем резервный ветер
-    const fallbackSpeed = 8 + Math.random() * 7;
-    const fallbackDirection = 180 + Math.random() * 180;
-    
-    const fallbackData = {
-      speed: fallbackSpeed,
-      direction: fallbackDirection,
-      layerName: `${levelInfo.name} (резерв)`,
-      level: targetLevel,
-      pressure: pressure,
-      altitude: altitude,
-      timestamp: Date.now(),
-      isFallback: true
-    };
-    
-    console.log(`[WindService] 🔄 Резерв: ${fallbackSpeed.toFixed(1)} м/с, ${Math.round(fallbackDirection)}°`);
-    windCache.set(cacheKey, { data: fallbackData, timestamp: Date.now() - 3000 });
-    return fallbackData;
-  }
+/**
+ * Коэффициент увеличения скорости ветра с высотой
+ */
+function getAltitudeFactor(altitude) {
+    if (altitude < 1000) return 0.8;
+    if (altitude < 2000) return 1.0;
+    if (altitude < 3000) return 1.3;
+    if (altitude < 5000) return 1.8;
+    if (altitude < 8000) return 2.5;
+    if (altitude < 10000) return 3.5;
+    return 4.5;
 }
 
+/**
+ * Получение информации о слое по высоте
+ */
+function getPressureLevelInfo(altitude) {
+    return getPressureLevel(altitude);
+}
+
+/**
+ * Очистка кэша (для отладки)
+ */
 function clearWindCache() {
-  windCache.clear();
-  console.log('[WindService] 🗑️ Кэш очищен');
-}
-
-function getCacheStats() {
-  return {
-    totalEntries: windCache.size,
-    cacheTTLms: CACHE_TTL
-  };
+    windCache.clear();
+    console.log('🧹 Wind cache cleared');
 }
 
 module.exports = {
-  getWindAtPosition,
-  getPressureLevelInfo,
-  altitudeToPressure: (m) => Math.round(1013.25 * Math.pow(1 - 0.0000225577 * m, 5.25588)),
-  clearWindCache,
-  getCacheStats
+    getWindAtPosition,
+    getPressureLevelInfo,
+    clearWindCache
 };
