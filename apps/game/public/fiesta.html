@@ -63,7 +63,7 @@
             position: absolute;
             top: 20px;
             right: 20px;
-            width: 300px;
+            width: 320px;
             z-index: 2000;
             background: rgba(15,23,42,0.95);
             backdrop-filter: blur(14px);
@@ -89,6 +89,17 @@
             display: flex;
             justify-content: space-between;
             margin: 8px 0;
+            gap: 10px;
+        }
+        
+        .info-item .label {
+            color: #94a3b8;
+            white-space: nowrap;
+        }
+        
+        .info-item .value {
+            text-align: right;
+            word-break: break-word;
         }
         
         .deadline {
@@ -346,7 +357,7 @@
         
         /* Responsive */
         @media (max-width: 768px) {
-            .info-panel { width: 260px; padding: 10px; font-size: 11px; }
+            .info-panel { width: 280px; padding: 10px; font-size: 11px; }
             .altitude-panel { width: 240px; padding: 12px; }
             .btn { padding: 8px 16px; font-size: 12px; }
             .map-toggle { top: 55px; left: 15px; padding: 6px 12px; font-size: 10px; }
@@ -464,6 +475,12 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(2, 132, 199, 0.6);
         }
+        
+        /* Стили для статуса регистрации */
+        .reg-status-open { color: #22c55e; }
+        .reg-status-closed { color: #ef4444; }
+        .reg-status-racing { color: #f59e0b; }
+        .reg-status-none { color: #94a3b8; }
     </style>
 </head>
 <body>
@@ -504,10 +521,26 @@
     <!-- Info Panel -->
     <div class="info-panel">
         <h3>🏁 Race Information</h3>
-        <div class="info-item"><span>⏰ Race Start:</span><span id="race-start-time">--/--</span></div>
-        <div class="info-item"><span>🏁 Race End:</span><span class="deadline" id="race-deadline">--/--</span></div>
-        <div class="info-item"><span>🏆 Finish Line:</span><span id="finish-coords">--</span></div>
-        <div class="info-item"><span>📊 Status:</span><span id="race-status">Waiting...</span></div>
+        <div class="info-item">
+            <span class="label">⏰ Race Start (UTC):</span>
+            <span class="value" id="race-start-time">--/--</span>
+        </div>
+        <div class="info-item">
+            <span class="label">🏁 Race End (UTC):</span>
+            <span class="value deadline" id="race-deadline">--/--</span>
+        </div>
+        <div class="info-item">
+            <span class="label">📝 Registration:</span>
+            <span class="value" id="registration-status" style="font-weight: bold;">--</span>
+        </div>
+        <div class="info-item">
+            <span class="label">🏆 Finish Line:</span>
+            <span class="value" id="finish-coords">--</span>
+        </div>
+        <div class="info-item">
+            <span class="label">📊 Status:</span>
+            <span class="value" id="race-status">Waiting...</span>
+        </div>
         
         <h3 style="margin-top: 12px;">🌤️ Weather at Finish</h3>
         <div id="finish-weather">
@@ -515,7 +548,10 @@
         </div>
         
         <h3 style="margin-top: 12px;">🎈 Active Balloons</h3>
-        <div class="info-item"><span>Total Pilots:</span><span id="balloon-count">0</span></div>
+        <div class="info-item">
+            <span class="label">Total Pilots:</span>
+            <span class="value" id="balloon-count">0</span>
+        </div>
         <div id="pilots-list" style="font-size: 11px; max-height: 150px; overflow-y: auto;">
             <div style="color: #94a3b8; text-align: center;">No pilots yet</div>
         </div>
@@ -576,6 +612,7 @@
         let flightStartTime = null;
         let flightTimerInterval = null;
         let currentGameState = 'idle';
+        let lastPilotUIUpdate = null;
         
         // Tile Layers
         const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -613,6 +650,59 @@
                 imageUrl = `/images/${imageId}.png`;
             }
             return imageUrl;
+        }
+        
+        // ============================================
+        // ФУНКЦИЯ ФОРМАТИРОВАНИЯ UTC
+        // ============================================
+        function formatUTC(date) {
+            if (!date) return '--/--';
+            const d = new Date(date);
+            if (isNaN(d.getTime())) return '--/--';
+            return d.toUTCString();
+        }
+        
+        // ============================================
+        // ФУНКЦИЯ ОБНОВЛЕНИЯ СТАТУСА РЕГИСТРАЦИИ
+        // ============================================
+        function updateRegistrationStatus(config) {
+            const statusEl = document.getElementById('registration-status');
+            if (!statusEl) return;
+
+            const raceStatus = config?.raceStatus || 'idle';
+            const from = config?.registrationWindowFrom;
+            const to = config?.registrationWindowTo;
+
+            if (raceStatus === 'registration') {
+                if (from && to) {
+                    const fromStr = formatUTC(from);
+                    const toStr = formatUTC(to);
+                    if (fromStr !== '--/--' && toStr !== '--/--') {
+                        statusEl.innerHTML = `✅ ${fromStr} — ${toStr}`;
+                    } else {
+                        statusEl.innerHTML = '✅ ОТКРЫТА';
+                    }
+                } else {
+                    statusEl.innerHTML = '✅ ОТКРЫТА';
+                }
+                statusEl.style.color = '#22c55e';
+                statusEl.className = 'value reg-status-open';
+            } 
+            else if (raceStatus === 'racing') {
+                statusEl.innerHTML = '🔒 ЗАКРЫТА (гонка идет)';
+                statusEl.style.color = '#f59e0b';
+                statusEl.className = 'value reg-status-racing';
+            }
+            else if (raceStatus === 'finished' || raceStatus === 'idle') {
+                statusEl.innerHTML = '❌ НЕТ РЕГИСТРАЦИИ';
+                statusEl.style.color = '#ef4444';
+                statusEl.className = 'value reg-status-closed';
+            } 
+            else {
+                statusEl.innerHTML = '❌ НЕТ РЕГИСТРАЦИИ';
+                statusEl.style.color = '#94a3b8';
+                statusEl.className = 'value reg-status-none';
+            }
         }
         
         // ============================================
@@ -758,10 +848,17 @@
         }
         
         // ============================================
-        // ИНТЕРФЕЙС ПИЛОТА
+        // ИНТЕРФЕЙС ПИЛОТА (с защитой от дублирования)
         // ============================================
         function updatePilotUI(balloon) {
             if (!balloon) return;
+            
+            const stateKey = `${balloon.id}_${balloon.lat}_${balloon.lng}_${balloon.altitude}_${balloon.speed}`;
+            if (lastPilotUIUpdate === stateKey) {
+                return;
+            }
+            lastPilotUIUpdate = stateKey;
+            
             console.log('🎈 Updating UI for balloon:', balloon.username);
             
             document.getElementById('pilot-name').innerHTML = escapeHtml(balloon.username);
@@ -889,7 +986,6 @@
                 statusEl.style.color = info.color;
             }
             
-            // Показываем/скрываем кнопку регистрации
             const registerBtn = document.getElementById('register-btn');
             if (registerBtn) {
                 if (state === 'registration' || state === 'idle') {
@@ -899,7 +995,6 @@
                 }
             }
             
-            // Показываем/скрываем ссылку на регистрацию в модальном окне
             const registerLink = document.getElementById('register-link');
             if (registerLink) {
                 if (state === 'registration' || state === 'idle') {
@@ -907,6 +1002,11 @@
                 } else {
                     registerLink.style.display = 'none';
                 }
+            }
+            
+            // Обновляем статус регистрации
+            if (config) {
+                updateRegistrationStatus(config);
             }
         }
         
@@ -991,7 +1091,7 @@
                 displayAnnouncement({ message: `Login failed: ${data.message}`, timestamp: Date.now() });
             });
             
-            // Race config - ОБНОВЛЕННЫЙ БЛОК
+            // Race config
             socket.on('fiesta-race-config', (config) => {
                 console.log('Race config received');
                 currentConfig = config;
@@ -999,8 +1099,6 @@
                 if (config.finishCoords?.lat && config.finishCoords?.lng) {
                     document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
                     
-                    // ОБНОВЛЕННАЯ ЛОГИКА ДЛЯ ВРЕМЕНИ СТАРТА И ОКОНЧАНИЯ
-                    // Используем scheduledStartTime если есть, иначе raceStartDateTime
                     let startTime = null;
                     if (config.scheduledStartTime) {
                         startTime = new Date(config.scheduledStartTime);
@@ -1009,19 +1107,17 @@
                     }
                     
                     if (startTime && !isNaN(startTime.getTime())) {
-                        document.getElementById('race-start-time').innerHTML = startTime.toLocaleString();
+                        document.getElementById('race-start-time').innerHTML = formatUTC(startTime);
                         
-                        // Вычисляем время окончания
                         const duration = config.raceDurationHours || 24;
                         const endTime = new Date(startTime);
                         endTime.setHours(endTime.getHours() + duration);
-                        document.getElementById('race-deadline').innerHTML = endTime.toLocaleString();
+                        document.getElementById('race-deadline').innerHTML = formatUTC(endTime);
                     } else {
                         document.getElementById('race-start-time').innerHTML = '--/--';
                         document.getElementById('race-deadline').innerHTML = '--/--';
                     }
                     
-                    // Отображение статуса
                     const statusMap = {
                         'idle': { text: '⏸️ No race active', color: '#94a3b8' },
                         'registration': { text: '📝 Registration open!', color: '#fbbf24' },
@@ -1036,6 +1132,9 @@
                         statusEl.style.color = statusInfo.color;
                     }
                     
+                    // Обновляем статус регистрации
+                    updateRegistrationStatus(config);
+                    
                     if (finishMarker && map) map.removeLayer(finishMarker);
                     const finishIcon = L.divIcon({
                         html: '<span style="font-size: 32px;">🏁</span>',
@@ -1048,7 +1147,6 @@
                     updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
                 }
                 
-                // Обновляем UI в зависимости от состояния
                 if (config.raceStatus) {
                     updateUIForState(config.raceStatus, config);
                 }
@@ -1061,8 +1159,8 @@
                     currentConfig = data.config;
                 }
                 updateUIForState(data.newState, data.config || currentConfig);
+                updateRegistrationStatus(data.config || currentConfig);
                 
-                // Если состояние изменилось на racing, обновляем список шаров
                 if (data.newState === 'racing') {
                     socket.emit('fiesta-get-participants');
                 }
