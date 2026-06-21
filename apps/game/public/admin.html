@@ -588,14 +588,17 @@
                 }
             }
 
-            if (startTimeInput && startDate <= nowUTC) {
-                alert('Время старта должно быть в будущем (UTC)');
-                return;
-            }
-
-            if (startTimeInput && currentConfig?.raceStatus !== 'registration') {
-                alert('❌ Отложенный старт можно установить только в режиме REGISTRATION');
-                return;
+            // Разрешаем устанавливать отложенный старт в режиме IDLE или REGISTRATION
+            if (startTimeInput) {
+                if (startDate <= nowUTC) {
+                    alert('Время старта должно быть в будущем (UTC)');
+                    return;
+                }
+                // Проверяем только если статус не IDLE и не REGISTRATION
+                if (currentConfig?.raceStatus !== 'idle' && currentConfig?.raceStatus !== 'registration') {
+                    alert('❌ Отложенный старт можно установить только в режиме IDLE или REGISTRATION');
+                    return;
+                }
             }
 
             // Формируем конфигурацию
@@ -618,7 +621,12 @@
                 announcement: announcement || null
             };
 
-            if (confirm('Сохранить все настройки? (Регистрация, старт, сообщение)')) {
+            let confirmMessage = 'Сохранить все настройки? (Регистрация, старт, сообщение)';
+            if (startTimeInput && currentConfig?.raceStatus === 'idle') {
+                confirmMessage = '⚠️ Вы устанавливаете отложенный старт в режиме IDLE. Гонка автоматически перейдет в режим REGISTRATION при наступлении времени старта. Продолжить?';
+            }
+
+            if (confirm(confirmMessage)) {
                 // Отправляем все настройки на сервер
                 socket.emit('fiesta-admin-change-rules', config);
                 
@@ -629,6 +637,13 @@
                         registrationFrom: config.registrationWindowFrom,
                         registrationTo: config.registrationWindowTo
                     });
+                } else {
+                    // Если регистрация не установлена, очищаем
+                    socket.emit('fiesta-set-registration-window', {
+                        adminKey: ADMIN_KEY,
+                        registrationFrom: null,
+                        registrationTo: null
+                    });
                 }
                 
                 // Отправляем запланированный старт
@@ -637,6 +652,12 @@
                         adminKey: ADMIN_KEY,
                         startTime: config.scheduledStartTime,
                         duration: duration || 24
+                    });
+                } else {
+                    // Если старт не установлен, очищаем
+                    socket.emit('fiesta-set-scheduled-start', {
+                        adminKey: ADMIN_KEY,
+                        startTime: null
                     });
                 }
                 
