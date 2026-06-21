@@ -398,10 +398,18 @@
             const hasValidTo = config.registrationWindowTo && 
                 config.registrationWindowTo.getTime() !== new Date('1970-01-01').getTime();
 
+            let registrationText = 'Not set';
+            if (hasValidFrom && hasValidTo) {
+                registrationText = `${formatUTC(config.registrationWindowFrom)} — ${formatUTC(config.registrationWindowTo)}`;
+            } else if (config.raceStatus === 'registration' || config.raceStatus === 'racing') {
+                // Если идет регистрация или гонка, но время не задано - показываем "Открыта"
+                registrationText = '✅ Открыта (время не задано)';
+            }
+
             document.getElementById('current-config').innerHTML = `
                 <strong>🏁 Finish Line:</strong> ${config.finishCoords?.lat?.toFixed(4)}°, ${config.finishCoords?.lng?.toFixed(4)}°<br>
                 <strong>🗺️ Start Zone:</strong> ${startZoneText}<br>
-                <strong>📝 Registration:</strong> ${hasValidFrom && hasValidTo ? `${formatUTC(config.registrationWindowFrom)} — ${formatUTC(config.registrationWindowTo)}` : 'Not set'}<br>
+                <strong>📝 Registration:</strong> ${registrationText}<br>
                 <strong>⏰ Scheduled Start:</strong> ${config.scheduledStartTime ? formatUTC(config.scheduledStartTime) : 'Not set'}<br>
                 <strong>⏱️ Duration:</strong> ${config.raceDurationHours || 24} hours<br>
                 <strong>📊 Status:</strong> ${config.raceStatus || 'idle'}
@@ -646,7 +654,7 @@
                     });
                 }
                 
-                // Отправляем запланированный старт
+                // Отправляем запланированный старт с длительностью
                 if (config.scheduledStartTime) {
                     socket.emit('fiesta-set-scheduled-start', {
                         adminKey: ADMIN_KEY,
