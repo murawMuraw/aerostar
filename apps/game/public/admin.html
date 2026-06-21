@@ -110,15 +110,6 @@
         }
         .scheduled-time .label { color: #94a3b8; font-size: 12px; }
         .scheduled-time .value { color: #10b981; font-size: 14px; font-weight: bold; }
-        .button-group-small {
-            display: flex;
-            gap: 10px;
-        }
-        .button-group-small button {
-            flex: 1;
-            padding: 10px;
-            font-size: 14px;
-        }
         .status-info {
             display: flex;
             justify-content: space-between;
@@ -142,15 +133,16 @@
         }
         .utc-indicator .label { color: #94a3b8; font-size: 13px; }
         .utc-indicator .value { color: #38bdf8; font-size: 14px; font-weight: bold; font-family: monospace; }
-        .registration-status {
-            padding: 8px 12px;
+        .announcement-sent {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
             border-radius: 8px;
-            font-weight: bold;
-            text-align: center;
+            padding: 10px;
+            margin-top: 10px;
+            color: #22c55e;
+            font-size: 13px;
+            display: none;
         }
-        .registration-open { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
-        .registration-closed { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-        .registration-none { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
     </style>
 </head>
 <body>
@@ -177,13 +169,11 @@
                 <button id="logout-btn" style="width: auto; padding: 8px 20px; margin-top: 10px;">Logout</button>
             </div>
 
-            <!-- Индикатор UTC времени -->
             <div class="utc-indicator">
                 <span class="label">🕐 Current UTC Time:</span>
                 <span class="value" id="current-utc-time">--:--:--</span>
             </div>
 
-            <!-- БЛОК ТЕКУЩЕГО СТАТУСА -->
             <div class="admin-card">
                 <h2>📊 Race Status</h2>
                 <div class="status-display" id="status-display-box" style="background: #64748b; color: #fff;">
@@ -199,7 +189,6 @@
                 </div>
             </div>
 
-            <!-- БЛОК НАСТРОЙКИ РЕГИСТРАЦИИ -->
             <div class="admin-card">
                 <h2>📝 Registration Window (UTC)</h2>
                 <div class="coord-group">
@@ -220,7 +209,6 @@
                 </div>
             </div>
 
-            <!-- БЛОК ЗАПЛАНИРОВАННОГО СТАРТА ГОНКИ -->
             <div class="admin-card">
                 <h2>⏰ Scheduled Race Start (UTC)</h2>
                 <div class="form-group">
@@ -241,7 +229,6 @@
                 </div>
             </div>
 
-            <!-- БЛОК ОБЪЯВЛЕНИЙ -->
             <div class="admin-card">
                 <h2>💬 Admin Announcement</h2>
                 <div class="form-group">
@@ -249,9 +236,9 @@
                     <textarea id="admin-message" placeholder="Enter your message here..." maxlength="500"></textarea>
                     <div class="char-counter"><span id="char-count">0</span> / 500 characters</div>
                 </div>
+                <div id="announcement-status" class="announcement-sent">✅ Announcement sent!</div>
             </div>
 
-            <!-- НАСТРОЙКА ФИНИША -->
             <div class="admin-card">
                 <h2>📍 Finish Line</h2>
                 <div class="coord-group">
@@ -260,7 +247,6 @@
                 </div>
             </div>
 
-            <!-- НАСТРОЙКА СТАРТОВОЙ ЗОНЫ -->
             <div class="admin-card">
                 <h2>🗺️ Start Zone (Rectangle)</h2>
                 <div class="region-group">
@@ -271,7 +257,6 @@
                 </div>
             </div>
 
-            <!-- КНОПКИ УПРАВЛЕНИЯ -->
             <div class="admin-card">
                 <h2>🎮 Race Controls</h2>
                 <div class="button-group">
@@ -280,19 +265,17 @@
                     <button id="reset-race" class="btn-idle">🔄 Reset Race</button>
                 </div>
                 <div class="info-text" style="margin-top: 10px;">
-                    💡 <strong>Save Configuration</strong> — сохраняет все настройки (регистрация, старт, сообщение) в UTC<br>
+                    💡 <strong>Save Configuration</strong> — отправляет ВСЕ настройки одним пакетом<br>
                     💡 <strong>Finish Race</strong> — завершает гонку (активно только в режиме RACING)<br>
                     💡 <strong>Reset Race</strong> — очищает всех пилотов и переводит в режим IDLE
                 </div>
             </div>
 
-            <!-- СТАТИСТИКА -->
             <div class="admin-card">
                 <h2>📊 Race Statistics</h2>
                 <div class="current-config" id="race-stats">Loading...</div>
             </div>
 
-            <!-- ТЕКУЩАЯ КОНФИГУРАЦИЯ (UTC) -->
             <div class="admin-card">
                 <h2>📋 Current Race Rules (UTC)</h2>
                 <div class="current-config" id="current-config">Loading...</div>
@@ -305,10 +288,6 @@
         let socket = null;
         let currentConfig = null;
         const ADMIN_KEY = "aerostar2024";
-
-        // ============================================
-        // ФУНКЦИИ ДЛЯ РАБОТЫ С UTC
-        // ============================================
 
         function formatUTC(date) {
             if (!date) return 'Not set';
@@ -338,10 +317,6 @@
             document.getElementById('current-utc-time').textContent = now.toUTCString();
         }
 
-        // ============================================
-        // ФУНКЦИИ ОТОБРАЖЕНИЯ
-        // ============================================
-
         function updateStatusDisplay(status) {
             const statusMap = {
                 'idle': { text: '⏸️ IDLE', color: '#64748b', badge: 'status-idle' },
@@ -369,17 +344,11 @@
 
         function updateButtons(currentStatus) {
             const finishBtn = document.getElementById('finish-race');
-            const resetBtn = document.getElementById('reset-race');
             const saveBtn = document.getElementById('save-config');
 
             if (finishBtn) {
                 finishBtn.disabled = (currentStatus !== 'racing');
             }
-
-            if (resetBtn) {
-                resetBtn.disabled = false;
-            }
-
             if (saveBtn) {
                 saveBtn.disabled = (currentStatus === 'racing' || currentStatus === 'finished');
             }
@@ -402,7 +371,6 @@
             if (hasValidFrom && hasValidTo) {
                 registrationText = `${formatUTC(config.registrationWindowFrom)} — ${formatUTC(config.registrationWindowTo)}`;
             } else if (config.raceStatus === 'registration' || config.raceStatus === 'racing') {
-                // Если идет регистрация или гонка, но время не задано - показываем "Открыта"
                 registrationText = '✅ Открыта (время не задано)';
             }
 
@@ -513,6 +481,17 @@
             socket.on('fiesta-config-saved', (data) => {
                 if (data.success) {
                     alert('✅ Configuration saved successfully!');
+                    // Показываем статус отправки объявления
+                    if (data.announcementSent) {
+                        document.getElementById('announcement-status').style.display = 'block';
+                        document.getElementById('admin-message').value = '';
+                        document.getElementById('char-count').textContent = '0';
+                        setTimeout(() => {
+                            document.getElementById('announcement-status').style.display = 'none';
+                        }, 5000);
+                    }
+                } else {
+                    alert('❌ Error saving configuration: ' + (data.error || 'Unknown error'));
                 }
             });
 
@@ -526,30 +505,6 @@
                 socket.emit('fiesta-get-participants');
             });
 
-            socket.on('fiesta-scheduled-start-set', (data) => {
-                if (data.success) {
-                    alert(`✅ Scheduled start set to ${formatUTC(data.startTime)} (UTC)`);
-                    socket.emit('fiesta-get-participants');
-                }
-            });
-
-            socket.on('fiesta-registration-window-set', (data) => {
-                if (data.success) {
-                    const from = data.registrationFrom ? new Date(data.registrationFrom) : null;
-                    const to = data.registrationTo ? new Date(data.registrationTo) : null;
-                    if (from && to) {
-                        document.getElementById('registration-window-display').style.display = 'block';
-                        document.getElementById('registration-window-value').textContent = 
-                            `${from.toUTCString()} — ${to.toUTCString()}`;
-                        alert(`✅ Registration window set: ${from.toUTCString()} — ${to.toUTCString()} (UTC)`);
-                    } else {
-                        document.getElementById('registration-window-display').style.display = 'none';
-                        alert('✅ Registration window cleared');
-                    }
-                    socket.emit('fiesta-get-participants');
-                }
-            });
-
             socket.on('fiesta-error', (error) => {
                 console.error('Server error:', error);
                 alert('❌ Error: ' + error);
@@ -561,30 +516,29 @@
         }
 
         // ============================================
-        // ОБРАБОТЧИКИ СОБЫТИЙ
+        // ОТПРАВКА ВСЕЙ КОНФИГУРАЦИИ ОДНИМ ПАКЕТОМ
         // ============================================
 
-        // Save Configuration - ЕДИНАЯ КНОПКА ДЛЯ ВСЕХ НАСТРОЕК
         document.getElementById('save-config').addEventListener('click', () => {
             if (currentConfig?.raceStatus === 'racing' || currentConfig?.raceStatus === 'finished') {
                 alert('❌ Нельзя сохранить конфигурацию во время гонки или после финиша');
                 return;
             }
 
-            const duration = parseInt(document.getElementById('race-duration').value);
+            // Собираем все данные из полей
+            const duration = parseInt(document.getElementById('race-duration').value) || 24;
             const startTimeInput = document.getElementById('scheduled-start-time').value;
             const fromInput = document.getElementById('reg-from').value;
             const toInput = document.getElementById('reg-to').value;
             const announcement = document.getElementById('admin-message').value.trim();
             
-            // Проверяем корректность дат
             const startDate = startTimeInput ? new Date(startTimeInput + 'Z') : null;
             const fromDate = fromInput ? new Date(fromInput + 'Z') : null;
             const toDate = toInput ? new Date(toInput + 'Z') : null;
             const now = new Date();
             const nowUTC = new Date(now.toUTCString());
 
-            // Валидация
+            // Валидация на клиенте
             if (fromInput && toInput) {
                 if (fromDate <= nowUTC) {
                     alert('Время открытия регистрации должно быть в будущем (UTC)');
@@ -596,92 +550,61 @@
                 }
             }
 
-            // Разрешаем устанавливать отложенный старт в режиме IDLE или REGISTRATION
             if (startTimeInput) {
                 if (startDate <= nowUTC) {
                     alert('Время старта должно быть в будущем (UTC)');
                     return;
                 }
-                // Проверяем только если статус не IDLE и не REGISTRATION
+                // Можно устанавливать старт в IDLE или REGISTRATION
                 if (currentConfig?.raceStatus !== 'idle' && currentConfig?.raceStatus !== 'registration') {
                     alert('❌ Отложенный старт можно установить только в режиме IDLE или REGISTRATION');
                     return;
                 }
             }
 
-            // Формируем конфигурацию
-            const config = {
+            // Формируем полную конфигурацию
+            const fullConfig = {
                 adminKey: ADMIN_KEY,
+                // Правила гонки
                 finishCoords: {
-                    lat: parseFloat(document.getElementById('finish-lat').value),
-                    lng: parseFloat(document.getElementById('finish-lng').value)
+                    lat: parseFloat(document.getElementById('finish-lat').value) || 0,
+                    lng: parseFloat(document.getElementById('finish-lng').value) || 0
                 },
                 allowedStartRegion: {
-                    minLat: parseFloat(document.getElementById('min-lat').value),
-                    maxLat: parseFloat(document.getElementById('max-lat').value),
-                    minLng: parseFloat(document.getElementById('min-lng').value),
-                    maxLng: parseFloat(document.getElementById('max-lng').value)
+                    minLat: parseFloat(document.getElementById('min-lat').value) || 0,
+                    maxLat: parseFloat(document.getElementById('max-lat').value) || 0,
+                    minLng: parseFloat(document.getElementById('min-lng').value) || 0,
+                    maxLng: parseFloat(document.getElementById('max-lng').value) || 0
                 },
-                registrationWindowFrom: fromInput ? fromDate.toISOString() : null,
-                registrationWindowTo: toInput ? toDate.toISOString() : null,
-                raceDurationHours: duration || 24,
-                scheduledStartTime: startTimeInput ? startDate.toISOString() : null,
+                // Окно регистрации
+                registrationWindowFrom: fromDate ? fromDate.toISOString() : null,
+                registrationWindowTo: toDate ? toDate.toISOString() : null,
+                // Запланированный старт
+                scheduledStartTime: startDate ? startDate.toISOString() : null,
+                raceDurationHours: duration,
+                // Объявление
                 announcement: announcement || null
             };
 
-            let confirmMessage = 'Сохранить все настройки? (Регистрация, старт, сообщение)';
+            // Подтверждение
+            let confirmMsg = 'Сохранить полную конфигурацию?';
             if (startTimeInput && currentConfig?.raceStatus === 'idle') {
-                confirmMessage = '⚠️ Вы устанавливаете отложенный старт в режиме IDLE. Гонка автоматически перейдет в режим REGISTRATION при наступлении времени старта. Продолжить?';
+                confirmMsg = '⚠️ Вы устанавливаете отложенный старт в режиме IDLE. Гонка автоматически перейдет в режим REGISTRATION при наступлении времени старта. Продолжить?';
+            }
+            if (announcement) {
+                confirmMsg += '\n\n📢 Будет отправлено объявление: "' + announcement + '"';
             }
 
-            if (confirm(confirmMessage)) {
-                // Отправляем все настройки на сервер
-                socket.emit('fiesta-admin-change-rules', config);
-                
-                // Отправляем окно регистрации
-                if (config.registrationWindowFrom && config.registrationWindowTo) {
-                    socket.emit('fiesta-set-registration-window', {
-                        adminKey: ADMIN_KEY,
-                        registrationFrom: config.registrationWindowFrom,
-                        registrationTo: config.registrationWindowTo
-                    });
-                } else {
-                    // Если регистрация не установлена, очищаем
-                    socket.emit('fiesta-set-registration-window', {
-                        adminKey: ADMIN_KEY,
-                        registrationFrom: null,
-                        registrationTo: null
-                    });
-                }
-                
-                // Отправляем запланированный старт с длительностью
-                if (config.scheduledStartTime) {
-                    socket.emit('fiesta-set-scheduled-start', {
-                        adminKey: ADMIN_KEY,
-                        startTime: config.scheduledStartTime,
-                        duration: duration || 24
-                    });
-                } else {
-                    // Если старт не установлен, очищаем
-                    socket.emit('fiesta-set-scheduled-start', {
-                        adminKey: ADMIN_KEY,
-                        startTime: null
-                    });
-                }
-                
-                // Отправляем объявление
-                if (announcement) {
-                    socket.emit('fiesta-admin-announcement', {
-                        message: announcement,
-                        adminKey: ADMIN_KEY
-                    });
-                    document.getElementById('admin-message').value = '';
-                    document.getElementById('char-count').textContent = '0';
-                }
-            }
+            if (!confirm(confirmMsg)) return;
+
+            // ОТПРАВЛЯЕМ ВСЕ ОДНИМ ПАКЕТОМ
+            socket.emit('fiesta-save-full-config', fullConfig);
         });
 
-        // Finish Race
+        // ============================================
+        // ОСТАЛЬНЫЕ ОБРАБОТЧИКИ
+        // ============================================
+
         document.getElementById('finish-race').addEventListener('click', () => {
             if (currentConfig?.raceStatus !== 'racing') {
                 alert('❌ Завершить гонку можно только в режиме RACING');
@@ -694,7 +617,6 @@
             }
         });
 
-        // Reset Race
         document.getElementById('reset-race').addEventListener('click', () => {
             if (currentConfig?.raceStatus === 'idle') {
                 alert('Гонка уже в режиме IDLE');
@@ -710,11 +632,11 @@
                 document.getElementById('scheduled-start-time').value = '';
                 document.getElementById('admin-message').value = '';
                 document.getElementById('char-count').textContent = '0';
+                document.getElementById('announcement-status').style.display = 'none';
                 alert('✅ Гонка сброшена. Все пилоты удалены.');
             }
         });
 
-        // Login/Logout
         document.getElementById('login-btn').addEventListener('click', login);
         document.getElementById('logout-btn').addEventListener('click', () => {
             if (socket) socket.disconnect();
@@ -729,7 +651,6 @@
             document.getElementById('char-count').textContent = this.value.length;
         });
 
-        // Auto-refresh stats
         setInterval(() => {
             if (socket && socket.connected) {
                 socket.emit('fiesta-get-participants');
