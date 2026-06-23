@@ -482,6 +482,7 @@ function startBalloonSimulation(balloonId) {
         balloon.speed = wind.speed;
         balloon.layerName = wind.layerName || balloon.layerName || 'Default Layer';
         balloon.windDirection = wind.direction;
+        balloon.layerName = wind.layerName; // ЖЕСТКО ПРИСВАИВАЕМ ИМЯ СЛОЯ ИЗ КЭША
         
         // Запись точек пути шара
         balloon.path.push({ 
