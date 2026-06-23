@@ -355,28 +355,27 @@ function loadPilotsFromFile() {
 // ОБНОВЛЕНИЕ ВЕТРА
 // ============================================
 async function updateWeatherForAllBalloons() {
-    const balloonIds = Object.keys(balloons);
-    if (balloonIds.length === 0) return;
+    console.log('🔄 [Weather Update] Starting 300s weather refresh for all active balloons...');
     
-    console.log(`🌤️ Обновление погоды для ${balloonIds.length} шаров...`);
-    
-    for (const id of balloonIds) {
-        const balloon = balloons[id];
-        if (!balloon || balloon.finished) continue;
+    // Перебираем все шары, которые сейчас есть на сервере
+    const promises = Object.keys(balloons).map(async (balloonId) => {
+        const balloon = balloons[balloonId];
         
-        try {
-            const wind = await windService.getWindAtPosition(balloon.lat, balloon.lng, balloon.altitude);
-            balloon._cachedWind = wind;
-            console.log(`🌤️ Ветер для ${balloon.username}: ${wind.speed} м/с, ${wind.direction}°`);
-        } catch (error) {
-            console.error(`❌ Ошибка получения ветра для ${balloon.username}:`, error.message);
-            if (!balloon._cachedWind) {
-                console.warn(`⚠️ Нет кэшированного ветра для ${balloon.username}`);
-            } else {
-                console.log(`📦 Используем кэшированный ветер для ${balloon.username}`);
-            }
-        }
-    }
+        // Запрашиваем из API и сохраняем в кэш все слои ветра для текущей точки шара
+        await windService.fetchAndCacheWindForBalloon(balloonId, balloon.lat, balloon.lng);
+        
+        // Сразу выставляем шару актуальный ветер из кэша под его текущую высоту
+        const currentWind = windService.getCachedWindForBalloon(balloonId, balloon.altitude);
+        balloon.speed = currentWind.speed;
+        balloon.windDirection = currentWind.direction;
+    });
+
+    // Ждем, пока отправятся и запишутся в кэш данные по всем шарам
+    await Promise.all(promises);
+    console.log('📦 [Weather Update] All balloons caches updated successfully.');
+    
+    // Сохраняем обновленные данные в файл pilots.json
+    savePilotsToFile();
 }
 
 // ============================================
