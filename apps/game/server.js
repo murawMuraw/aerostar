@@ -850,15 +850,18 @@ socket.on('fiesta-change-altitude', (data) => {
 
     const balloon = balloons[socket.currentPilotId];
     
-    // Обновляем высоту шара (ограничиваем её разумными пределами, например, до 12000м)
+    // Ограничиваем высоту в пределах нормы
     balloon.altitude = Math.min(Math.max(data.altitude, 0), 12000);
 
-    // МГНОВЕННО подтягиваем вектор ветра из кэша для этой новой высоты
+    // ИСПРАВЛЕНО: Берем данные из нового кэша по ID шара и высоте
     const wind = windService.getCachedWindForBalloon(socket.currentPilotId, balloon.altitude);
+    
+    // Мгновенно обновляем физические параметры шара
     balloon.speed = wind.speed;
     balloon.windDirection = wind.direction;
+    balloon.layerName = wind.layerName;
+    balloon.lastUpdate = Date.now();
 
-    // Сохраняем состояние в файл и отправляем игрокам
     savePilotsToFile();
     io.to('race-room').emit('fiesta-balloon-updated', balloon);
 
@@ -1329,13 +1332,17 @@ server.listen(PORT, () => {
     loadConfig();
     loadPilotsFromFile();
     
-    // ТРЕБОВАНИЕ: 1 раз в 300 секунд смотрим координаты шаров и обновляем кэш ветра
+    // Восстанавливаем симуляции шаров из файла (чтобы они появились в объекте balloons)
+    restoreSimulations();
+
+    // 1. ПЕРВЫЙ ЗАПУСК: Сразу наполняем кэш актуальным ветром для всех шаров при старте сервера
+    updateWeatherForAllBalloons();
+    
+    // 2. ИНТЕРВАЛ: Каждые 300 секунд проверяем координаты и обновляем кэш
     setInterval(async () => {
         if (raceConfig.raceStatus === GAME_STATES.RACING) {
-            const activeBalloons = Object.values(balloons).filter(b => !b.finished);
-            await windService.updateWindForBalloons(activeBalloons);
+            // Вызываем нашу новую функцию, которая сама обойдет balloons и обновит кэш по ID
+            await updateWeatherForAllBalloons();
         }
-    }, 300000); // 300 секунд
-
-    restoreSimulations();
+    }, 300000); 
 });
