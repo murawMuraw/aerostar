@@ -1361,19 +1361,18 @@ setInterval(() => {
 }, 30000);
 
 // Запуск сервера
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🎮 Fiesta Game Server running on port ${PORT}`);
-    console.log(`📍 Race page: http://localhost:${PORT}/fiesta.html`);
-    console.log(`📝 Register page: http://localhost:${PORT}/register.html`);
-    console.log(`🔧 Admin page: http://localhost:${PORT}/admin.html`);
-    console.log(`👥 Max participants: ${MAX_PARTICIPANTS}`);
-    console.log(`🏁 Race status: ${raceConfig.raceStatus}`);
-    console.log(`🎯 Finish: ${raceConfig.finishCoords.lat}, ${raceConfig.finishCoords.lng}`);
-    if (raceConfig.registrationWindowFrom && raceConfig.registrationWindowFrom.getTime() !== new Date('1970-01-01').getTime()) {
-        console.log(`📝 Registration window: ${raceConfig.registrationWindowFrom.toUTCString()} — ${raceConfig.registrationWindowTo.toUTCString()}`);
-    }
-    if (raceConfig.scheduledStartTime) {
-        console.log(`⏰ Scheduled start: ${new Date(raceConfig.scheduledStartTime).toUTCString()}`);
-    }
-    console.log(`👥 Pilots: ${Object.keys(balloons).length}`);
+server.listen(PORT, () => {
+    console.log(`🚀 FIESTA SERVER v6.0 running on port ${PORT}`);
+    loadConfig();
+    loadPilotsFromFile();
+    
+    // ТРЕБОВАНИЕ: 1 раз в 300 секунд смотрим координаты шаров и обновляем кэш ветра
+    setInterval(async () => {
+        if (raceConfig.raceStatus === GAME_STATES.RACING) {
+            const activeBalloons = Object.values(balloons).filter(b => !b.finished);
+            await windService.updateWindForBalloons(activeBalloons);
+        }
+    }, 300000); // 300 секунд
+
+    restoreSimulations();
 });
