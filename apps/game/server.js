@@ -842,24 +842,31 @@ io.on('connection', (socket) => {
     // ============================================
     // УПРАВЛЕНИЕ ВЫСОТОЙ
     // ============================================
-    socket.on('fiesta-change-altitude', (data) => {
-        if (!socket.currentPilotId || !balloons[socket.currentPilotId]) {
-            socket.emit('fiesta-error', 'Not authenticated as pilot');
-            return;
-        }
-        
-        const balloon = balloons[socket.currentPilotId];
-        const newAltitude = Math.min(Math.max(data.altitude, 0), 15000);
-        balloon.altitude = newAltitude;
-        
-        const levelInfo = windService.getPressureLevelInfo(newAltitude);
-        balloon.layerName = levelInfo.name;
-        savePilotsToFile();
-        
-        io.to('race-room').emit('fiesta-balloon-updated', balloon);
-        console.log(`📈 ${balloon.username} altitude → ${newAltitude}m`);
-    });
+socket.on('fiesta-change-altitude', (data) => {
+    if (!socket.currentPilotId || !balloons[socket.currentPilotId]) {
+        socket.emit('fiesta-error', 'Not authenticated as pilot');
+        return;
+    }
 
+    const balloon = balloons[socket.currentPilotId];
+    
+    // Обновляем высоту шара (ограничиваем её разумными пределами, например, до 12000м)
+    balloon.altitude = Math.min(Math.max(data.altitude, 0), 12000);
+
+    // МГНОВЕННО подтягиваем вектор ветра из кэша для этой новой высоты
+    const wind = windService.getCachedWindForBalloon(socket.currentPilotId, balloon.altitude);
+    balloon.speed = wind.speed;
+    balloon.windDirection = wind.direction;
+
+    // Сохраняем состояние в файл и отправляем игрокам
+    savePilotsToFile();
+    io.to('race-room').emit('fiesta-balloon-updated', balloon);
+
+    console.log(`📈 Pilot ${balloon.username} changed altitude to ${balloon.altitude}m. New wind: ${balloon.speed}m/s, ${balloon.windDirection}°`);
+});
+
+    
+ 
     // ============================================
     // АДМИНИСТРАТОРСКИЕ ФУНКЦИИ
     // ============================================
