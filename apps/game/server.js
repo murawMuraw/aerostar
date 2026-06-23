@@ -434,39 +434,15 @@ function stopAllSimulations() {
     simulationIntervals.clear();
 }
 
-async function startBalloonSimulation(balloonId) {
+function startBalloonSimulation(balloonId) {
     if (simulationIntervals.has(balloonId)) {
         console.log(`⏭️ Simulation already running for ${balloonId}`);
         return;
     }
     
-    console.log(`🎈 Starting simulation for balloon ${balloonId}`);
+    console.log(`🎈 Starting simulation loop for balloon ${balloonId}`);
     
-    const balloon = balloons[balloonId];
-    if (!balloon) {
-        console.error(`❌ Balloon ${balloonId} not found`);
-        return;
-    }
-    
-    if (!balloon._cachedWind) {
-        try {
-            console.log(`🌤️ Getting initial wind for ${balloon.username}...`);
-            const wind = await windService.getWindAtPosition(balloon.lat, balloon.lng, balloon.altitude);
-            balloon._cachedWind = wind;
-            balloon.speed = wind.speed;
-            balloon.windDirection = wind.direction;
-            balloon.layerName = wind.layerName;
-            console.log(`✅ Initial wind for ${balloon.username}: ${wind.speed} m/s, ${wind.direction}°`);
-            
-            io.to('race-room').emit('fiesta-balloon-updated', balloon);
-        } catch (error) {
-            console.error(`❌ Error getting initial wind for ${balloon.username}:`, error.message);
-        }
-    } else {
-        console.log(`📦 Using cached wind for ${balloon.username}: ${balloon._cachedWind.speed} m/s`);
-    }
-    
-    const interval = setInterval(async () => {
+    const interval = setInterval(() => {
         const balloon = balloons[balloonId];
         
         if (!balloon) {
@@ -487,84 +463,65 @@ async function startBalloonSimulation(balloonId) {
             simulationIntervals.delete(balloonId);
             return;
         }
+
+        // 1. БЕРЕМ ВЕТЕР ИЗ ЦЕНТРАЛЬНОГО КЭША (Синхронно и мгновенно)
+        const wind = windService.getCachedWindForBalloon(balloonId, balloon.altitude);
         
-        try {
-            let wind = balloon._cachedWind;
-            if (!wind || (Date.now() - wind.timestamp) > 300000) {
-                console.log(`🔄 Обновление ветра для ${balloon.username}...`);
-                try {
-                    wind = await windService.getWindAtPosition(balloon.lat, balloon.lng, balloon.altitude);
-                    balloon._cachedWind = wind;
-                } catch (error) {
-                    console.error(`❌ Ошибка получения ветра для ${balloon.username}:`, error.message);
-                    if (!wind) {
-                        console.warn(`⚠️ Нет данных о ветре для ${balloon.username}, пропускаем обновление`);
-                        return;
-                    }
-                }
-            }
+        // 2. ВАША ФИЗИКА ДВИЖЕНИЯ И ТРАЕКТОРИЯ (Полностью сохранена)
+        const speedLatPerSecond = wind.speed / 111000;
+        const speedLngPerSecond = wind.speed / (111000 * Math.cos(balloon.lat * Math.PI / 180));
+        const intervalSeconds = SIMULATION_INTERVAL / 1000;
+        const windDirectionRad = wind.direction * Math.PI / 180;
+        const moveDirectionRad = windDirectionRad + Math.PI;
+        
+        const latChange = Math.cos(moveDirectionRad) * speedLatPerSecond * intervalSeconds;
+        const lngChange = Math.sin(moveDirectionRad) * speedLngPerSecond * intervalSeconds;
+        
+        balloon.lat += latChange;
+        balloon.lng += lngChange;
+        balloon.speed = wind.speed;
+        balloon.layerName = wind.layerName || balloon.layerName || 'Default Layer';
+        balloon.windDirection = wind.direction;
+        
+        // Запись точек пути шара
+        balloon.path.push({ 
+            lat: balloon.lat, 
+            lng: balloon.lng,
+            altitude: balloon.altitude,
+            timestamp: Date.now()
+        });
+        
+        if (balloon.path.length > 200) {
+            balloon.path = balloon.path.slice(-200);
+        }
+        
+        balloon.lastUpdate = Date.now();
+        
+        // 3. ОТПРАВКА ОБНОВЛЕНИЙ ИГРОКАМ
+        io.to('race-room').emit('fiesta-balloon-updated', balloon);
+        
+        // 4. ВАША ЛОГИКА ПРОВЕРКИ ФИНИША
+        const distanceToFinish = getDistanceFromLatLonInKm(
+            balloon.lat, balloon.lng,
+            raceConfig.finishCoords.lat, raceConfig.finishCoords.lng
+        );
+        
+        if (distanceToFinish < 50 && !balloon.finished) {
+            balloon.finished = true;
+            balloon.finishTime = Date.now();
+            savePilotsToFile();
             
-            if (!wind) {
-                console.warn(`⚠️ Нет данных о ветре для ${balloon.username}, пропускаем обновление`);
-                return;
-            }
-            
-            const speedLatPerSecond = wind.speed / 111000;
-            const speedLngPerSecond = wind.speed / (111000 * Math.cos(balloon.lat * Math.PI / 180));
-            const intervalSeconds = SIMULATION_INTERVAL / 1000;
-            const windDirectionRad = wind.direction * Math.PI / 180;
-            const moveDirectionRad = windDirectionRad + Math.PI;
-            
-            const latChange = Math.cos(moveDirectionRad) * speedLatPerSecond * intervalSeconds;
-            const lngChange = Math.sin(moveDirectionRad) * speedLngPerSecond * intervalSeconds;
-            
-            balloon.lat += latChange;
-            balloon.lng += lngChange;
-            balloon.speed = wind.speed;
-            balloon.layerName = wind.layerName || balloon.layerName || 'Default Layer';
-            balloon.windDirection = wind.direction;
-            balloon.lastWindUpdate = wind.timestamp;
-            
-            balloon.path.push({ 
-                lat: balloon.lat, 
-                lng: balloon.lng,
-                altitude: balloon.altitude,
-                timestamp: Date.now()
+            io.to('race-room').emit('fiesta-message', {
+                type: 'finish',
+                message: `🎉 ПОБЕДА! ${balloon.username} достиг финиша! 🎉`,
+                balloon: balloon,
+                finishTime: balloon.finishTime
             });
             
-            if (balloon.path.length > 200) {
-                balloon.path = balloon.path.slice(-200);
-            }
+            console.log(`🏆 Balloon ${balloon.raceNumber} (${balloon.username}) finished!`);
             
-            balloon.lastUpdate = Date.now();
-            
-            io.to('race-room').emit('fiesta-balloon-updated', balloon);
-            
-            const distanceToFinish = getDistanceFromLatLonInKm(
-                balloon.lat, balloon.lng,
-                raceConfig.finishCoords.lat, raceConfig.finishCoords.lng
-            );
-            
-            if (distanceToFinish < 50 && !balloon.finished) {
-                balloon.finished = true;
-                balloon.finishTime = Date.now();
-                savePilotsToFile();
-                
-                io.to('race-room').emit('fiesta-message', {
-                    type: 'finish',
-                    message: `🎉 ПОБЕДА! ${balloon.username} достиг финиша! 🎉`,
-                    balloon: balloon,
-                    finishTime: balloon.finishTime
-                });
-                
-                console.log(`🏆 Balloon ${balloon.raceNumber} (${balloon.username}) finished!`);
-                
-                clearInterval(interval);
-                simulationIntervals.delete(balloonId);
-            }
-            
-        } catch (error) {
-            console.error(`Error in simulation for balloon ${balloonId}:`, error);
+            clearInterval(interval);
+            simulationIntervals.delete(balloonId);
         }
         
     }, SIMULATION_INTERVAL);
