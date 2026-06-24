@@ -464,11 +464,6 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(2, 132, 199, 0.6);
         }
-        
-        .reg-status-open { color: #22c55e; }
-        .reg-status-closed { color: #ef4444; }
-        .reg-status-racing { color: #f59e0b; }
-        .reg-status-none { color: #94a3b8; }
     </style>
 </head>
 <body>
@@ -513,10 +508,6 @@
         <div class="info-item">
             <span class="label">🏁 Race End (UTC):</span>
             <span class="value deadline" id="race-deadline">--/--</span>
-        </div>
-        <div class="info-item" id="registration-info-item">
-            <span class="label">📝 Registration:</span>
-            <span class="value" id="registration-status" style="font-weight: bold;">--</span>
         </div>
         <div class="info-item">
             <span class="label">🏆 Finish Line:</span>
@@ -594,6 +585,8 @@
         let flightTimerInterval = null;
         let currentGameState = 'idle';
         let lastPilotUIUpdate = null;
+        let lastWeatherUpdate = 0;
+        const WEATHER_UPDATE_INTERVAL = 3600; // 1 час в секундах
         
         const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
@@ -643,50 +636,6 @@
         }
         
         // ============================================
-        // ФУНКЦИЯ ОБНОВЛЕНИЯ СТАТУСА РЕГИСТРАЦИИ
-        // ============================================
-        function updateRegistrationStatus(config) {
-            const statusEl = document.getElementById('registration-status');
-            if (!statusEl) return;
-
-            const raceStatus = config?.raceStatus || 'idle';
-            const from = config?.registrationWindowFrom;
-            const to = config?.registrationWindowTo;
-
-            // Проверяем, что даты валидные (не 1970-01-01)
-            const hasValidFrom = from && from.getTime && from.getTime() !== new Date('1970-01-01').getTime();
-            const hasValidTo = to && to.getTime && to.getTime() !== new Date('1970-01-01').getTime();
-
-            // Регистрация открыта только в состоянии REGISTRATION
-            if (raceStatus === 'registration') {
-                if (hasValidFrom && hasValidTo) {
-                    const fromStr = formatUTC(from);
-                    const toStr = formatUTC(to);
-                    if (fromStr !== '--/--' && toStr !== '--/--') {
-                        statusEl.innerHTML = `✅ ${fromStr} — ${toStr}`;
-                    } else {
-                        statusEl.innerHTML = '✅ ОТКРЫТА';
-                    }
-                } else {
-                    statusEl.innerHTML = '✅ ОТКРЫТА';
-                }
-                statusEl.style.color = '#22c55e';
-                statusEl.className = 'value reg-status-open';
-            } 
-            else if (raceStatus === 'racing') {
-                statusEl.innerHTML = '🔒 ЗАКРЫТА (гонка идет)';
-                statusEl.style.color = '#f59e0b';
-                statusEl.className = 'value reg-status-racing';
-            }
-            else {
-                // idle, finished или любой другой статус - регистрация закрыта
-                statusEl.innerHTML = '❌ НЕТ РЕГИСТРАЦИИ';
-                statusEl.style.color = '#ef4444';
-                statusEl.className = 'value reg-status-closed';
-            }
-        }
-        
-        // ============================================
         // ИНИЦИАЛИЗАЦИЯ КАРТЫ
         // ============================================
         function initMap() {
@@ -713,19 +662,29 @@
         }
         
         // ============================================
-        // ПОГОДА НА ФИНИШЕ
+        // ПОГОДА НА ФИНИШЕ (обновление раз в час)
         // ============================================
         function updateFinishWeather(lat, lng) {
+            const now = Date.now() / 1000;
+            if (now - lastWeatherUpdate < WEATHER_UPDATE_INTERVAL) {
+                console.log(`⏳ Weather update skipped (${Math.round((now - lastWeatherUpdate) / 60)} min since last update)`);
+                return;
+            }
+            
             if (!lat || !lng) return;
+            
+            console.log('🌤️ Fetching weather for finish line...');
             fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`)
                 .then(r => r.json())
                 .then(data => {
+                    lastWeatherUpdate = Date.now() / 1000;
                     if (data?.current_weather) {
                         const w = data.current_weather;
                         document.getElementById('finish-weather').innerHTML = `
                             <div class="weather-item">🌡️ Temperature: <span style="color:#fbbf24;">${w.temperature}°C</span></div>
                             <div class="weather-item">💨 Wind Speed: <span style="color:#fbbf24;">${w.windspeed} m/s</span></div>
                             <div class="weather-item">🧭 Wind Direction: <span style="color:#fbbf24;">${w.winddirection}°</span></div>
+                            <div class="weather-item" style="font-size:9px; color:#64748b; margin-top:4px;">⏱️ Updated: ${new Date().toLocaleTimeString()}</div>
                         `;
                     } else {
                         document.getElementById('finish-weather').innerHTML = '<div class="weather-item">⏳ No weather data</div>';
@@ -977,10 +936,6 @@
             if (registerLink) {
                 registerLink.style.display = (state === 'registration' || state === 'idle') ? 'block' : 'none';
             }
-            
-            if (config) {
-                updateRegistrationStatus(config);
-            }
         }
         
         // ============================================
@@ -1100,8 +1055,6 @@
                         statusEl.style.color = statusInfo.color;
                     }
                     
-                    updateRegistrationStatus(config);
-                    
                     // Всегда показываем маркер финиша
                     if (finishMarker && map) map.removeLayer(finishMarker);
                     const finishIcon = L.divIcon({
@@ -1112,6 +1065,7 @@
                     finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
                     finishMarker.bindPopup('<b>🏁 FINISH LINE</b><br>First within 50km wins!');
                     
+                    // Обновляем погоду при получении конфигурации
                     updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
                 }
                 
@@ -1126,7 +1080,6 @@
                     currentConfig = data.config;
                 }
                 updateUIForState(data.newState, data.config || currentConfig);
-                updateRegistrationStatus(data.config || currentConfig);
                 
                 if (data.newState === 'racing') {
                     socket.emit('fiesta-get-participants');
@@ -1220,11 +1173,12 @@
                 if (socket?.connected) socket.emit('fiesta-get-participants');
             }, 5000);
             
+            // Проверяем погоду раз в час (3600 секунд)
             setInterval(() => {
                 if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng) {
                     updateFinishWeather(currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
                 }
-            }, 60000);
+            }, WEATHER_UPDATE_INTERVAL * 1000);
         });
     </script>
 </body>
