@@ -1,7 +1,8 @@
 const fetch = require('node-fetch');
 
-// Кэш: ключ — balloonId, значение — { timestamp, layers: [...] }
-const balloonWindCache = new Map();
+// Кэш: ключ — координаты (lat_lng), значение — { timestamp, layers: [...] }
+const windCache = new Map();
+const CACHE_TTL = 300000; // 5 минут
 
 const PRESSURE_LEVELS = [
   { altitude: 0, param: 'wind_speed_10m,wind_direction_10m', keySpeed: 'wind_speed_10m', keyDir: 'wind_direction_10m', name: 'Surface Layer' },
@@ -12,9 +13,33 @@ const PRESSURE_LEVELS = [
 ];
 
 /**
- * Запрашивает погоду для координат конкретного шара и сохраняет в кэш
+ * Получает информацию о слое по высоте
  */
-async function fetchAndCacheWindForBalloon(balloonId, lat, lng) {
+function getPressureLevelInfo(altitude) {
+  // Находим ближайший слой
+  const nearest = PRESSURE_LEVELS.reduce((prev, curr) => 
+    Math.abs(curr.altitude - altitude) < Math.abs(prev.altitude - altitude) ? curr : prev
+  );
+  
+  return {
+    name: nearest.name,
+    altitude: nearest.altitude
+  };
+}
+
+/**
+ * Запрашивает погоду для координат
+ */
+async function fetchWindForPosition(lat, lng) {
+  const cacheKey = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
+  
+  // Проверяем кэш
+  const cached = windCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+    console.log(`📦 Using cached wind for ${cacheKey}`);
+    return cached.layers;
+  }
+
   const allParams = PRESSURE_LEVELS.map(level => level.param).join(',');
   const url = `https://open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=${allParams}`;
 
@@ -32,37 +57,50 @@ async function fetchAndCacheWindForBalloon(balloonId, lat, lng) {
       direction: Math.round(data.current[level.keyDir])
     }));
 
-    balloonWindCache.set(balloonId, {
+    // Сохраняем в кэш
+    windCache.set(cacheKey, {
       timestamp: Date.now(),
       layers: parsedLayers
     });
-    
-    return true;
+
+    console.log(`✅ Wind data cached for ${cacheKey}`);
+    return parsedLayers;
   } catch (error) {
-    console.error(`❌ Error fetching wind for balloon ${balloonId}:`, error.message);
-    return false;
+    console.error(`❌ Error fetching wind for ${lat}, ${lng}:`, error.message);
+    // Возвращаем дефолтные значения
+    return PRESSURE_LEVELS.map(level => ({
+      altitude: level.altitude,
+      layerName: level.name,
+      speed: 3.0,
+      direction: 90
+    }));
   }
 }
 
 /**
- * Синхронно возвращает ветер из кэша для шара на его текущей высоте
+ * Основная функция для получения ветра в позиции
  */
-function getCachedWindForBalloon(balloonId, altitude) {
-  const cached = balloonWindCache.get(balloonId);
+async function getWindAtPosition(lat, lng, altitude) {
+  const layers = await fetchWindForPosition(lat, lng);
   
-  // Если игра только запустилась и кэш еще пуст — даем дефолтный ветер, чтобы сервер не упал
-  if (!cached) {
-    return { speed: 3.0, direction: 90, layerName: 'Initial Layer' }; 
-  }
-
-  // Находим ближайший по высоте атмосферный слой
-  return cached.layers.reduce((prev, curr) => 
+  // Находим ближайший слой по высоте
+  const nearest = layers.reduce((prev, curr) => 
     Math.abs(curr.altitude - altitude) < Math.abs(prev.altitude - altitude) ? curr : prev
   );
+
+  return {
+    speed: nearest.speed,
+    direction: nearest.direction,
+    layerName: nearest.layerName,
+    altitude: nearest.altitude,
+    timestamp: Date.now()
+  };
 }
 
-// Экспортируем ровно те функции, которые вызываем в server.js
+// Экспортируем все функции, которые используются в server.js
 module.exports = {
-  fetchAndCacheWindForBalloon,
-  getCachedWindForBalloon
+  getWindAtPosition,
+  getPressureLevelInfo,
+  fetchWindForPosition, // для внешнего использования
+  PRESSURE_LEVELS
 };
