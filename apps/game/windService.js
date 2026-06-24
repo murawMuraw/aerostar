@@ -16,7 +16,7 @@ const PRESSURE_LEVELS = [
  */
 async function fetchAndCacheWindForBalloon(balloonId, lat, lng) {
   const allParams = PRESSURE_LEVELS.map(level => level.param).join(',');
-  const url = `https://open-meteo.com{lat}&longitude=${lng}&current=${allParams}`;
+  const url = `https://open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=${allParams}`;
 
   try {
     const response = await fetch(url);
