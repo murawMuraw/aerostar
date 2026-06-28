@@ -406,7 +406,7 @@
     <div class="container">
         <div class="header">
             <h1>🎈 Fiesta Race Registration</h1>
-            <p>📍 КЛИКНИТЕ НА КАРТЕ в пределах красной зоны для выбора старта → Выберите шар → Зарегистрируйтесь</p>
+            <p>📍 CLICK ON THE MAP within the red zone to select start → Choose a balloon → Register</p>
             <div class="connection-status" id="connection-status">
                 <span class="connected-indicator"></span>
                 <span id="status-text">Connecting to server...</span>
@@ -462,7 +462,7 @@
                 
                 <h3>📍 Selected Start Location</h3>
                 <div class="coords-info" id="start-coords-info">
-                    ⚠️ Кликните на карту в красной зоне
+                    ⚠️ Click on the map in the red zone
                 </div>
                 <div id="region-warning" class="warning-text" style="display: none;">
                     ⚠️ Start location outside allowed region!
@@ -478,8 +478,8 @@
                 </div>
                 
                 <div class="login-hint">
-                    💡 После регистрации вы сможете войти используя:<br>
-                    <strong>Callsign</strong> + <strong>Пароль</strong>
+                    💡 After registration you will be able to log in using:<br>
+                    <strong>Callsign</strong> + <strong>Password</strong>
                 </div>
             </div>
             
@@ -517,8 +517,8 @@
                 <div id="register-message" style="margin-top: 12px; font-size: 12px; text-align: center;"></div>
                 
                 <div class="info-text" style="margin-top: 15px; text-align: center;">
-                    💡 После регистрации дождитесь старта гонки.<br>
-                    Все шары начнут движение автоматически в указанное время!
+                    💡 After registration, wait for the race to start.<br>
+                    All balloons will begin moving automatically at the scheduled time!
                 </div>
                 
                 <hr style="margin: 15px 0; border-color: rgba(255,255,255,0.1);">
@@ -543,7 +543,7 @@
     
     <script>
         // ============================================
-        // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+        // GLOBAL VARIABLES
         // ============================================
         let map, socket;
         let selectedStartCoords = null;
@@ -556,7 +556,7 @@
         let countdownInterval = null;
         
         // ============================================
-        // ПРОВЕРКА СИЛЫ ПАРОЛЯ
+        // PASSWORD STRENGTH CHECK
         // ============================================
         function checkPasswordStrength() {
             const password = document.getElementById('player-password').value;
@@ -603,7 +603,7 @@
         }
         
         // ============================================
-        // ИНИЦИАЛИЗАЦИЯ КАРТЫ
+        // MAP INITIALIZATION
         // ============================================
         function initMap() {
             if (mapInitialized) return;
@@ -619,7 +619,7 @@
             
             L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
             
-            // Обработчик клика по карте
+            // Map click handler
             map.on('click', function(e) {
                 console.log('🖱️ MAP CLICK at:', e.latlng);
                 const { lat, lng } = e.latlng;
@@ -695,7 +695,7 @@
         }
         
         // ============================================
-        // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+        // HELPER FUNCTIONS
         // ============================================
         function isRegistrationOpen() {
             if (!currentConfig) return false;
@@ -749,7 +749,7 @@
                             fillColor: '#f87171',
                             fillOpacity: 0.1,
                             interactive: false
-                        }).addTo(map).bindPopup('<b>📍 Allowed Start Region</b><br>Кликните в этой зоне для выбора старта');
+                        }).addTo(map).bindPopup('<b>📍 Allowed Start Region</b><br>Click in this area to select start location');
                     }
                 }
             }
@@ -838,7 +838,7 @@
         }
         
         // ============================================
-        // ПОДКЛЮЧЕНИЕ К СОКЕТАМ
+        // SOCKET CONNECTION
         // ============================================
         function connectSocket() {
             socket = io({ transports: ['polling', 'websocket'], upgrade: true });
@@ -887,47 +887,46 @@
                 checkRegistrationValidation();
             });
             
-            
-           
-socket.on('fiesta-balloon-catalog', (catalog) => {
-    const grid = document.getElementById('catalog-grid');
-    if (grid && catalog) {
-        grid.innerHTML = '';
-        // Преобразуем объект в массив для итерации
-        const styles = Object.values(catalog);
-        styles.forEach((item, index) => {
-            const card = document.createElement('div');
-            card.className = 'skin-card';
-            card.dataset.id = item.id;
-            
-            // Определяем, какой шар выбран по умолчанию (первый в списке)
-            if (index === 0) {
-                card.classList.add('selected');
-                // Обновляем информацию о выбранном шаре
-                document.getElementById('selected-balloon-info').innerHTML = `Selected: <strong>${escapeHtml(item.name)}</strong>`;
-                // Устанавливаем первый шар как выбранный по умолчанию
-                selectedStyleId = item.id;
-            }
-            
-            // Создаем HTML для карточки с изображением
-            card.innerHTML = `
-                <div class="skin-preview">
-                    <img src="${item.image}" alt="${escapeHtml(item.name)}" style="width: 48px; height: 48px; object-fit: contain;">
-                </div>
-                <div class="skin-name">${escapeHtml(item.name)}</div>
-            `;
-            
-            card.addEventListener('click', () => {
-                document.querySelectorAll('.skin-card').forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-                selectedStyleId = item.id;
-                document.getElementById('selected-balloon-info').innerHTML = `Selected: <strong>${escapeHtml(item.name)}</strong>`;
-                checkRegistrationValidation();
+            socket.on('fiesta-balloon-catalog', (catalog) => {
+                const grid = document.getElementById('catalog-grid');
+                if (grid && catalog) {
+                    grid.innerHTML = '';
+                    // Convert object to array for iteration
+                    const styles = Object.values(catalog);
+                    styles.forEach((item, index) => {
+                        const card = document.createElement('div');
+                        card.className = 'skin-card';
+                        card.dataset.id = item.id;
+                        
+                        // Determine which balloon is selected by default (first in list)
+                        if (index === 0) {
+                            card.classList.add('selected');
+                            // Update selected balloon info
+                            document.getElementById('selected-balloon-info').innerHTML = `Selected: <strong>${escapeHtml(item.name)}</strong>`;
+                            // Set first balloon as default selected
+                            selectedStyleId = item.id;
+                        }
+                        
+                        // Create card HTML with image
+                        card.innerHTML = `
+                            <div class="skin-preview">
+                                <img src="${item.image}" alt="${escapeHtml(item.name)}" style="width: 48px; height: 48px; object-fit: contain;">
+                            </div>
+                            <div class="skin-name">${escapeHtml(item.name)}</div>
+                        `;
+                        
+                        card.addEventListener('click', () => {
+                            document.querySelectorAll('.skin-card').forEach(c => c.classList.remove('selected'));
+                            card.classList.add('selected');
+                            selectedStyleId = item.id;
+                            document.getElementById('selected-balloon-info').innerHTML = `Selected: <strong>${escapeHtml(item.name)}</strong>`;
+                            checkRegistrationValidation();
+                        });
+                        grid.appendChild(card);
+                    });
+                }
             });
-            grid.appendChild(card);
-        });
-    }
-});
+            
             socket.on('fiesta-all-balloons', (balloons) => {
                 const container = document.getElementById('participants-container');
                 if (!balloons || balloons.length === 0) {
@@ -1047,7 +1046,7 @@ socket.on('fiesta-balloon-catalog', (catalog) => {
             checkRegistrationValidation();
         });
         
-        // Автоматическое обновление списка участников
+        // Auto-update participants list
         setInterval(() => {
             if (socket && socket.connected) {
                 socket.emit('fiesta-get-participants');
