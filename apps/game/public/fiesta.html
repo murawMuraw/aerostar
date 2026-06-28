@@ -469,7 +469,7 @@
 <body>
     <div id="map"></div>
     
-    <!-- Модальное окно выбора роли -->
+    <!-- Modal window for role selection -->
     <div id="role-modal" class="modal-overlay">
         <div class="modal-content">
             <div id="modal-role-selection">
@@ -571,7 +571,7 @@
     
     <script>
         // ============================================
-        // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+        // GLOBAL VARIABLES
         // ============================================
         let map, socket;
         let finishMarker = null;
@@ -586,7 +586,11 @@
         let currentGameState = 'idle';
         let lastPilotUIUpdate = null;
         let lastWeatherUpdate = 0;
-        const WEATHER_UPDATE_INTERVAL = 3600; // 1 час в секундах
+        const WEATHER_UPDATE_INTERVAL = 3600; // 1 hour in seconds
+        
+        // Store race times separately to preserve them
+        let cachedRaceStartTime = null;
+        let cachedRaceEndTime = null;
         
         const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
@@ -600,7 +604,7 @@
         });
         
         // ============================================
-        // МАППИНГ СТАРЫХ СТИЛЕЙ
+        // MAPPING OLD STYLES
         // ============================================
         const styleMapping = {
             'classic_blue': 'bal1',
@@ -626,7 +630,7 @@
         }
         
         // ============================================
-        // ФУНКЦИЯ ФОРМАТИРОВАНИЯ UTC
+        // UTC FORMATTING FUNCTION
         // ============================================
         function formatUTC(date) {
             if (!date) return '--/--';
@@ -636,7 +640,45 @@
         }
         
         // ============================================
-        // ИНИЦИАЛИЗАЦИЯ КАРТЫ
+        // UPDATE RACE TIMES DISPLAY
+        // ============================================
+        function updateRaceTimesDisplay(config) {
+            if (!config) {
+                // Use cached values if config is not available
+                if (cachedRaceStartTime) {
+                    document.getElementById('race-start-time').innerHTML = formatUTC(cachedRaceStartTime);
+                }
+                if (cachedRaceEndTime) {
+                    document.getElementById('race-deadline').innerHTML = formatUTC(cachedRaceEndTime);
+                }
+                return;
+            }
+            
+            let startTime = config.scheduledStartTime ? new Date(config.scheduledStartTime) : null;
+            
+            if (startTime && !isNaN(startTime.getTime())) {
+                cachedRaceStartTime = startTime;
+                document.getElementById('race-start-time').innerHTML = formatUTC(startTime);
+                
+                // Calculate end time based on race duration
+                const duration = config.raceDurationHours || 24;
+                const endTime = new Date(startTime);
+                endTime.setHours(endTime.getHours() + duration);
+                cachedRaceEndTime = endTime;
+                document.getElementById('race-deadline').innerHTML = formatUTC(endTime);
+            } else {
+                // Try to use cached values if available
+                if (cachedRaceStartTime) {
+                    document.getElementById('race-start-time').innerHTML = formatUTC(cachedRaceStartTime);
+                }
+                if (cachedRaceEndTime) {
+                    document.getElementById('race-deadline').innerHTML = formatUTC(cachedRaceEndTime);
+                }
+            }
+        }
+        
+        // ============================================
+        // MAP INITIALIZATION
         // ============================================
         function initMap() {
             console.log('🗺️ Initializing map...');
@@ -662,7 +704,7 @@
         }
         
         // ============================================
-        // ПОГОДА НА ФИНИШЕ (обновление раз в час)
+        // FINISH WEATHER (update every hour)
         // ============================================
         function updateFinishWeather(lat, lng) {
             const now = Date.now() / 1000;
@@ -697,7 +739,7 @@
         }
         
         // ============================================
-        // МАРКЕРЫ ШАРОВ
+        // BALLOON MARKERS
         // ============================================
         function clearBalloons() {
             Object.values(balloonsMarkers).forEach(marker => {
@@ -776,7 +818,7 @@
         }
         
         // ============================================
-        // ТРЕК ПОЛЕТА
+        // FLIGHT PATH
         // ============================================
         function updatePath(balloon) {
             if (!map || !balloon || myBalloonId !== balloon.id) return;
@@ -788,7 +830,7 @@
         }
         
         // ============================================
-        // ИНТЕРФЕЙС ПИЛОТА
+        // PILOT UI
         // ============================================
         function updatePilotUI(balloon) {
             if (!balloon) return;
@@ -847,7 +889,7 @@
         }
         
         // ============================================
-        // УВЕДОМЛЕНИЯ
+        // ANNOUNCEMENTS
         // ============================================
         function displayAnnouncement(data) {
             const container = document.getElementById('announcements-panel');
@@ -884,7 +926,7 @@
         }
         
         // ============================================
-        // УПРАВЛЕНИЕ ВЫСОТОЙ
+        // ALTITUDE CONTROL
         // ============================================
         function initAltitudeControl() {
             const slider = document.getElementById('altitude-slider');
@@ -907,7 +949,7 @@
         }
         
         // ============================================
-        // ОБНОВЛЕНИЕ UI В ЗАВИСИМОСТИ ОТ СОСТОЯНИЯ
+        // UPDATE UI BASED ON STATE
         // ============================================
         function updateUIForState(state, config) {
             currentGameState = state;
@@ -926,7 +968,7 @@
                 statusEl.style.color = info.color;
             }
             
-            // Кнопка регистрации видна только в IDLE и REGISTRATION
+            // Register button visible only in IDLE and REGISTRATION
             const registerBtn = document.getElementById('register-btn');
             if (registerBtn) {
                 registerBtn.style.display = (state === 'registration' || state === 'idle') ? 'block' : 'none';
@@ -936,10 +978,13 @@
             if (registerLink) {
                 registerLink.style.display = (state === 'registration' || state === 'idle') ? 'block' : 'none';
             }
+            
+            // Always preserve race times
+            updateRaceTimesDisplay(config || currentConfig);
         }
         
         // ============================================
-        // ПОДКЛЮЧЕНИЕ К СОКЕТАМ
+        // SOCKET CONNECTION
         // ============================================
         function connectSocket() {
             socket = io({ transports: ['polling', 'websocket'], reconnection: true });
@@ -1022,40 +1067,14 @@
                 console.log('Race config received');
                 currentConfig = config;
                 
-                // Всегда показываем finish line сразу
+                // Always update race times first
+                updateRaceTimesDisplay(config);
+                
+                // Show finish line immediately
                 if (config.finishCoords?.lat && config.finishCoords?.lng) {
                     document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
                     
-                    // Отображаем время старта и окончания
-                    let startTime = config.scheduledStartTime ? new Date(config.scheduledStartTime) : null;
-                    
-                    if (startTime && !isNaN(startTime.getTime())) {
-                        document.getElementById('race-start-time').innerHTML = formatUTC(startTime);
-                        
-                        const duration = config.raceDurationHours || 24;
-                        const endTime = new Date(startTime);
-                        endTime.setHours(endTime.getHours() + duration);
-                        document.getElementById('race-deadline').innerHTML = formatUTC(endTime);
-                    } else {
-                        document.getElementById('race-start-time').innerHTML = '--/--';
-                        document.getElementById('race-deadline').innerHTML = '--/--';
-                    }
-                    
-                    const statusMap = {
-                        'idle': { text: '⏸️ No race active', color: '#94a3b8' },
-                        'registration': { text: '📝 Registration open!', color: '#fbbf24' },
-                        'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981' },
-                        'finished': { text: '🏆 RACE FINISHED', color: '#ef4444' }
-                    };
-                    
-                    const statusInfo = statusMap[config.raceStatus] || statusMap['idle'];
-                    const statusEl = document.getElementById('race-status');
-                    if (statusEl) {
-                        statusEl.innerHTML = statusInfo.text;
-                        statusEl.style.color = statusInfo.color;
-                    }
-                    
-                    // Всегда показываем маркер финиша
+                    // Show finish marker
                     if (finishMarker && map) map.removeLayer(finishMarker);
                     const finishIcon = L.divIcon({
                         html: '<span style="font-size: 32px;">🏁</span>',
@@ -1065,12 +1084,16 @@
                     finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
                     finishMarker.bindPopup('<b>🏁 FINISH LINE</b><br>First within 50km wins!');
                     
-                    // Обновляем погоду при получении конфигурации
+                    // Update weather
                     updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
                 }
                 
+                // Update status
                 if (config.raceStatus) {
                     updateUIForState(config.raceStatus, config);
+                } else {
+                    // Still update UI even if no status
+                    updateUIForState('idle', config);
                 }
             });
             
@@ -1146,7 +1169,7 @@
         }
         
         // ============================================
-        // ВЫХОД
+        // EXIT
         // ============================================
         function exit() {
             if (confirm('Are you sure you want to exit the Fiesta?')) {
@@ -1157,7 +1180,7 @@
         }
         
         // ============================================
-        // ЗАПУСК
+        // STARTUP
         // ============================================
         window.addEventListener('load', () => {
             console.log('📄 Page loaded');
@@ -1173,7 +1196,7 @@
                 if (socket?.connected) socket.emit('fiesta-get-participants');
             }, 5000);
             
-            // Проверяем погоду раз в час (3600 секунд)
+            // Check weather once an hour (3600 seconds)
             setInterval(() => {
                 if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng) {
                     updateFinishWeather(currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
