@@ -1087,7 +1087,7 @@ function updateUIForState(state, config) {
                     if (finishMarker && map) map.removeLayer(finishMarker);
                     const finishIcon = L.divIcon({
                         html: '<span style="font-size: 32px;">🏁</span>',
-                        iconSize:,
+                        iconSize:[32, 32],
                         className: 'finish-marker'
                     });
                     finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
