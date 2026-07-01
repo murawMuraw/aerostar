@@ -469,7 +469,7 @@
 <body>
     <div id="map"></div>
     
-    <!-- Modal window for role selection -->
+    <!-- Модальное окно выбора роли -->
     <div id="role-modal" class="modal-overlay">
         <div class="modal-content">
             <div id="modal-role-selection">
@@ -571,7 +571,7 @@
     
     <script>
         // ============================================
-        // GLOBAL VARIABLES
+        // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
         // ============================================
         let map, socket;
         let finishMarker = null;
@@ -586,12 +586,7 @@
         let currentGameState = 'idle';
         let lastPilotUIUpdate = null;
         let lastWeatherUpdate = 0;
-        const WEATHER_UPDATE_INTERVAL = 3600; // 1 hour in seconds
-        
-        // Store race times separately to preserve them - PERSISTENT STORAGE
-        let cachedRaceStartTime = null;
-        let cachedRaceEndTime = null;
-        let cachedFinishCoords = null;
+        const WEATHER_UPDATE_INTERVAL = 3600; // 1 час в секундах
         
         const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
@@ -605,7 +600,7 @@
         });
         
         // ============================================
-        // MAPPING OLD STYLES
+        // МАППИНГ СТАРЫХ СТИЛЕЙ
         // ============================================
         const styleMapping = {
             'classic_blue': 'bal1',
@@ -631,7 +626,7 @@
         }
         
         // ============================================
-        // UTC FORMATTING FUNCTION
+        // ФУНКЦИЯ ФОРМАТИРОВАНИЯ UTC
         // ============================================
         function formatUTC(date) {
             if (!date) return '--/--';
@@ -641,98 +636,7 @@
         }
         
         // ============================================
-        // UPDATE RACE TIMES DISPLAY - PERSISTENT
-        // ============================================
-        function updateRaceTimesDisplay(config) {
-            // Always try to get times from config first
-            let startTime = null;
-            let endTime = null;
-            
-            if (config) {
-                if (config.scheduledStartTime) {
-                    startTime = new Date(config.scheduledStartTime);
-                    if (!isNaN(startTime.getTime())) {
-                        cachedRaceStartTime = startTime;
-                    }
-                }
-                
-                // Calculate end time based on race duration
-                const duration = config.raceDurationHours || 24;
-                if (startTime && !isNaN(startTime.getTime())) {
-                    endTime = new Date(startTime);
-                    endTime.setHours(endTime.getHours() + duration);
-                    cachedRaceEndTime = endTime;
-                } else if (cachedRaceStartTime) {
-                    // Use cached start time to calculate end
-                    endTime = new Date(cachedRaceStartTime);
-                    endTime.setHours(endTime.getHours() + duration);
-                    cachedRaceEndTime = endTime;
-                }
-                
-                // Cache finish coords
-                if (config.finishCoords) {
-                    cachedFinishCoords = config.finishCoords;
-                }
-            }
-            
-            // Display start time
-            const startEl = document.getElementById('race-start-time');
-            if (cachedRaceStartTime) {
-                startEl.innerHTML = formatUTC(cachedRaceStartTime);
-            } else if (startTime && !isNaN(startTime.getTime())) {
-                startEl.innerHTML = formatUTC(startTime);
-            } else {
-                startEl.innerHTML = '--/--';
-            }
-            
-            // Display end time
-            const endEl = document.getElementById('race-deadline');
-            if (cachedRaceEndTime) {
-                endEl.innerHTML = formatUTC(cachedRaceEndTime);
-            } else if (endTime && !isNaN(endTime.getTime())) {
-                endEl.innerHTML = formatUTC(endTime);
-            } else {
-                endEl.innerHTML = '--/--';
-            }
-            
-            // Update finish coords
-            if (cachedFinishCoords) {
-                const coordsEl = document.getElementById('finish-coords');
-                if (coordsEl) {
-                    coordsEl.innerHTML = `${cachedFinishCoords.lat?.toFixed(2)}°, ${cachedFinishCoords.lng?.toFixed(2)}°`;
-                }
-            }
-            
-            console.log('⏰ Race times updated:', {
-                start: cachedRaceStartTime ? formatUTC(cachedRaceStartTime) : '--',
-                end: cachedRaceEndTime ? formatUTC(cachedRaceEndTime) : '--'
-            });
-        }
-        
-        // ============================================
-        // FORCE UPDATE RACE TIMES - called frequently
-        // ============================================
-        function forceUpdateRaceTimes() {
-            // If we have cached times, display them regardless of config
-            if (cachedRaceStartTime || cachedRaceEndTime || cachedFinishCoords) {
-                const startEl = document.getElementById('race-start-time');
-                const endEl = document.getElementById('race-deadline');
-                const coordsEl = document.getElementById('finish-coords');
-                
-                if (cachedRaceStartTime && startEl) {
-                    startEl.innerHTML = formatUTC(cachedRaceStartTime);
-                }
-                if (cachedRaceEndTime && endEl) {
-                    endEl.innerHTML = formatUTC(cachedRaceEndTime);
-                }
-                if (cachedFinishCoords && coordsEl) {
-                    coordsEl.innerHTML = `${cachedFinishCoords.lat?.toFixed(2)}°, ${cachedFinishCoords.lng?.toFixed(2)}°`;
-                }
-            }
-        }
-        
-        // ============================================
-        // MAP INITIALIZATION
+        // ИНИЦИАЛИЗАЦИЯ КАРТЫ
         // ============================================
         function initMap() {
             console.log('🗺️ Initializing map...');
@@ -751,17 +655,14 @@
         }
         
         function focusOnFinish() {
-            if (cachedFinishCoords?.lat && cachedFinishCoords?.lng && map) {
-                map.setView([cachedFinishCoords.lat, cachedFinishCoords.lng], 6);
-                displayAnnouncement({ message: '📍 Map centered on finish line', timestamp: Date.now() });
-            } else if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng && map) {
+            if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng && map) {
                 map.setView([currentConfig.finishCoords.lat, currentConfig.finishCoords.lng], 6);
                 displayAnnouncement({ message: '📍 Map centered on finish line', timestamp: Date.now() });
             }
         }
         
         // ============================================
-        // FINISH WEATHER (update every hour)
+        // ПОГОДА НА ФИНИШЕ (обновление раз в час)
         // ============================================
         function updateFinishWeather(lat, lng) {
             const now = Date.now() / 1000;
@@ -796,7 +697,7 @@
         }
         
         // ============================================
-        // BALLOON MARKERS
+        // МАРКЕРЫ ШАРОВ
         // ============================================
         function clearBalloons() {
             Object.values(balloonsMarkers).forEach(marker => {
@@ -875,7 +776,7 @@
         }
         
         // ============================================
-        // FLIGHT PATH
+        // ТРЕК ПОЛЕТА
         // ============================================
         function updatePath(balloon) {
             if (!map || !balloon || myBalloonId !== balloon.id) return;
@@ -887,7 +788,7 @@
         }
         
         // ============================================
-        // PILOT UI
+        // ИНТЕРФЕЙС ПИЛОТА
         // ============================================
         function updatePilotUI(balloon) {
             if (!balloon) return;
@@ -918,10 +819,8 @@
             else layerText = 'Jet Stream (8km+) - Very fast winds ⚡';
             document.getElementById('layer-info').innerHTML = balloon.layerName || layerText;
             
-            const finishLat = cachedFinishCoords?.lat || currentConfig?.finishCoords?.lat;
-            const finishLng = cachedFinishCoords?.lng || currentConfig?.finishCoords?.lng;
-            if (finishLat && finishLng) {
-                const dist = getDistance(balloon.lat, balloon.lng, finishLat, finishLng);
+            if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng) {
+                const dist = getDistance(balloon.lat, balloon.lng, currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
                 document.getElementById('distance-finish').innerHTML = `${dist.toFixed(1)} km`;
             }
             
@@ -948,7 +847,7 @@
         }
         
         // ============================================
-        // ANNOUNCEMENTS
+        // УВЕДОМЛЕНИЯ
         // ============================================
         function displayAnnouncement(data) {
             const container = document.getElementById('announcements-panel');
@@ -985,7 +884,7 @@
         }
         
         // ============================================
-        // ALTITUDE CONTROL
+        // УПРАВЛЕНИЕ ВЫСОТОЙ
         // ============================================
         function initAltitudeControl() {
             const slider = document.getElementById('altitude-slider');
@@ -1008,7 +907,7 @@
         }
         
         // ============================================
-        // UPDATE UI BASED ON STATE
+        // ОБНОВЛЕНИЕ UI В ЗАВИСИМОСТИ ОТ СОСТОЯНИЯ
         // ============================================
         function updateUIForState(state, config) {
             currentGameState = state;
@@ -1027,7 +926,7 @@
                 statusEl.style.color = info.color;
             }
             
-            // Register button visible only in IDLE and REGISTRATION
+            // Кнопка регистрации видна только в IDLE и REGISTRATION
             const registerBtn = document.getElementById('register-btn');
             if (registerBtn) {
                 registerBtn.style.display = (state === 'registration' || state === 'idle') ? 'block' : 'none';
@@ -1037,13 +936,10 @@
             if (registerLink) {
                 registerLink.style.display = (state === 'registration' || state === 'idle') ? 'block' : 'none';
             }
-            
-            // ALWAYS preserve and update race times
-            updateRaceTimesDisplay(config || currentConfig);
         }
         
         // ============================================
-        // SOCKET CONNECTION
+        // ПОДКЛЮЧЕНИЕ К СОКЕТАМ
         // ============================================
         function connectSocket() {
             socket = io({ transports: ['polling', 'websocket'], reconnection: true });
@@ -1052,11 +948,6 @@
                 console.log('✅ Connected to server');
                 document.getElementById('status-text').innerHTML = 'Connected';
                 document.querySelector('.connected-indicator').style.background = '#22c55e';
-                
-                // Force update times on reconnect
-                setTimeout(() => {
-                    forceUpdateRaceTimes();
-                }, 500);
             });
             
             socket.on('connect_error', (error) => {
@@ -1121,11 +1012,6 @@
                     displayAnnouncement({ message: 'You are watching as spectator', timestamp: Date.now() });
                 }
                 document.getElementById('role-badge').style.display = 'block';
-                
-                // Force update race times after auth
-                setTimeout(() => {
-                    forceUpdateRaceTimes();
-                }, 300);
             });
             
             socket.on('fiesta-auth-error', (data) => {
@@ -1136,15 +1022,40 @@
                 console.log('Race config received');
                 currentConfig = config;
                 
-                // Always update race times first
-                updateRaceTimesDisplay(config);
-                
-                // Show finish line immediately
+                // Всегда показываем finish line сразу
                 if (config.finishCoords?.lat && config.finishCoords?.lng) {
-                    cachedFinishCoords = config.finishCoords;
                     document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
                     
-                    // Show finish marker
+                    // Отображаем время старта и окончания
+                    let startTime = config.scheduledStartTime ? new Date(config.scheduledStartTime) : null;
+                    
+                    if (startTime && !isNaN(startTime.getTime())) {
+                        document.getElementById('race-start-time').innerHTML = formatUTC(startTime);
+                        
+                        const duration = config.raceDurationHours || 24;
+                        const endTime = new Date(startTime);
+                        endTime.setHours(endTime.getHours() + duration);
+                        document.getElementById('race-deadline').innerHTML = formatUTC(endTime);
+                    } else {
+                        document.getElementById('race-start-time').innerHTML = '--/--';
+                        document.getElementById('race-deadline').innerHTML = '--/--';
+                    }
+                    
+                    const statusMap = {
+                        'idle': { text: '⏸️ No race active', color: '#94a3b8' },
+                        'registration': { text: '📝 Registration open!', color: '#fbbf24' },
+                        'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981' },
+                        'finished': { text: '🏆 RACE FINISHED', color: '#ef4444' }
+                    };
+                    
+                    const statusInfo = statusMap[config.raceStatus] || statusMap['idle'];
+                    const statusEl = document.getElementById('race-status');
+                    if (statusEl) {
+                        statusEl.innerHTML = statusInfo.text;
+                        statusEl.style.color = statusInfo.color;
+                    }
+                    
+                    // Всегда показываем маркер финиша
                     if (finishMarker && map) map.removeLayer(finishMarker);
                     const finishIcon = L.divIcon({
                         html: '<span style="font-size: 32px;">🏁</span>',
@@ -1154,16 +1065,12 @@
                     finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
                     finishMarker.bindPopup('<b>🏁 FINISH LINE</b><br>First within 50km wins!');
                     
-                    // Update weather
+                    // Обновляем погоду при получении конфигурации
                     updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
                 }
                 
-                // Update status
                 if (config.raceStatus) {
                     updateUIForState(config.raceStatus, config);
-                } else {
-                    // Still update UI even if no status
-                    updateUIForState('idle', config);
                 }
             });
             
@@ -1173,11 +1080,6 @@
                     currentConfig = data.config;
                 }
                 updateUIForState(data.newState, data.config || currentConfig);
-                
-                // Force update times after state change
-                setTimeout(() => {
-                    forceUpdateRaceTimes();
-                }, 200);
                 
                 if (data.newState === 'racing') {
                     socket.emit('fiesta-get-participants');
@@ -1191,8 +1093,6 @@
                         const myBalloon = balloons.find(b => b.id === myBalloonId);
                         if (myBalloon) updatePilotUI(myBalloon);
                     }
-                    // Force update times whenever we get balloon data
-                    forceUpdateRaceTimes();
                 }
             });
             
@@ -1217,21 +1117,17 @@
                 } else if (balloon && myRole === 'pilot' && myBalloonId === balloon.id) {
                     updatePilotUI(balloon);
                 }
-                // Force update times on balloon update
-                forceUpdateRaceTimes();
             });
             
             socket.on('fiesta-race-started', (data) => {
                 updateUIForState('racing', currentConfig);
                 displayAnnouncement({ message: data.message || '🏁 Race started!', timestamp: Date.now() });
-                setTimeout(() => forceUpdateRaceTimes(), 300);
             });
             
             socket.on('fiesta-race-finished', (data) => {
                 updateUIForState('finished', currentConfig);
                 if (flightTimerInterval) clearInterval(flightTimerInterval);
                 displayAnnouncement({ message: data.message || '🏆 Race finished!', timestamp: Date.now() });
-                setTimeout(() => forceUpdateRaceTimes(), 300);
             });
             
             socket.on('fiesta-admin-message', (data) => {
@@ -1250,7 +1146,7 @@
         }
         
         // ============================================
-        // EXIT
+        // ВЫХОД
         // ============================================
         function exit() {
             if (confirm('Are you sure you want to exit the Fiesta?')) {
@@ -1261,7 +1157,7 @@
         }
         
         // ============================================
-        // STARTUP
+        // ЗАПУСК
         // ============================================
         window.addEventListener('load', () => {
             console.log('📄 Page loaded');
@@ -1275,16 +1171,12 @@
             
             setInterval(() => {
                 if (socket?.connected) socket.emit('fiesta-get-participants');
-                // Force update times every 5 seconds as a safety net
-                forceUpdateRaceTimes();
             }, 5000);
             
-            // Check weather once an hour (3600 seconds)
+            // Проверяем погоду раз в час (3600 секунд)
             setInterval(() => {
-                const lat = cachedFinishCoords?.lat || currentConfig?.finishCoords?.lat;
-                const lng = cachedFinishCoords?.lng || currentConfig?.finishCoords?.lng;
-                if (lat && lng) {
-                    updateFinishWeather(lat, lng);
+                if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng) {
+                    updateFinishWeather(currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
                 }
             }, WEATHER_UPDATE_INTERVAL * 1000);
         });
