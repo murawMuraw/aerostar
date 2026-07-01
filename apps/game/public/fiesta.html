@@ -829,8 +829,11 @@
                     totalDist += getDistance(balloon.path[i-1].lat, balloon.path[i-1].lng, balloon.path[i].lat, balloon.path[i].lng);
                 }
             }
-            document.getElementById('distance-traveled').innerHTML = `${totalDist.toFixed(1)} km`;
-            
+                 if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng) {
+    const dist = getDistance(balloon.lat, balloon.lng, currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
+    const distEl = document.getElementById('distance-finish');
+    if (distEl) distEl.innerHTML = `${dist.toFixed(1)} km`; // Безопасное обновление
+}       
             updatePath(balloon);
         }
         
