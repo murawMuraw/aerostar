@@ -21,9 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. Server Ping Setup
     startServerPing();
     // 6. Show Welcome Modal
-    setTimeout(() => {
-        showWelcomeModal();
-    }, 500);
+   
     // 7. Hide Loading Overlay
     hideLoading(3000);
 
@@ -63,6 +61,14 @@ function initMap() {
 
     L.control.scale({ metric: true, position: 'bottomleft' }).addTo(window.map);
 
+    esriSatellite.on('load', function() {
+        // Показываем окно через 1.5 сек после загрузки карты
+      if (!localStorage.getItem('welcome_dont_show')) {
+          setTimeout(showWelcomeModal, 1500);
+      }
+  });
+
+    
     // Map Click Handler
     window.map.on('click', async function(e) {
         if (window.App.isFlying) {
