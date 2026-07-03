@@ -35,7 +35,7 @@ function initMap() {
     // Create Map
     window.map = L.map('map', {
         center: [52.12, 23.72],
-        zoom: 8,
+        zoom: 3,
         zoomControl: true
     });
 
