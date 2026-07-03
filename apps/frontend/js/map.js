@@ -1,4 +1,4 @@
-//Инициализация карты, слои
+// Инициализация карты, слои
 
 // --- НАСТРОЙКИ КАРТЫ ---
 // Для отображения всей Европы: центр примерно на (50°N, 10°E), начальный масштаб 4
@@ -16,19 +16,25 @@ window.map = L.map('map', {
 // Элемент загрузки уже есть в HTML: <div class="loading" id="loading">Loading Map... 🗺️</div>
 const loadingElement = document.getElementById('loading');
 
+// Функция для скрытия индикатора загрузки
+function hideLoading() {
+    if (loadingElement) {
+        loadingElement.style.display = 'none';
+        console.log('Loading indicator hidden');
+    }
+}
+
 // Показываем индикатор при старте загрузки тайлов
 window.map.on('load', function() {
     // Скрываем индикатор, когда карта полностью загружена
-    if (loadingElement) {
-        loadingElement.style.display = 'none';
-    }
+    hideLoading();
+    console.log('Map loaded event fired');
 });
 
 // На случай, если событие 'load' не сработает (например, при кэшировании), добавляем таймаут
 setTimeout(() => {
-    if (loadingElement && loadingElement.style.display !== 'none') {
-        loadingElement.style.display = 'none';
-    }
+    hideLoading();
+    console.log('Loading hidden by timeout (10s)');
 }, 10000); // Максимум 10 секунд ожидания
 
 // --- ДОБАВЛЕНИЕ СЛОЁВ КАРТЫ ---
@@ -71,27 +77,34 @@ function showWelcomeModalDelayed() {
     
     // Проверяем, не скрыто ли окно навсегда
     if (localStorage.getItem(WELCOME_KEY)) {
+        console.log('Welcome modal hidden by localStorage');
         return;
     }
     
     const modal = document.getElementById('welcomeModal');
-    if (!modal) return;
+    if (!modal) {
+        console.log('Welcome modal element not found');
+        return;
+    }
     
     // Показываем модальное окно через 1.5 секунды после загрузки карты
     setTimeout(() => {
         modal.style.display = 'flex';
+        console.log('Welcome modal shown after 1.5s delay');
     }, 1500);
 }
 
 // Запускаем показ модального окна после того, как карта полностью загрузится
 // Используем событие 'load', которое срабатывает после загрузки всех тайлов
 window.map.on('load', function() {
+    console.log('Map load event - showing modal');
     showWelcomeModalDelayed();
 });
 
 // Также добавим обработчик на случай, если карта уже была загружена до подписки на событие
 // (например, при очень быстрой загрузке или из кэша)
 if (window.map._loaded) {
+    console.log('Map already loaded - showing modal');
     showWelcomeModalDelayed();
 }
 
