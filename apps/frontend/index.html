@@ -152,7 +152,17 @@
 
 
 <div class="hint" id="hint">👆 Click on the map to set a start location</div>
-<div class="loading" id="loading">Loading Map... 🗺️</div>
+<div class="loading" id="loading">
+    <!-- Оставляем ваш индикатор, но оборачиваем для стиля -->
+    <div class="loading-status">Loading Map... 🗺️</div>
+    
+    <!-- Добавляем описание проекта -->
+    <div class="loading-description">
+        <h2>Launch a virtual hot air balloon anywhere on Earth</h2>
+        <p>and watch it drift using real weather forecasts</p>
+    </div>
+</div>
+
 
 <!-- SEO Footer (visible content for search engines) -->
 <footer class="seo-footer">
@@ -304,6 +314,55 @@
             text-align: center;
         }
     }
+
+/* Настройки для самого контейнера загрузки */
+#loading {
+    display: flex;
+    flex-direction: column; /* Выстраивает элементы вертикально */
+    align-items: center;
+    justify-content: center;
+    gap: 20px;             /* Расстояние между лоадером и текстом */
+    text-align: center;
+    background: #1a1a1a;   /* Или ваш текущий цвет фона */
+    color: #ffffff;
+}
+
+/* Стиль для вашей текущей надписи "Loading Map..." */
+.loading-status {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+/* Блок с новой фразой */
+.loading-description {
+    max-width: 500px;      /* Чтобы текст красиво разбивался на строки */
+    padding: 0 20px;
+    animation: fadeIn 1s ease-in-out; /* Плавное появление текста */
+}
+
+.loading-description h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    line-height: 1.4;
+    color: #ffffff;
+}
+
+.loading-description p {
+    font-size: 0.95rem;
+    color: #b3b3b3;        /* Чуть более мягкий цвет для подзаголовка */
+    margin: 0;
+}
+
+/* Анимация плавного проявления */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+
+    
 </style>
 
 <script>
