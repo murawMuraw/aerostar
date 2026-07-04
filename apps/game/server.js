@@ -920,6 +920,75 @@ io.on('connection', (socket) => {
     });
 
     // ============================================
+    // УПРАВЛЕНИЕ СТАТУСОМ ГОНКИ ИЗ АДМИНКИ
+    // ============================================
+    socket.on('fiesta-admin-set-status', (data) => {
+        // Проверка административного ключа
+        if (data.adminKey !== 'aerostar2024') {
+            socket.emit('fiesta-error', 'Admin privileges required');
+            return;
+        }
+
+        const targetStatus = data.status;
+        console.log(`🔑 Admin requested status change to: ${targetStatus}`);
+
+        // Проверяем, возможен ли переход
+        if (!canTransitionTo(targetStatus)) {
+            const errorMsg = `❌ Invalid transition from ${raceConfig.raceStatus} to ${targetStatus}`;
+            console.error(errorMsg);
+            socket.emit('fiesta-error', errorMsg);
+            return;
+        }
+
+        // Если запрошен сброс в IDLE, выполняем его
+        if (targetStatus === GAME_STATES.IDLE) {
+            // Функция setRaceStatus уже сбрасывает всё, включая balloons и конфиг
+            setRaceStatus(GAME_STATES.IDLE);
+            
+            // Дополнительно очищаем UI отображение запланированного старта и регистрации
+            // Это уже сделано внутри setRaceStatus, но мы явно подтверждаем админу
+            socket.emit('fiesta-config-saved', { 
+                success: true,
+                message: 'Race has been reset to IDLE state. All pilots cleared.'
+            });
+            
+            // Рассылаем всем обновленный статус (это также делает setRaceStatus)
+            console.log('✅ Race status reset to IDLE by admin');
+            return;
+        }
+
+        // Если запрошен перевод в FINISHED (завершение гонки)
+        if (targetStatus === GAME_STATES.FINISHED) {
+            if (raceConfig.raceStatus !== GAME_STATES.RACING) {
+                socket.emit('fiesta-error', 'Cannot finish a race that is not in progress');
+                return;
+            }
+            setRaceStatus(GAME_STATES.FINISHED);
+            io.emit('fiesta-race-finished', {
+                message: `🏁 Race finished by administrator! 🏁`,
+                timestamp: new Date()
+            });
+            socket.emit('fiesta-config-saved', { 
+                success: true,
+                message: 'Race has been finished.'
+            });
+            return;
+        }
+
+        // Для других статусов (например, принудительный старт)
+        if (setRaceStatus(targetStatus)) {
+            socket.emit('fiesta-config-saved', { 
+                success: true,
+                message: `Status changed to ${targetStatus}`
+            });
+        } else {
+            socket.emit('fiesta-error', `Failed to change status to ${targetStatus}`);
+        }
+    });
+
+    
+
+    // ============================================
     // НОВАЯ ФУНКЦИЯ: СОХРАНЕНИЕ ПОЛНОЙ КОНФИГУРАЦИИ
     // ============================================
     socket.on('fiesta-save-full-config', (fullConfig) => {
