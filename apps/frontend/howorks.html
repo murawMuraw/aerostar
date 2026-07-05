@@ -175,48 +175,37 @@
       margin-top: 1.2rem;
     }
 
-    /* изображения-заглушки (символизируют контент) */
-    .img-placeholder {
-      background: rgba(0, 180, 255, 0.03);
-      border: 1px dashed rgba(0, 200, 255, 0.25);
-      border-radius: 1.8rem;
-      padding: 1.2rem 1.8rem;
+    /* реальные изображения */
+    .image-container {
       margin: 1.6rem 0 0.8rem 0;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-      backdrop-filter: blur(4px);
+      border-radius: 1.8rem;
+      overflow: hidden;
+      border: 1px solid rgba(0, 200, 255, 0.15);
+      background: rgba(0, 180, 255, 0.03);
+      max-width: 100%;
+    }
+
+    .image-container img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 1.8rem;
+    }
+
+    .image-container video {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 1.8rem;
+    }
+
+    .image-caption {
+      padding: 0.8rem 1.5rem;
       color: #9bc3db;
-      font-size: 0.95rem;
-    }
-
-    .img-placeholder span {
-      background: rgba(0, 255, 200, 0.05);
-      padding: 0.2rem 1rem;
-      border-radius: 40px;
-      border: 1px solid rgba(0, 200, 255, 0.1);
-    }
-
-    .video-placeholder {
-      background: #0a121f;
-      border-radius: 2rem;
-      padding: 1.8rem 2rem;
-      margin: 1.2rem 0;
-      border: 1px solid rgba(0, 200, 255, 0.1);
-      box-shadow: inset 0 0 40px rgba(0, 150, 255, 0.02);
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-    }
-
-    .video-placeholder .badge {
-      background: rgba(0, 200, 255, 0.1);
-      padding: 0.2rem 1.2rem;
-      border-radius: 40px;
-      color: #7fcbff;
       font-size: 0.9rem;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.2);
+      border-top: 1px solid rgba(0, 200, 255, 0.05);
     }
 
     /* для ссылки */
@@ -252,9 +241,9 @@
       <h2>🌤️ Как движется воздушный шар?</h2>
       <p><span class="inline-icon"></span> В отличие от самолёта или дрона, у воздушного шара <strong class="highlight-cyan">нет двигателя и рулевого колеса</strong>. Пилот не может просто решить полететь на север или на юг. Воздушный шар движется вместе с окружающим воздухом.</p>
       
-      <div class="img-placeholder">
-        <span>🖼️ изображение atmospher.png</span> 
-        <span style="opacity:0.6;">(схема атмосферных слоёв)</span>
+      <div class="image-container">
+        <img src="apps/frontend/images/atmospher.png" alt="Схема атмосферных слоёв и движения воздушных масс" loading="lazy">
+        <div class="image-caption">Схема атмосферных слоёв</div>
       </div>
       
       <div class="glow-line"></div>
@@ -265,15 +254,17 @@
     <!-- Секция 2: altitudr + видео -->
     <section id="vysota" class="glass-section section-2">
       <h2>📊 Высота и прогнозы</h2>
-      <div class="img-placeholder">
-        <span>🖼️ изображение altitudr.png</span> 
-        <span style="opacity:0.6;">(профиль ветра по высоте)</span>
+      <div class="image-container">
+        <img src="apps/frontend/images/altitudr.png" alt="Профиль ветра по высоте" loading="lazy">
+        <div class="image-caption">Профиль ветра по высоте</div>
       </div>
 
-      <div class="video-placeholder">
-        <span style="font-size: 1.8rem;">▶️</span>
-        <span class="badge">🎬 weather.mp4</span>
-        <span style="color:#aacfeb;">Анимация движения воздушных масс</span>
+      <div class="image-container">
+        <video controls preload="metadata" loading="lazy">
+          <source src="apps/frontend/images/weather.mp4" type="video/mp4">
+          Ваш браузер не поддерживает видео.
+        </video>
+        <div class="image-caption">Анимация движения воздушных масс</div>
       </div>
       <p style="margin-top: 0.8rem;">Прогнозные модели помогают оценить возможные траектории, но атмосфера всегда вносит коррективы.</p>
     </section>
@@ -304,10 +295,6 @@
     <section id="pochemu-shar-nelzya-napravit" class="glass-section section-5">
       <h2>🧭 Почему шар нельзя направить?</h2>
       <p>Полностью управлять направлением полёта <strong class="highlight-cyan">невозможно</strong>. Если на всех доступных высотах ветер движется в одном направлении, шар будет следовать именно за ним.</p>
-      <div class="img-placeholder" style="border-color:rgba(0,200,255,0.08);">
-        <span>🌬️ Ветровые профили</span>
-        <span style="opacity:0.7;">(пример однонаправленного потока)</span>
-      </div>
       <p style="margin-top: 0.8rem;">Именно поэтому каждый полёт уникален, а поиск подходящего воздушного потока становится частью искусства воздухоплавания.</p>
     </section>
 
@@ -316,12 +303,12 @@
       <h2 style="border-bottom: none; margin-bottom: 0.5rem;">✨ Попробуйте сами</h2>
       <p style="max-width: 100%; margin-bottom: 0.8rem; color: #b5d4ea;">Исследуйте, как ветер на разных высотах меняет маршрут.</p>
       <div class="btn-wrapper">
-        <a href="#" class="btn-return" onclick="alert('Возврат на главную страницу Aerost.art (демо)'); return false;">← На главную</a>
+        <a href="index.html" class="btn-return">← На главную</a>
       </div>
       <p style="font-size: 0.8rem; opacity: 0.5; margin-top: 1.4rem;">Ссылка возврата на главную страницу</p>
     </section>
 
-    <!-- декоративная тонкая линия внизу (опционально) -->
+    <!-- декоративная тонкая линия внизу -->
     <div style="height: 1px; background: linear-gradient(90deg, transparent, rgba(0,200,255,0.1), transparent); margin: 0.5rem 0;"></div>
 
   </div>
