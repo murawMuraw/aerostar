@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Learn the art of ballooning: how a hot air balloon works, why the route depends on the wind, and how modeling helps predict movement.">
+  <title>How It Works — Aerost.art</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #0b0e1a;
+      background-image: radial-gradient(circle at 10% 20%, rgba(0, 180, 255, 0.03) 0%, transparent 40%),
+                        radial-gradient(circle at 90% 70%, rgba(0, 255, 200, 0.02) 0%, transparent 50%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #e3f0fc;
+      line-height: 1.6;
+      padding: 2rem 1.5rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 3rem;
+    }
+
+    /* секции – стеклянные панели */
+    .glass-section {
+      background: rgba(20, 30, 50, 0.25);
+      backdrop-filter: blur(10px) saturate(180%);
+      -webkit-backdrop-filter: blur(10px) saturate(180%);
+      border: 1px solid rgba(0, 200, 255, 0.15);
+      border-radius: 2.5rem;
+      padding: 2.5rem 2.8rem;
+      box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 220, 255, 0.05);
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+      animation: fadeUp 0.8s ease forwards;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .glass-section:hover {
+      box-shadow: 0 30px 60px -16px rgba(0, 150, 255, 0.2), 0 0 0 1px rgba(0, 220, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    /* разные задержки для анимации */
+    .section-1 { animation-delay: 0.05s; }
+    .section-2 { animation-delay: 0.15s; }
+    .section-3 { animation-delay: 0.25s; }
+    .section-4 { animation-delay: 0.35s; }
+    .section-5 { animation-delay: 0.45s; }
+    .section-6 { animation-delay: 0.55s; }
+
+    @keyframes fadeUp {
+      0% { opacity: 0; transform: translateY(24px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      font-size: 2rem;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      margin-bottom: 1.25rem;
+      background: linear-gradient(135deg, #b0f0ff, #4dd0e1);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      display: inline-block;
+      border-bottom: 2px solid rgba(0, 200, 255, 0.2);
+      padding-bottom: 0.4rem;
+    }
+
+    h3 {
+      font-size: 1.3rem;
+      font-weight: 450;
+      color: #b0e4ff;
+      margin: 1.5rem 0 0.6rem 0;
+      letter-spacing: -0.01em;
+    }
+
+    p {
+      margin-bottom: 1.2rem;
+      color: #d0e5f5;
+      font-weight: 350;
+      max-width: 75ch;
+    }
+
+    .accent-text {
+      color: #8dd0f0;
+      font-weight: 400;
+    }
+
+    .highlight-cyan {
+      color: #6ed4ff;
+      font-weight: 450;
+    }
+
+    /* тонкие светящиеся линии — декоративные */
+    .glow-line {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0, 220, 255, 0.3), rgba(0, 255, 200, 0.2), transparent);
+      margin: 1.8rem 0 2rem 0;
+      box-shadow: 0 0 12px rgba(0, 180, 255, 0.2);
+    }
+
+    .inline-icon {
+      display: inline-block;
+      width: 0.9rem;
+      height: 0.9rem;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #4dd0e1, #0077b6);
+      margin-right: 0.5rem;
+      box-shadow: 0 0 12px #00bcd4aa;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 1rem 0 0.5rem 0;
+    }
+
+    li {
+      padding: 0.4rem 0 0.4rem 1.8rem;
+      position: relative;
+      color: #cadeee;
+      border-bottom: 1px solid rgba(0, 200, 255, 0.04);
+    }
+
+    li::before {
+      content: "▹";
+      position: absolute;
+      left: 0;
+      color: #4dd0e1;
+      font-size: 1.2rem;
+      opacity: 0.7;
+    }
+
+    .btn-return {
+      display: inline-block;
+      background: rgba(0, 180, 255, 0.08);
+      border: 1px solid rgba(0, 220, 255, 0.3);
+      backdrop-filter: blur(4px);
+      padding: 0.8rem 2.2rem;
+      border-radius: 60px;
+      font-weight: 450;
+      color: #c6ecff;
+      text-decoration: none;
+      letter-spacing: 0.3px;
+      transition: all 0.25s ease;
+      box-shadow: 0 0 20px rgba(0, 180, 255, 0.1);
+      margin-top: 0.75rem;
+    }
+
+    .btn-return:hover {
+      background: rgba(0, 200, 255, 0.15);
+      border-color: #4dd0e1;
+      color: #ffffff;
+      box-shadow: 0 0 32px #00bcd466;
+      transform: scale(1.02);
+    }
+
+    .btn-wrapper {
+      margin-top: 1.2rem;
+    }
+
+    /* реальные изображения */
+    .image-container {
+      margin: 1.6rem 0 0.8rem 0;
+      border-radius: 1.8rem;
+      overflow: hidden;
+      border: 1px solid rgba(0, 200, 255, 0.15);
+      background: rgba(0, 180, 255, 0.03);
+      max-width: 100%;
+    }
+
+    .image-container img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 1.8rem;
+    }
+
+    .image-container video {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 1.8rem;
+    }
+
+    .image-caption {
+      padding: 0.8rem 1.5rem;
+      color: #9bc3db;
+      font-size: 0.9rem;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.2);
+      border-top: 1px solid rgba(0, 200, 255, 0.05);
+    }
+
+    /* для ссылки */
+    .meteo-link {
+      color: #6ed4ff;
+      text-decoration: none;
+      border-bottom: 1px dotted #4dd0e180;
+      transition: color 0.2s;
+    }
+    .meteo-link:hover {
+      color: #b3edff;
+    }
+
+    /* мобильная адаптация */
+    @media (max-width: 680px) {
+      body { padding: 1rem 0.8rem; }
+      .glass-section { padding: 1.8rem 1.5rem; border-radius: 2rem; }
+      h2 { font-size: 1.7rem; }
+      .btn-return { width: 100%; text-align: center; }
+    }
+
+    /* ID для якорных ссылок */
+    section[id] {
+      scroll-margin-top: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Section 1: Introduction, atmosphere -->
+    <section id="how-it-works" class="glass-section section-1">
+      <h2>🌤️ How does a hot air balloon move?</h2>
+      <p><span class="inline-icon"></span> Unlike an airplane or drone, a hot air balloon <strong class="highlight-cyan">has no engine or steering wheel</strong>. The pilot cannot simply decide to fly north or south. The balloon moves with the surrounding air.</p>
+      
+      <div class="image-container">
+        <img src="images/atmosphere.png" alt="Atmospheric layers and air mass movement diagram" loading="lazy">
+        <div class="image-caption">Atmospheric layers diagram</div>
+      </div>
+      
+      <div class="glow-line"></div>
+      <p><span class="inline-icon"></span> <strong>Aerost.art</strong> uses weather forecast data to estimate how the atmosphere moves over time.</p>
+      <p style="margin-top: 0.2rem;">➜ <a href="https://www.meteomatics.com/en/weather-visualization/" target="_blank" class="meteo-link">Meteomatics — Weather Visualization</a></p>
+    </section>
+
+    <!-- Section 2: altitude + video -->
+    <section id="altitude-forecasts" class="glass-section section-2">
+      <h2>📊 Altitude and forecasts</h2>
+      <div class="image-container">
+        <img src="images/altitude.png" alt="Wind profile by altitude" loading="lazy">
+        <div class="image-caption">Wind profile by altitude</div>
+      </div>
+
+      <div class="image-container">
+        <video controls preload="metadata" loading="lazy">
+          <source src="images/weather.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+        <div class="image-caption">Air mass movement animation</div>
+      </div>
+      <p style="margin-top: 0.8rem;">Forecast models help estimate possible trajectories, but the atmosphere always introduces corrections.</p>
+    </section>
+
+    <!-- Section 3: Why modeling is never perfect -->
+    <section id="why-not-perfect" class="glass-section section-3">
+      <h2>🌀 Why is modeling never perfect?</h2>
+      <p>Because the <strong class="highlight-cyan">atmosphere is chaotic</strong>:</p>
+      <ul>
+        <li><span style="font-weight:400;">Forecast errors</span> – even the best models have inaccuracies;</li>
+        <li><span style="font-weight:400;">Turbulence</span> – unpredictable eddies;</li>
+        <li><span style="font-weight:400;">Local mountain vortices</span> – terrain changes wind patterns;</li>
+        <li><span style="font-weight:400;">Convection</span> – warm air creates vertical movements.</li>
+      </ul>
+      <div class="glow-line" style="margin: 1.2rem 0 0.6rem 0;"></div>
+      <p style="font-size: 0.95rem; color:#b5d4ea;">That's why every flight is unique, and finding the right air current becomes part of the art of ballooning.</p>
+    </section>
+
+    <!-- Section 4: Can you reach a specific destination? -->
+    <section id="can-you-reach" class="glass-section section-4">
+      <h2>🎯 Can you reach a specific destination in a regular hot air balloon?</h2>
+      <p><span class="inline-icon"></span> Sometimes — <strong class="highlight-cyan">yes</strong>.</p>
+      <p>Although the balloon has no rudder or engine, the pilot can partially influence the route by <strong>changing altitude</strong>.</p>
+      <p>At different altitudes, the wind often blows in different directions. By ascending or descending, the balloon can catch a different air current that changes its trajectory.</p>
+    </section>
+
+    <!-- Section 5: Limitations of control -->
+    <section id="why-cant-steer" class="glass-section section-5">
+      <h2>🧭 Why can't the balloon be steered?</h2>
+      <p>It is <strong class="highlight-cyan">impossible</strong> to fully control the direction of flight. If the wind at all available altitudes moves in the same direction, the balloon will follow it.</p>
+      <p style="margin-top: 0.8rem;">That's exactly why every flight is unique, and finding the right air current becomes part of the art of ballooning.</p>
+    </section>
+
+    <!-- Section 6: Return button -->
+    <section id="try-yourself" class="glass-section section-6" style="text-align: center; padding-bottom: 2rem;">
+      <h2 style="border-bottom: none; margin-bottom: 0.5rem;">✨ Try it yourself</h2>
+      <p style="max-width: 100%; margin-bottom: 0.8rem; color: #b5d4ea;">Explore how wind at different altitudes changes the route.</p>
+      <div class="btn-wrapper">
+        <a href="index.html" class="btn-return">← Back to main</a>
+      </div>
+    
+    </section>
+
+    <!-- decorative line at the bottom -->
+    <div style="height: 1px; background: linear-gradient(90deg, transparent, rgba(0,200,255,0.1), transparent); margin: 0.5rem 0;"></div>
+
+  </div>
+</body>
+</html>
