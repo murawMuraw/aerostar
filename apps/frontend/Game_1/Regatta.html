@@ -4,7 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Game Regatta – Coming Soon</title>
+
+    <!-- Разрешаем загрузку скриптов от Cloudflare Insights -->
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://cloud.umami.is; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.open-meteo.com;">
+
     <style>
+        /* ... все стили остаются без изменений ... */
         * {
             margin: 0;
             padding: 0;
@@ -23,7 +29,6 @@
             overflow: hidden;
         }
 
-        /* Анимированные волны для атмосферы */
         body::before,
         body::after {
             content: '';
@@ -173,7 +178,6 @@
             border-bottom-color: rgba(255, 255, 255, 0.2);
         }
 
-        /* Адаптив */
         @media (max-width: 600px) {
             .container {
                 padding: 30px 20px;
