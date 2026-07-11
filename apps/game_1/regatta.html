@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Game Regatta – Coming Soon</title>
 
-    <!-- Разрешаем загрузку скриптов от Cloudflare Insights -->
-    <meta http-equiv="Content-Security-Policy" 
-          content="default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://cloud.umami.is; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.open-meteo.com;">
-
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* ... все стили остаются без изменений ... */
+        /* --- базовые стили (сохранены) --- */
         * {
             margin: 0;
             padding: 0;
@@ -60,6 +58,7 @@
             100% { transform: translateX(80px); }
         }
 
+        /* --- главный контейнер (поверх карты) --- */
         .container {
             max-width: 800px;
             width: 100%;
@@ -72,7 +71,8 @@
             border: 1px solid rgba(255, 255, 255, 0.15);
             box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
             position: relative;
-            z-index: 1;
+            z-index: 10;
+            pointer-events: auto;
         }
 
         .icon {
@@ -205,10 +205,58 @@
                 font-size: 52px;
             }
         }
+
+        /* --- Стили для карты (фон) --- */
+        #map {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            background: #0b1a2e; /* на случай, если тайлы не загрузятся */
+        }
+
+        /* --- Легенда (поверх карты, но под контейнером) --- */
+        .map-legend {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(6px);
+            color: #ddd;
+            padding: 10px 16px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            letter-spacing: 0.3px;
+            z-index: 5;
+            pointer-events: none;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .map-legend i {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #4a9eff;
+            border-radius: 50%;
+            margin-right: 6px;
+            box-shadow: 0 0 8px #4a9eff88;
+        }
     </style>
 </head>
 <body>
 
+    <!-- КАРТА (спутниковый слой) -->
+    <div id="map"></div>
+
+    <!-- Маленькая легенда -->
+    <div class="map-legend">
+        <i></i> Satellite view · both hemispheres
+    </div>
+
+    <!-- ОСНОВНОЙ КОНТЕНТ -->
     <div class="container">
         <span class="icon">⛵</span>
 
@@ -231,6 +279,52 @@
         <a href="https://aerost.art/index.html" class="back-link">← Aerostar</a>
       
     </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    </script>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // --- инициализация карты ---
+            // Центр: (0, 0) — видно оба полушария, но немного сместим, чтобы Тихий океан не разрезал карту
+            const map = L.map('map', {
+                center: [0, 10],        // чуть смещено, чтобы Евразия и Америка были видны
+                zoom: 2,
+                zoomControl: false,     // убираем стандартные контролы для красоты
+                attributionControl: false,
+                fadeAnimation: false,
+                zoomAnimation: false,
+                markerZoomAnimation: false
+            });
+
+            // --- спутниковый слой (ESRI) — качественный, без надписей, видно оба полушария ---
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '&copy; Esri',
+                maxZoom: 19,
+                minZoom: 1,
+                noWrap: true,           // не зацикливать карту по горизонтали — видно оба полушария
+                bounds: [[-90, -180], [90, 180]]
+            }).addTo(map);
+
+            // --- дополнительный слой (светлая подложка) на случай, если основной не загрузится ---
+            // но он будет вторым, чтобы не мешать
+            // (можно добавить как fallback, но в данном случае оставим только Esri для чистоты)
+
+            // --- убираем возможность скролла карты колёсиком (чтобы не мешала) ---
+            map.scrollWheelZoom.disable();
+
+            // --- также отключаем перетаскивание (dragging), чтобы карта была статичной заглушкой ---
+            map.dragging.disable();
+
+            // --- если нужно, можно добавить пару маркеров для атмосферы (опционально) ---
+            // L.marker([0, 0]).addTo(map).bindPopup('Equator');
+
+            console.log('🌍 Satellite map loaded (Regatta placeholder)');
+        })();
+    </script>
 
 </body>
 </html>
