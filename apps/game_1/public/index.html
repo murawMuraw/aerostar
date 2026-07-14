@@ -1,185 +1,80 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Regatta — Парусная регата</title>
-    
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <!-- Основные стили -->
-    <link rel="stylesheet" href="style.css" />
-</head>
-<body>
+/* ============================================
+   БАННЕР "GAME UNDER DEVELOPMENT"
+   ============================================ */
 
-    <!-- ========================================== -->
-    <!-- 1. МОДАЛЬНОЕ ОКНО АВТОРИЗАЦИИ              -->
-    <!-- ========================================== -->
-    <div id="auth-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h1>⛵ Regatta</h1>
-                <p class="subtitle">Гонка парусников с реальными ветром и течениями</p>
-            </div>
+.development-banner {
+    background: linear-gradient(135deg, #ff0000, #cc0000, #ff0000);
+    background-size: 200% 200%;
+    animation: devPulse 2s ease-in-out infinite;
+    padding: 16px 20px;
+    border-radius: 12px;
+    text-align: center;
+    margin-bottom: 20px;
+    border: 3px solid #ff4444;
+    box-shadow: 0 0 30px rgba(255, 0, 0, 0.4);
+    position: relative;
+    overflow: hidden;
+}
 
-            <div class="auth-tabs">
-                <button class="tab-btn active" data-tab="login">Вход</button>
-                <button class="tab-btn" data-tab="register">Регистрация</button>
-                <button class="tab-btn" data-tab="guest">Наблюдать</button>
-            </div>
+@keyframes devPulse {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
 
-            <!-- Форма входа -->
-            <div id="login-form" class="auth-form active">
-                <input type="text" id="login-username" placeholder="Имя пользователя" autocomplete="username" />
-                <input type="password" id="login-password" placeholder="Пароль" autocomplete="current-password" />
-                <button id="login-btn" class="btn-primary">Войти</button>
-                <div id="login-error" class="error-message"></div>
-            </div>
+.development-banner .dev-text {
+    display: block;
+    font-size: 28px;
+    font-weight: 900;
+    color: #ffffff;
+    text-shadow: 
+        0 0 10px rgba(255, 0, 0, 0.8),
+        0 0 20px rgba(255, 0, 0, 0.6),
+        0 0 40px rgba(255, 0, 0, 0.4),
+        2px 2px 0 #000000;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-family: 'Arial Black', 'Impact', sans-serif;
+}
 
-            <!-- Форма регистрации -->
-            <div id="register-form" class="auth-form">
-                <input type="text" id="reg-username" placeholder="Имя пользователя (3-20 символов)" autocomplete="username" />
-                <input type="password" id="reg-password" placeholder="Пароль (минимум 4 символа)" autocomplete="new-password" />
-                <input type="password" id="reg-password-confirm" placeholder="Подтвердите пароль" autocomplete="new-password" />
-                <button id="register-btn" class="btn-primary">Зарегистрироваться</button>
-                <div id="register-error" class="error-message"></div>
-            </div>
+.development-banner .dev-sub {
+    display: block;
+    font-size: 14px;
+    color: #ffcccc;
+    margin-top: 4px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+}
 
-            <!-- Форма гостя -->
-            <div id="guest-form" class="auth-form">
-                <p class="guest-info">👁 Вы сможете наблюдать за гонкой, но не управлять кораблём</p>
-                <button id="guest-btn" class="btn-secondary">Войти как гость</button>
-            </div>
+/* Дополнительно — мигающая рамка */
+.development-banner::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 14px;
+    background: linear-gradient(45deg, #ff0000, #ff6600, #ff0000, #ff6600);
+    background-size: 300% 300%;
+    animation: borderGlow 1s ease-in-out infinite;
+    z-index: -1;
+}
 
-            <!-- Информация о сервере -->
-            <div class="auth-footer">
-                <span id="players-count">👥 Игроков: 0 / 12</span>
-                <span id="server-status">🟢 Онлайн</span>
-            </div>
-        </div>
-    </div>
+@keyframes borderGlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
 
-    <!-- ========================================== -->
-    <!-- 2. КАРТА (фон)                            -->
-    <!-- ========================================== -->
-    <div id="map"></div>
-
-    <!-- ========================================== -->
-    <!-- 3. ИГРОВОЙ HUD                            -->
-    <!-- ========================================== -->
-    <div id="hud" style="display:none;">
-        <!-- Верхняя панель -->
-        <div id="hud-top">
-            <div id="ship-status">
-                <span id="ship-name">Корабль</span>
-                <span id="ship-role" class="role-badge">⛵ Игрок</span>
-                <span id="ship-status-icon">🟢</span>
-            </div>
-            <div id="hud-stats">
-                <span>📏 <span id="distance-display">0</span> км</span>
-                <span>⏱ <span id="time-display">00:00</span></span>
-            </div>
-        </div>
-
-        <!-- Информация о корабле -->
-        <div id="ship-info">
-            <div class="info-item">
-                <span class="label">🧭 Курс</span>
-                <span class="value" id="heading-display">0°</span>
-            </div>
-            <div class="info-item">
-                <span class="label">⛵ Скорость</span>
-                <span class="value" id="speed-display">0.0</span>
-                <span class="unit">уз</span>
-            </div>
-            <div class="info-item">
-                <span class="label">📈 Паруса</span>
-                <div class="sail-bar">
-                    <div class="sail-fill" id="sail-fill" style="width:50%"></div>
-                </div>
-                <span class="value" id="sail-display">50%</span>
-            </div>
-            <div class="info-item">
-                <span class="label">📌 Статус</span>
-                <span class="value" id="status-display">В пути</span>
-            </div>
-        </div>
-
-        <!-- Панель управления -->
-        <div id="controls">
-            <div class="controls-group">
-                <button id="btn-left" class="ctrl-btn" title="Повернуть налево (←)">◄</button>
-                <button id="btn-right" class="ctrl-btn" title="Повернуть направо (→)">►</button>
-            </div>
-            <div class="controls-group">
-                <button id="btn-raise" class="ctrl-btn" title="Поднять паруса (↑)">▲</button>
-                <button id="btn-lower" class="ctrl-btn" title="Опустить паруса (↓)">▼</button>
-            </div>
-            <div class="controls-group">
-                <button id="btn-anchor" class="ctrl-btn anchor-btn" title="Якорь (Space)">⚓</button>
-                <button id="btn-help" class="ctrl-btn help-btn" title="Запросить помощь">🆘</button>
-            </div>
-        </div>
-
-        <!-- Информация о ветре и течении -->
-        <div id="weather-info">
-            <div class="weather-item">
-                <span>🌬️ Ветер</span>
-                <span id="wind-display">0 уз, 0°</span>
-            </div>
-            <div class="weather-item">
-                <span>🌊 Течение</span>
-                <span id="current-display">0 уз, 0°</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================== -->
-    <!-- 4. ЧАТ                                    -->
-    <!-- ========================================== -->
-    <div id="chat" style="display:none;">
-        <div id="chat-header">
-            <span>💬 Чат</span>
-            <button id="chat-toggle">−</button>
-        </div>
-        <div id="chat-messages"></div>
-        <div id="chat-input-area">
-            <input type="text" id="chat-input" placeholder="Сообщение..." />
-            <button id="chat-send">➤</button>
-        </div>
-    </div>
-
-    <!-- ========================================== -->
-    <!-- 5. ЛЕГЕНДА                                -->
-    <!-- ========================================== -->
-    <div id="legend">
-        <div class="legend-title">📌 Легенда</div>
-        <div><span style="color:#4CAF50;">●</span> Игрок (онлайн)</div>
-        <div><span style="color:#FF9800;">●</span> Игрок (офлайн)</div>
-        <div><span style="color:#9E9E9E;">●</span> Гость</div>
-        <div><span style="color:#F44336;">●</span> Выбыл</div>
-        <div><span style="color:#FF5722;">⚓</span> На якоре</div>
-        <div><span style="color:#FF0000;">⚠</span> На мели</div>
-        <div class="legend-divider"></div>
-        <div><span style="color:#4CAF50;">➤</span> Зелёные стрелки — течение</div>
-    </div>
-
-    <!-- ========================================== -->
-    <!-- 6. УВЕДОМЛЕНИЯ                            -->
-    <!-- ========================================== -->
-    <div id="notifications"></div>
-
-    <!-- ========================================== -->
-    <!-- 7. КНОПКА ПОКАЗА/СКРЫТИЯ ТЕЧЕНИЙ          -->
-    <!-- ========================================== -->
-    <button id="toggle-currents" class="toggle-btn" title="Показать/скрыть течения">🌊</button>
-
-    <!-- ========================================== -->
-    <!-- 8. ПОДКЛЮЧЕНИЕ СКРИПТОВ                   -->
-    <!-- ========================================== -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script src="game.js"></script>
-</body>
-</html>
+/* Адаптив для мобильных */
+@media (max-width: 600px) {
+    .development-banner .dev-text {
+        font-size: 20px;
+        letter-spacing: 1px;
+    }
+    .development-banner .dev-sub {
+        font-size: 12px;
+    }
+}
