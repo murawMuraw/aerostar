@@ -14,7 +14,17 @@ const fetch = require('node-fetch');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+
+// ============================================
+//  НАСТРОЙКА SOCKET.IO
+// ============================================
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    },
+    transports: ['websocket', 'polling']
+});
 
 // ============================================
 //  ЧТЕНИЕ ПЕРЕМЕННЫХ ИЗ .env
@@ -26,15 +36,20 @@ const MAX_PLAYERS = parseInt(process.env.MAX_PLAYERS) || 12;
 const INACTIVITY_TIMEOUT_HOURS = parseInt(process.env.INACTIVITY_TIMEOUT_HOURS) || 48;
 const GROUNDED_TIMEOUT_SECONDS = parseInt(process.env.GROUNDED_TIMEOUT_SECONDS) || 300;
 
-// Конвертируем в миллисекунды
 const INACTIVITY_TIMEOUT = INACTIVITY_TIMEOUT_HOURS * 60 * 60 * 1000;
 const GROUNDED_TIMEOUT = GROUNDED_TIMEOUT_SECONDS * 1000;
 
 // ============================================
-//  СТАТИЧЕСКИЕ ФАЙЛЫ
+//  MIDDLEWARE
 // ============================================
-app.use(express.static('public'));
 app.use(express.json());
+app.use(express.static('public'));
+
+// Логирование запросов
+app.use((req, res, next) => {
+    console.log(`📡 ${req.method} ${req.url}`);
+    next();
+});
 
 // ============================================
 //  КЕШИ
@@ -42,20 +57,6 @@ app.use(express.json());
 const windCache = new Map();
 const currentCache = new Map();
 const CACHE_TTL = 600000; // 10 минут
-
-// ============================================
-//  КОНСТАНТЫ
-// ============================================
-console.log('========================================');
-console.log('🚀 REGATTA SERVER');
-console.log('========================================');
-console.log(`📡 Port: ${PORT}`);
-console.log(`🔧 Mode: ${NODE_ENV}`);
-console.log(`👥 Max players: ${MAX_PLAYERS}`);
-console.log(`⏰ Inactivity timeout: ${INACTIVITY_TIMEOUT_HOURS} hours`);
-console.log(`⏳ Grounded timeout: ${GROUNDED_TIMEOUT_SECONDS} seconds`);
-console.log(`🌬️ OpenWeatherMap: ${OPENWEATHER_API_KEY ? '✅ Configured' : '❌ Not configured (using test data)'}`);
-console.log('========================================\n');
 
 // ============================================
 //  ХРАНИЛИЩЕ
@@ -413,6 +414,24 @@ class OceanCurrentModel {
         if ((month === 8 && day >= 23) || (month >= 9 && month <= 10) || (month === 11 && day <= 20)) return 'autumn';
         return 'winter';
     }
+
+    getCurrentsForVisualization(latMin, latMax, lngMin, lngMax, step = 5) {
+        const data = [];
+        for (let lat = latMin; lat <= latMax; lat += step) {
+            for (let lng = lngMin; lng <= lngMax; lng += step) {
+                const current = this.getCurrent(lat, lng);
+                data.push({
+                    lat: lat,
+                    lng: lng,
+                    speed: current.speed,
+                    direction: current.direction,
+                    u: current.u,
+                    v: current.v
+                });
+            }
+        }
+        return data;
+    }
 }
 
 const oceanCurrents = new OceanCurrentModel();
@@ -478,32 +497,10 @@ async function fetchCurrentData(lat, lng) {
 }
 
 // ============================================
-//  API
+//  API МАРШРУТЫ
 // ============================================
-app.get('/api/wind', async (req, res) => {
-    const { lat, lng } = req.query;
-    const data = await fetchWindData(lat, lng);
-    res.json(data);
-});
 
-app.get('/api/current', async (req, res) => {
-    const { lat, lng } = req.query;
-    const data = await fetchCurrentData(lat, lng);
-    res.json(data);
-});
-
-app.get('/api/currents/grid', (req, res) => {
-    const { latMin, latMax, lngMin, lngMax, step } = req.query;
-    const grid = oceanCurrents.getCurrentsForVisualization(
-        parseFloat(latMin || -60),
-        parseFloat(latMax || 60),
-        parseFloat(lngMin || -180),
-        parseFloat(lngMax || 180),
-        parseFloat(step || 10)
-    );
-    res.json(grid);
-});
-
+// 1. Получение списка игроков
 app.get('/api/players', (req, res) => {
     const playerList = [];
     for (const [id, ship] of players) {
@@ -524,45 +521,43 @@ app.get('/api/players', (req, res) => {
     });
 });
 
-// ============================================
-//  РЕГИСТРАЦИЯ (JSON файл)
-// ============================================
-const usersFile = path.join(__dirname, 'data', 'users.json');
-
-function loadUsers() {
-    try {
-        if (fs.existsSync(usersFile)) {
-            const data = fs.readFileSync(usersFile, 'utf8');
-            const users = JSON.parse(data);
-            for (const [username, userData] of Object.entries(users)) {
-                registeredUsers.set(username, userData);
-            }
-            console.log(`👥 Loaded ${registeredUsers.size} registered users`);
-        }
-    } catch (error) {
-        console.error('Error loading users:', error);
+// 2. Получение ветра
+app.get('/api/wind', async (req, res) => {
+    const { lat, lng } = req.query;
+    if (!lat || !lng) {
+        return res.status(400).json({ error: 'Missing lat/lng parameters' });
     }
-}
+    const data = await fetchWindData(parseFloat(lat), parseFloat(lng));
+    res.json(data);
+});
 
-function saveUsers() {
-    try {
-        const users = {};
-        for (const [username, userData] of registeredUsers) {
-            users[username] = userData;
-        }
-        fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
-    } catch (error) {
-        console.error('Error saving users:', error);
+// 3. Получение течения (точка)
+app.get('/api/current', async (req, res) => {
+    const { lat, lng } = req.query;
+    if (!lat || !lng) {
+        return res.status(400).json({ error: 'Missing lat/lng parameters' });
     }
-}
+    const data = await fetchCurrentData(parseFloat(lat), parseFloat(lng));
+    res.json(data);
+});
 
-if (!fs.existsSync(path.join(__dirname, 'data'))) {
-    fs.mkdirSync(path.join(__dirname, 'data'));
-}
-loadUsers();
+// 4. Получение сетки течений
+app.get('/api/currents/grid', (req, res) => {
+    const { latMin, latMax, lngMin, lngMax, step } = req.query;
+    const grid = oceanCurrents.getCurrentsForVisualization(
+        parseFloat(latMin || -60),
+        parseFloat(latMax || 60),
+        parseFloat(lngMin || -180),
+        parseFloat(lngMax || 180),
+        parseFloat(step || 10)
+    );
+    res.json(grid);
+});
 
+// 5. Регистрация
 app.post('/api/register', (req, res) => {
     const { username, password } = req.body;
+    
     if (!username || !password) {
         return res.status(400).json({ success: false, message: 'Необходимы имя и пароль' });
     }
@@ -583,8 +578,10 @@ app.post('/api/register', (req, res) => {
     res.json({ success: true, message: 'Регистрация успешна' });
 });
 
+// 6. Вход
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
+    
     if (!username || !password) {
         return res.status(400).json({ success: false, message: 'Необходимы имя и пароль' });
     }
@@ -637,6 +634,58 @@ app.post('/api/login', (req, res) => {
     const token = Buffer.from(`${username}:${Date.now()}`).toString('base64');
     res.json({ success: true, token, username, message: 'Вход выполнен успешно' });
 });
+
+// 7. Корневой маршрут
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// 8. Поддержка regatta.html
+app.get('/regatta.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// 9. favicon.ico
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end();
+});
+
+// ============================================
+//  РАБОТА С ПОЛЬЗОВАТЕЛЯМИ (JSON)
+// ============================================
+const usersFile = path.join(__dirname, 'data', 'users.json');
+
+function loadUsers() {
+    try {
+        if (fs.existsSync(usersFile)) {
+            const data = fs.readFileSync(usersFile, 'utf8');
+            const users = JSON.parse(data);
+            for (const [username, userData] of Object.entries(users)) {
+                registeredUsers.set(username, userData);
+            }
+            console.log(`👥 Loaded ${registeredUsers.size} registered users`);
+        }
+    } catch (error) {
+        console.error('Error loading users:', error);
+    }
+}
+
+function saveUsers() {
+    try {
+        const users = {};
+        for (const [username, userData] of registeredUsers) {
+            users[username] = userData;
+        }
+        fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+    } catch (error) {
+        console.error('Error saving users:', error);
+    }
+}
+
+if (!fs.existsSync(path.join(__dirname, 'data'))) {
+    fs.mkdirSync(path.join(__dirname, 'data'));
+}
+loadUsers();
 
 // ============================================
 //  КЛАСС КОРАБЛЯ
@@ -1090,7 +1139,7 @@ io.on('connection', (socket) => {
                 isGuest: false
             });
             
-            console.log(`✨ Player ${username} joined (${activePlayers.length + 1}/${MAX_PLAYERS})`);
+            console.log(`✨ Player ${username} joined`);
         }
         
         broadcastState();
@@ -1196,12 +1245,12 @@ setInterval(async () => {
 // ============================================
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Regatta server running at http://0.0.0.0:${PORT}`);
+    console.log(`📡 Socket.IO enabled on /socket.io/`);
     console.log(`👥 Max players: ${MAX_PLAYERS}`);
     console.log(`⏰ Inactivity timeout: ${INACTIVITY_TIMEOUT_HOURS} hours`);
     console.log(`⏳ Grounded timeout: ${GROUNDED_TIMEOUT_SECONDS} seconds`);
     console.log(`👤 Registered users: ${registeredUsers.size}`);
-    console.log(`🌊 Wind + ocean currents enabled`);
-    console.log(`📡 Socket.IO enabled\n`);
+    console.log(`🌊 Wind + ocean currents enabled\n`);
 });
 
 // Обработка завершения
