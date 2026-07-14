@@ -1,4 +1,9 @@
-// server.js — с системой завершения сеанса
+// apps/game_1/server.js
+
+// ============================================
+//  ЗАГРУЗКА ЛОКАЛЬНОГО .env
+// ============================================
+require('dotenv').config();
 
 const express = require('express');
 const http = require('http');
@@ -6,104 +11,361 @@ const socketIo = require('socket.io');
 const path = require('path');
 const fs = require('fs');
 const fetch = require('node-fetch');
-require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
-const PORT = process.env.PORT || 3002;
 
-// =====================
-// СТАТИЧЕСКИЕ ФАЙЛЫ
-// =====================
+// ============================================
+//  ЧТЕНИЕ ПЕРЕМЕННЫХ ИЗ .env
+// ============================================
+const PORT = process.env.PORT || 3002;
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY;
+const MAX_PLAYERS = parseInt(process.env.MAX_PLAYERS) || 12;
+const INACTIVITY_TIMEOUT_HOURS = parseInt(process.env.INACTIVITY_TIMEOUT_HOURS) || 48;
+const GROUNDED_TIMEOUT_SECONDS = parseInt(process.env.GROUNDED_TIMEOUT_SECONDS) || 300;
+
+// Конвертируем в миллисекунды
+const INACTIVITY_TIMEOUT = INACTIVITY_TIMEOUT_HOURS * 60 * 60 * 1000;
+const GROUNDED_TIMEOUT = GROUNDED_TIMEOUT_SECONDS * 1000;
+
+// ============================================
+//  СТАТИЧЕСКИЕ ФАЙЛЫ
+// ============================================
 app.use(express.static('public'));
 app.use(express.json());
 
-// =====================
-// КЕШИ
-// =====================
+// ============================================
+//  КЕШИ
+// ============================================
 const windCache = new Map();
 const currentCache = new Map();
-const CACHE_TTL = 600000;
+const CACHE_TTL = 600000; // 10 минут
 
-// =====================
-// КОНСТАНТЫ
-// =====================
-const MAX_PLAYERS = 12;                    // Максимум 12 кораблей
-const INACTIVITY_TIMEOUT = 48 * 60 * 60 * 1000; // 48 часов
-const GROUNDED_TIMEOUT = 5 * 60 * 1000;     // 5 минут на мели — выбывание
+// ============================================
+//  КОНСТАНТЫ
+// ============================================
+console.log('========================================');
+console.log('🚀 REGATTA SERVER');
+console.log('========================================');
+console.log(`📡 Port: ${PORT}`);
+console.log(`🔧 Mode: ${NODE_ENV}`);
+console.log(`👥 Max players: ${MAX_PLAYERS}`);
+console.log(`⏰ Inactivity timeout: ${INACTIVITY_TIMEOUT_HOURS} hours`);
+console.log(`⏳ Grounded timeout: ${GROUNDED_TIMEOUT_SECONDS} seconds`);
+console.log(`🌬️ OpenWeatherMap: ${OPENWEATHER_API_KEY ? '✅ Configured' : '❌ Not configured (using test data)'}`);
+console.log('========================================\n');
 
-// =====================
-// ХРАНИЛИЩЕ ИГРОКОВ
-// =====================
-const players = new Map();        // id -> Ship
-const registeredUsers = new Map(); // username -> { password, shipId }
-const guestSessions = new Map();  // socketId -> true
-const eliminatedPlayers = new Set(); // id -> true (выбывшие)
+// ============================================
+//  ХРАНИЛИЩЕ
+// ============================================
+const players = new Map();
+const registeredUsers = new Map();
+const guestSessions = new Map();
 
-// =====================
-// МОДЕЛЬ ТЕЧЕНИЙ
-// =====================
+// ============================================
+//  МОДЕЛЬ ТЕЧЕНИЙ
+// ============================================
 class OceanCurrentModel {
     constructor() {
         this.currents = [
-            { name: 'Gulf Stream', type: 'warm', regions: [{ latMin: 24, latMax: 45, lngMin: -80, lngMax: -60 }, { latMin: 45, latMax: 55, lngMin: -60, lngMax: -40 }], speed: 2.5, direction: 45, variation: 15 },
-            { name: 'North Atlantic Drift', type: 'warm', regions: [{ latMin: 45, latMax: 60, lngMin: -40, lngMax: -10 }], speed: 1.8, direction: 60, variation: 20 },
-            { name: 'Brazil Current', type: 'warm', regions: [{ latMin: -30, latMax: -10, lngMin: -50, lngMax: -35 }], speed: 1.5, direction: 180, variation: 15 },
-            { name: 'South Atlantic Current', type: 'cold', regions: [{ latMin: -40, latMax: -30, lngMin: -50, lngMax: 10 }], speed: 1.2, direction: 90, variation: 20 },
-            { name: 'Benguela Current', type: 'cold', regions: [{ latMin: -35, latMax: -20, lngMin: 5, lngMax: 15 }], speed: 1.0, direction: 350, variation: 10 },
-            { name: 'Kuroshio Current', type: 'warm', regions: [{ latMin: 20, latMax: 35, lngMin: 120, lngMax: 150 }], speed: 2.2, direction: 50, variation: 15 },
-            { name: 'North Pacific Current', type: 'warm', regions: [{ latMin: 35, latMax: 45, lngMin: 150, lngMax: -130 }], speed: 1.5, direction: 80, variation: 20 },
-            { name: 'California Current', type: 'cold', regions: [{ latMin: 25, latMax: 40, lngMin: -130, lngMax: -115 }], speed: 0.8, direction: 160, variation: 15 },
-            { name: 'East Australian Current', type: 'warm', regions: [{ latMin: -35, latMax: -20, lngMin: 150, lngMax: 160 }], speed: 1.8, direction: 180, variation: 15 },
-            { name: 'South Pacific Current', type: 'cold', regions: [{ latMin: -45, latMax: -35, lngMin: 160, lngMax: -70 }], speed: 1.0, direction: 90, variation: 20 },
-            { name: 'Peru Current', type: 'cold', regions: [{ latMin: -30, latMax: -10, lngMin: -90, lngMax: -70 }], speed: 0.9, direction: 340, variation: 10 },
-            { name: 'Agulhas Current', type: 'warm', regions: [{ latMin: -35, latMax: -25, lngMin: 25, lngMax: 35 }], speed: 2.0, direction: 210, variation: 15 },
-            { name: 'West Australian Current', type: 'cold', regions: [{ latMin: -35, latMax: -20, lngMin: 110, lngMax: 120 }], speed: 0.7, direction: 350, variation: 10 },
-            { name: 'South Indian Current', type: 'cold', regions: [{ latMin: -40, latMax: -30, lngMin: 40, lngMax: 110 }], speed: 1.0, direction: 90, variation: 20 },
-            { name: 'North Equatorial Current (Atlantic)', type: 'warm', regions: [{ latMin: 5, latMax: 15, lngMin: -60, lngMax: -20 }], speed: 0.8, direction: 270, variation: 15 },
-            { name: 'South Equatorial Current (Atlantic)', type: 'warm', regions: [{ latMin: -10, latMax: 0, lngMin: -50, lngMax: 0 }], speed: 0.9, direction: 270, variation: 15 },
-            { name: 'North Equatorial Current (Pacific)', type: 'warm', regions: [{ latMin: 10, latMax: 20, lngMin: 130, lngMax: -120 }], speed: 0.7, direction: 270, variation: 15 },
-            { name: 'South Equatorial Current (Pacific)', type: 'warm', regions: [{ latMin: -10, latMax: 5, lngMin: 160, lngMax: -80 }], speed: 0.8, direction: 270, variation: 15 },
-            { name: 'Equatorial Countercurrent', type: 'warm', regions: [{ latMin: 5, latMax: 10, lngMin: -50, lngMax: 0 }], speed: 0.6, direction: 90, variation: 10 },
-            { name: 'Antarctic Circumpolar Current', type: 'cold', regions: [{ latMin: -65, latMax: -50, lngMin: -180, lngMax: 180 }], speed: 1.5, direction: 90, variation: 10, isCircumpolar: true },
-            { name: 'East Greenland Current', type: 'cold', regions: [{ latMin: 65, latMax: 80, lngMin: -40, lngMax: -10 }], speed: 0.8, direction: 180, variation: 10 },
-            { name: 'Norwegian Current', type: 'warm', regions: [{ latMin: 60, latMax: 70, lngMin: -10, lngMax: 20 }], speed: 0.9, direction: 45, variation: 15 }
+            // Северная Атлантика
+            {
+                name: 'Gulf Stream',
+                type: 'warm',
+                regions: [
+                    { latMin: 24, latMax: 45, lngMin: -80, lngMax: -60 },
+                    { latMin: 45, latMax: 55, lngMin: -60, lngMax: -40 }
+                ],
+                speed: 2.5,
+                direction: 45,
+                variation: 15
+            },
+            {
+                name: 'North Atlantic Drift',
+                type: 'warm',
+                regions: [
+                    { latMin: 45, latMax: 60, lngMin: -40, lngMax: -10 }
+                ],
+                speed: 1.8,
+                direction: 60,
+                variation: 20
+            },
+            // Южная Атлантика
+            {
+                name: 'Brazil Current',
+                type: 'warm',
+                regions: [
+                    { latMin: -30, latMax: -10, lngMin: -50, lngMax: -35 }
+                ],
+                speed: 1.5,
+                direction: 180,
+                variation: 15
+            },
+            {
+                name: 'South Atlantic Current',
+                type: 'cold',
+                regions: [
+                    { latMin: -40, latMax: -30, lngMin: -50, lngMax: 10 }
+                ],
+                speed: 1.2,
+                direction: 90,
+                variation: 20
+            },
+            {
+                name: 'Benguela Current',
+                type: 'cold',
+                regions: [
+                    { latMin: -35, latMax: -20, lngMin: 5, lngMax: 15 }
+                ],
+                speed: 1.0,
+                direction: 350,
+                variation: 10
+            },
+            // Северный Тихий океан
+            {
+                name: 'Kuroshio Current',
+                type: 'warm',
+                regions: [
+                    { latMin: 20, latMax: 35, lngMin: 120, lngMax: 150 }
+                ],
+                speed: 2.2,
+                direction: 50,
+                variation: 15
+            },
+            {
+                name: 'North Pacific Current',
+                type: 'warm',
+                regions: [
+                    { latMin: 35, latMax: 45, lngMin: 150, lngMax: -130 }
+                ],
+                speed: 1.5,
+                direction: 80,
+                variation: 20
+            },
+            {
+                name: 'California Current',
+                type: 'cold',
+                regions: [
+                    { latMin: 25, latMax: 40, lngMin: -130, lngMax: -115 }
+                ],
+                speed: 0.8,
+                direction: 160,
+                variation: 15
+            },
+            // Южный Тихий океан
+            {
+                name: 'East Australian Current',
+                type: 'warm',
+                regions: [
+                    { latMin: -35, latMax: -20, lngMin: 150, lngMax: 160 }
+                ],
+                speed: 1.8,
+                direction: 180,
+                variation: 15
+            },
+            {
+                name: 'South Pacific Current',
+                type: 'cold',
+                regions: [
+                    { latMin: -45, latMax: -35, lngMin: 160, lngMax: -70 }
+                ],
+                speed: 1.0,
+                direction: 90,
+                variation: 20
+            },
+            {
+                name: 'Peru Current',
+                type: 'cold',
+                regions: [
+                    { latMin: -30, latMax: -10, lngMin: -90, lngMax: -70 }
+                ],
+                speed: 0.9,
+                direction: 340,
+                variation: 10
+            },
+            // Индийский океан
+            {
+                name: 'Agulhas Current',
+                type: 'warm',
+                regions: [
+                    { latMin: -35, latMax: -25, lngMin: 25, lngMax: 35 }
+                ],
+                speed: 2.0,
+                direction: 210,
+                variation: 15
+            },
+            {
+                name: 'West Australian Current',
+                type: 'cold',
+                regions: [
+                    { latMin: -35, latMax: -20, lngMin: 110, lngMax: 120 }
+                ],
+                speed: 0.7,
+                direction: 350,
+                variation: 10
+            },
+            {
+                name: 'South Indian Current',
+                type: 'cold',
+                regions: [
+                    { latMin: -40, latMax: -30, lngMin: 40, lngMax: 110 }
+                ],
+                speed: 1.0,
+                direction: 90,
+                variation: 20
+            },
+            // Экваториальные течения
+            {
+                name: 'North Equatorial Current (Atlantic)',
+                type: 'warm',
+                regions: [
+                    { latMin: 5, latMax: 15, lngMin: -60, lngMax: -20 }
+                ],
+                speed: 0.8,
+                direction: 270,
+                variation: 15
+            },
+            {
+                name: 'South Equatorial Current (Atlantic)',
+                type: 'warm',
+                regions: [
+                    { latMin: -10, latMax: 0, lngMin: -50, lngMax: 0 }
+                ],
+                speed: 0.9,
+                direction: 270,
+                variation: 15
+            },
+            {
+                name: 'North Equatorial Current (Pacific)',
+                type: 'warm',
+                regions: [
+                    { latMin: 10, latMax: 20, lngMin: 130, lngMax: -120 }
+                ],
+                speed: 0.7,
+                direction: 270,
+                variation: 15
+            },
+            {
+                name: 'South Equatorial Current (Pacific)',
+                type: 'warm',
+                regions: [
+                    { latMin: -10, latMax: 5, lngMin: 160, lngMax: -80 }
+                ],
+                speed: 0.8,
+                direction: 270,
+                variation: 15
+            },
+            {
+                name: 'Equatorial Countercurrent',
+                type: 'warm',
+                regions: [
+                    { latMin: 5, latMax: 10, lngMin: -50, lngMax: 0 }
+                ],
+                speed: 0.6,
+                direction: 90,
+                variation: 10
+            },
+            // Антарктические течения
+            {
+                name: 'Antarctic Circumpolar Current',
+                type: 'cold',
+                regions: [
+                    { latMin: -65, latMax: -50, lngMin: -180, lngMax: 180 }
+                ],
+                speed: 1.5,
+                direction: 90,
+                variation: 10,
+                isCircumpolar: true
+            },
+            // Северный Ледовитый океан
+            {
+                name: 'East Greenland Current',
+                type: 'cold',
+                regions: [
+                    { latMin: 65, latMax: 80, lngMin: -40, lngMax: -10 }
+                ],
+                speed: 0.8,
+                direction: 180,
+                variation: 10
+            },
+            {
+                name: 'Norwegian Current',
+                type: 'warm',
+                regions: [
+                    { latMin: 60, latMax: 70, lngMin: -10, lngMax: 20 }
+                ],
+                speed: 0.9,
+                direction: 45,
+                variation: 15
+            }
         ];
-        this.seasonalFactors = { summer: 1.2, winter: 0.8, spring: 1.0, autumn: 1.0 };
+
+        this.seasonalFactors = {
+            summer: 1.2,
+            winter: 0.8,
+            spring: 1.0,
+            autumn: 1.0
+        };
     }
 
     getCurrent(lat, lng, date = new Date()) {
         const season = this.getSeason(date);
         const seasonalFactor = this.seasonalFactors[season] || 1.0;
         const activeCurrents = this.findActiveCurrents(lat, lng);
-        if (activeCurrents.length === 0) return this.generateBackgroundCurrent(lat, lng);
-        let totalU = 0, totalV = 0;
+        
+        if (activeCurrents.length === 0) {
+            return this.generateBackgroundCurrent(lat, lng);
+        }
+        
+        let totalU = 0;
+        let totalV = 0;
+        
         for (const current of activeCurrents) {
             const { u, v } = this.calculateCurrentVector(current, lat, lng, seasonalFactor);
-            totalU += u; totalV += v;
+            totalU += u;
+            totalV += v;
         }
+        
         const speed = Math.sqrt(totalU * totalU + totalV * totalV);
         const direction = (Math.atan2(totalU, totalV) * 180 / Math.PI + 360) % 360;
-        return { speed: Math.min(speed, 4.0), direction, u: totalU, v: totalV, components: activeCurrents.map(c => c.name), season };
+        
+        return {
+            speed: Math.min(speed, 4.0),
+            direction: direction,
+            u: totalU,
+            v: totalV,
+            components: activeCurrents.map(c => c.name),
+            season: season
+        };
     }
 
     findActiveCurrents(lat, lng) {
         const active = [];
         for (const current of this.currents) {
             if (current.isCircumpolar) {
-                if (lat >= current.regions[0].latMin && lat <= current.regions[0].latMax) active.push(current);
+                if (lat >= current.regions[0].latMin && lat <= current.regions[0].latMax) {
+                    active.push(current);
+                }
                 continue;
             }
             for (const region of current.regions) {
-                let lngMin = region.lngMin, lngMax = region.lngMax;
+                let lngMin = region.lngMin;
+                let lngMax = region.lngMax;
                 if (lngMin > lngMax) {
-                    if ((lng >= lngMin || lng <= lngMax) && (lat >= region.latMin && lat <= region.latMax)) {
-                        active.push(current); break;
+                    if (lng >= lngMin || lng <= lngMax) {
+                        if (lat >= region.latMin && lat <= region.latMax) {
+                            active.push(current);
+                            break;
+                        }
                     }
                 } else {
-                    if ((lng >= lngMin && lng <= lngMax) && (lat >= region.latMin && lat <= region.latMax)) {
-                        active.push(current); break;
+                    if (lng >= lngMin && lng <= lngMax) {
+                        if (lat >= region.latMin && lat <= region.latMax) {
+                            active.push(current);
+                            break;
+                        }
                     }
                 }
             }
@@ -115,11 +377,16 @@ class OceanCurrentModel {
         let speed = current.speed * seasonalFactor;
         const latVariation = 0.5 + Math.sin(lat * 0.1) * 0.5;
         speed *= (0.8 + latVariation * 0.4);
-        speed *= (0.85 + Math.random() * 0.3);
+        const randomVariation = 0.85 + Math.random() * 0.3;
+        speed *= randomVariation;
+        
         let direction = current.direction;
-        direction += Math.sin(lat * 0.05) * 10;
-        direction += (Math.random() - 0.5) * current.variation;
+        const latDirectionShift = Math.sin(lat * 0.05) * 10;
+        direction += latDirectionShift;
+        const directionVariation = (Math.random() - 0.5) * current.variation;
+        direction += directionVariation;
         direction = (direction + 360) % 360;
+        
         const rad = direction * Math.PI / 180;
         return { u: speed * Math.cos(rad), v: speed * Math.sin(rad) };
     }
@@ -128,11 +395,19 @@ class OceanCurrentModel {
         const baseSpeed = 0.2 + Math.sin(lat * 0.2) * 0.1 + Math.cos(lng * 0.15) * 0.1;
         const direction = (Math.atan2(Math.sin(lat * 0.3), Math.cos(lng * 0.2)) * 180 / Math.PI + 180) % 360;
         const rad = direction * Math.PI / 180;
-        return { speed: baseSpeed, direction, u: baseSpeed * Math.cos(rad), v: baseSpeed * Math.sin(rad), components: ['background'], season: 'background' };
+        return {
+            speed: baseSpeed,
+            direction: direction,
+            u: baseSpeed * Math.cos(rad),
+            v: baseSpeed * Math.sin(rad),
+            components: ['background'],
+            season: 'background'
+        };
     }
 
     getSeason(date) {
-        const month = date.getMonth(), day = date.getDate();
+        const month = date.getMonth();
+        const day = date.getDate();
         if ((month === 2 && day >= 20) || (month >= 3 && month <= 4) || (month === 5 && day <= 20)) return 'spring';
         if ((month === 5 && day >= 21) || (month >= 6 && month <= 7) || (month === 8 && day <= 22)) return 'summer';
         if ((month === 8 && day >= 23) || (month >= 9 && month <= 10) || (month === 11 && day <= 20)) return 'autumn';
@@ -141,20 +416,41 @@ class OceanCurrentModel {
 }
 
 const oceanCurrents = new OceanCurrentModel();
-console.log('🌊 Ocean Current Model initialized');
 
-// =====================
-// ФУНКЦИИ ДЛЯ ВЕТРА И ТЕЧЕНИЙ
-// =====================
+// ============================================
+//  ФУНКЦИИ ДЛЯ ВЕТРА И ТЕЧЕНИЙ
+// ============================================
 async function fetchWindData(lat, lng) {
-    const apiKey = process.env.OPENWEATHER_API_KEY;
-    if (!apiKey) return { speed: 5 + Math.random() * 10, direction: Math.floor(Math.random() * 360), gust: 0 };
+    if (!OPENWEATHER_API_KEY) {
+        return { speed: 5 + Math.random() * 10, direction: Math.floor(Math.random() * 360), gust: 0 };
+    }
+    
+    const key = `${parseFloat(lat).toFixed(2)},${parseFloat(lng).toFixed(2)}`;
+    if (windCache.has(key)) {
+        const cached = windCache.get(key);
+        if (Date.now() - cached.timestamp < CACHE_TTL) {
+            return cached.data;
+        }
+    }
+    
     try {
-        const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${apiKey}&units=metric`;
+        const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${OPENWEATHER_API_KEY}&units=metric`;
         const response = await fetch(url);
         const data = await response.json();
-        if (data.wind) return { speed: data.wind.speed * 1.94384, direction: data.wind.deg || 0, gust: data.wind.gust ? data.wind.gust * 1.94384 : 0 };
-    } catch (error) { console.error('OpenWeatherMap error:', error); }
+        
+        if (data.wind) {
+            const result = {
+                speed: data.wind.speed * 1.94384,
+                direction: data.wind.deg || 0,
+                gust: data.wind.gust ? data.wind.gust * 1.94384 : 0
+            };
+            windCache.set(key, { data: result, timestamp: Date.now() });
+            return result;
+        }
+    } catch (error) {
+        console.error('OpenWeatherMap error:', error);
+    }
+    
     return { speed: 5 + Math.random() * 10, direction: Math.floor(Math.random() * 360), gust: 0 };
 }
 
@@ -162,20 +458,28 @@ async function fetchCurrentData(lat, lng) {
     const key = `${parseFloat(lat).toFixed(2)},${parseFloat(lng).toFixed(2)}`;
     if (currentCache.has(key)) {
         const cached = currentCache.get(key);
-        if (Date.now() - cached.timestamp < CACHE_TTL) return cached.data;
+        if (Date.now() - cached.timestamp < CACHE_TTL) {
+            return cached.data;
+        }
     }
+    
     const current = oceanCurrents.getCurrent(lat, lng);
-    const result = { speed: current.speed, direction: current.direction, u: current.u, v: current.v, source: 'internal_model', components: current.components || [], season: current.season || 'unknown' };
+    const result = {
+        speed: current.speed,
+        direction: current.direction,
+        u: current.u,
+        v: current.v,
+        source: 'internal_model',
+        components: current.components || [],
+        season: current.season || 'unknown'
+    };
     currentCache.set(key, { data: result, timestamp: Date.now() });
     return result;
 }
 
-// =====================
-// API
-// =====================
-app.use(express.json());
-app.use(express.static('public'));
-
+// ============================================
+//  API
+// ============================================
 app.get('/api/wind', async (req, res) => {
     const { lat, lng } = req.query;
     const data = await fetchWindData(lat, lng);
@@ -188,10 +492,22 @@ app.get('/api/current', async (req, res) => {
     res.json(data);
 });
 
+app.get('/api/currents/grid', (req, res) => {
+    const { latMin, latMax, lngMin, lngMax, step } = req.query;
+    const grid = oceanCurrents.getCurrentsForVisualization(
+        parseFloat(latMin || -60),
+        parseFloat(latMax || 60),
+        parseFloat(lngMin || -180),
+        parseFloat(lngMax || 180),
+        parseFloat(step || 10)
+    );
+    res.json(grid);
+});
+
 app.get('/api/players', (req, res) => {
     const playerList = [];
     for (const [id, ship] of players) {
-        if (ship.isGuest) continue; // Гости не считаются
+        if (ship.isGuest) continue;
         playerList.push({
             id: id,
             name: ship.name,
@@ -200,18 +516,18 @@ app.get('/api/players', (req, res) => {
             isGrounded: ship.isGrounded
         });
     }
-    res.json({ 
-        players: playerList, 
-        maxPlayers: MAX_PLAYERS, 
+    res.json({
+        players: playerList,
+        maxPlayers: MAX_PLAYERS,
         current: playerList.filter(p => !p.isEliminated).length,
         eliminated: playerList.filter(p => p.isEliminated).length
     });
 });
 
 // ============================================
-//  РЕГИСТРАЦИЯ
+//  РЕГИСТРАЦИЯ (JSON файл)
 // ============================================
-const usersFile = 'data/users.json';
+const usersFile = path.join(__dirname, 'data', 'users.json');
 
 function loadUsers() {
     try {
@@ -223,7 +539,9 @@ function loadUsers() {
             }
             console.log(`👥 Loaded ${registeredUsers.size} registered users`);
         }
-    } catch (error) { console.error('Error loading users:', error); }
+    } catch (error) {
+        console.error('Error loading users:', error);
+    }
 }
 
 function saveUsers() {
@@ -233,18 +551,30 @@ function saveUsers() {
             users[username] = userData;
         }
         fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
-    } catch (error) { console.error('Error saving users:', error); }
+    } catch (error) {
+        console.error('Error saving users:', error);
+    }
 }
 
-if (!fs.existsSync('data')) fs.mkdirSync('data');
+if (!fs.existsSync(path.join(__dirname, 'data'))) {
+    fs.mkdirSync(path.join(__dirname, 'data'));
+}
 loadUsers();
 
 app.post('/api/register', (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ success: false, message: 'Необходимы имя и пароль' });
-    if (username.length < 3 || username.length > 20) return res.status(400).json({ success: false, message: 'Имя должно быть 3-20 символов' });
-    if (password.length < 4) return res.status(400).json({ success: false, message: 'Пароль должен быть минимум 4 символа' });
-    if (registeredUsers.has(username)) return res.status(400).json({ success: false, message: 'Пользователь с таким именем уже существует' });
+    if (!username || !password) {
+        return res.status(400).json({ success: false, message: 'Необходимы имя и пароль' });
+    }
+    if (username.length < 3 || username.length > 20) {
+        return res.status(400).json({ success: false, message: 'Имя должно быть 3-20 символов' });
+    }
+    if (password.length < 4) {
+        return res.status(400).json({ success: false, message: 'Пароль должен быть минимум 4 символа' });
+    }
+    if (registeredUsers.has(username)) {
+        return res.status(400).json({ success: false, message: 'Пользователь с таким именем уже существует' });
+    }
     
     const passwordHash = Buffer.from(password).toString('base64');
     registeredUsers.set(username, { password: passwordHash, shipId: null });
@@ -255,13 +585,19 @@ app.post('/api/register', (req, res) => {
 
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ success: false, message: 'Необходимы имя и пароль' });
+    if (!username || !password) {
+        return res.status(400).json({ success: false, message: 'Необходимы имя и пароль' });
+    }
     
     const userData = registeredUsers.get(username);
-    if (!userData) return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
+    if (!userData) {
+        return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
+    }
     
     const passwordHash = Buffer.from(password).toString('base64');
-    if (userData.password !== passwordHash) return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
+    if (userData.password !== passwordHash) {
+        return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
+    }
     
     // Проверяем, есть ли у игрока активный корабль
     let hasActiveShip = false;
@@ -277,9 +613,7 @@ app.post('/api/login', (req, res) => {
         }
     }
     
-    // Если корабль выбыл — игрок может создать новый
     if (shipIsEliminated) {
-        // Удаляем старый корабль
         for (const [id, ship] of players) {
             if (ship.owner === username) {
                 players.delete(id);
@@ -290,13 +624,12 @@ app.post('/api/login', (req, res) => {
         saveUsers();
     }
     
-    // Проверяем лимит (если нет активного корабля)
     if (!hasActiveShip && !shipIsEliminated) {
         const activePlayers = Array.from(players.values()).filter(p => p.isOnline && !p.isGuest && !p.isEliminated);
         if (activePlayers.length >= MAX_PLAYERS) {
-            return res.status(403).json({ 
-                success: false, 
-                message: `Максимум ${MAX_PLAYERS} игроков. Попробуйте позже.` 
+            return res.status(403).json({
+                success: false,
+                message: `Максимум ${MAX_PLAYERS} игроков. Попробуйте позже.`
             });
         }
     }
@@ -305,9 +638,9 @@ app.post('/api/login', (req, res) => {
     res.json({ success: true, token, username, message: 'Вход выполнен успешно' });
 });
 
-// =====================
-// КЛАСС КОРАБЛЯ
-// =====================
+// ============================================
+//  КЛАСС КОРАБЛЯ
+// ============================================
 class Ship {
     constructor(id, name, lat, lng, isGuest = false, owner = null) {
         this.id = id;
@@ -321,9 +654,9 @@ class Ship {
         this.targetSailPosition = 0.5;
         this.isAnchored = false;
         this.isGrounded = false;
-        this.isEliminated = false;        // Выбыл из игры
-        this.eliminationReason = null;    // Причина выбывания
-        this.eliminationTime = null;      // Время выбывания
+        this.isEliminated = false;
+        this.eliminationReason = null;
+        this.eliminationTime = null;
         this.speed = 0;
         this.currentDrift = { lat: 0, lng: 0 };
         this.shipType = Math.floor(Math.random() * 3) + 1;
@@ -335,34 +668,27 @@ class Ship {
         this.groundTime = null;
         this.helpRequested = false;
         this.color = `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
-        this.eliminationCountdown = 0;    // Обратный отсчёт до выбывания
     }
 
     update(wind, current, deltaTime) {
-        // Если выбыл — не обновляем
         if (this.isEliminated) return;
-
-        // Если на якоре — стоим
         if (this.isAnchored) {
             this.speed = 0;
             return;
         }
 
-        // Если на мели — начинаем отсчёт до выбывания
         if (this.isGrounded) {
             this.speed = 0;
             if (!this.groundTime) {
                 this.groundTime = Date.now();
             }
-            // Проверяем, не превышен ли лимит времени на мели
             if (Date.now() - this.groundTime > GROUNDED_TIMEOUT) {
                 this.eliminate('Сел на мель и не смог сняться');
             }
             return;
         }
 
-        // Нормальное движение
-        this.groundTime = null; // Сброс, если не на мели
+        this.groundTime = null;
 
         const sailDiff = this.targetSailPosition - this.sailPosition;
         this.sailPosition += sailDiff * deltaTime * 0.5;
@@ -426,12 +752,8 @@ class Ship {
         this.lastSeen = Date.now();
     }
 
-    // ============================================
-    //  ВЫБЫВАНИЕ ИЗ ИГРЫ
-    // ============================================
     eliminate(reason) {
         if (this.isEliminated) return;
-        
         this.isEliminated = true;
         this.eliminationReason = reason;
         this.eliminationTime = Date.now();
@@ -439,14 +761,12 @@ class Ship {
         this.speed = 0;
         
         console.log(`💀 ${this.name} выбыл из игры: ${reason}`);
-        
         io.emit('ship_eliminated', {
             playerId: this.id,
             name: this.name,
             reason: reason
         });
         
-        // Освобождаем корабль
         if (this.owner) {
             for (const [username, data] of registeredUsers) {
                 if (data.shipId === this.id) {
@@ -456,8 +776,6 @@ class Ship {
                 }
             }
         }
-        
-        // Отправляем обновление состояния
         broadcastState();
     }
 
@@ -532,9 +850,9 @@ class Ship {
     }
 }
 
-// =====================
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-// =====================
+// ============================================
+//  ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ============================================
 function getRandomStartPosition() {
     const positions = [
         { lat: 50, lng: -10 }, { lat: 40, lng: -30 }, { lat: 30, lng: -15 },
@@ -573,39 +891,49 @@ function isOnLand(lat, lng) {
     return false;
 }
 
-// =====================
-// ОЧИСТКА НЕАКТИВНЫХ И ВЫБЫВШИХ
-// =====================
+function getAllPlayersState() {
+    const result = {};
+    for (const [id, ship] of players) {
+        result[id] = ship.getState();
+    }
+    return result;
+}
+
+function broadcastState() {
+    io.emit('state', {
+        players: getAllPlayersState(),
+        timestamp: Date.now()
+    });
+}
+
+// ============================================
+//  ОЧИСТКА НЕАКТИВНЫХ
+// ============================================
 setInterval(() => {
     const now = Date.now();
     const toRemove = [];
     
     for (const [id, ship] of players) {
-        // 1. Выбывшие корабли удаляем сразу
         if (ship.isEliminated) {
             toRemove.push(id);
             continue;
         }
         
-        // 2. Неактивные более 48 часов — выбывают
         if (!ship.isOnline && (now - ship.lastSeen) > INACTIVITY_TIMEOUT) {
             ship.eliminate('Неактивен более 48 часов');
             toRemove.push(id);
             continue;
         }
         
-        // 3. Гости удаляются через 1 час неактивности
         if (ship.isGuest && !ship.isOnline && (now - ship.lastSeen) > 60 * 60 * 1000) {
             toRemove.push(id);
             continue;
         }
     }
     
-    // Удаляем помеченные корабли
     for (const id of toRemove) {
         const ship = players.get(id);
         if (ship) {
-            // Освобождаем владельца
             if (ship.owner) {
                 for (const [username, data] of registeredUsers) {
                     if (data.shipId === id) {
@@ -616,9 +944,9 @@ setInterval(() => {
                 }
             }
             players.delete(id);
-            console.log(`🧹 Removed ship: ${ship.name} (${ship.isEliminated ? 'eliminated' : 'inactive'})`);
-            io.emit('player_removed', { 
-                playerId: id, 
+            console.log(`🧹 Removed ship: ${ship.name}`);
+            io.emit('player_removed', {
+                playerId: id,
                 name: ship.name,
                 reason: ship.isEliminated ? 'Выбыл из игры' : 'Неактивен'
             });
@@ -628,11 +956,11 @@ setInterval(() => {
     if (toRemove.length > 0) {
         broadcastState();
     }
-}, 30 * 1000); // Проверка каждые 30 секунд
+}, 30000);
 
-// =====================
-// SOCKET.IO
-// =====================
+// ============================================
+//  SOCKET.IO
+// ============================================
 io.on('connection', (socket) => {
     console.log('🔗 New connection:', socket.id);
     
@@ -640,9 +968,6 @@ io.on('connection', (socket) => {
     let isGuest = true;
     let username = null;
 
-    // ============================================
-    //  ВХОД КАК ГОСТЬ
-    // ============================================
     socket.on('join_as_guest', () => {
         isGuest = true;
         username = `Гость_${socket.id.substring(0, 6)}`;
@@ -669,12 +994,8 @@ io.on('connection', (socket) => {
         broadcastState();
     });
 
-    // ============================================
-    //  ВХОД КАК ИГРОК
-    // ============================================
     socket.on('join_as_player', async (data) => {
         const { token } = data;
-        
         if (!token) {
             socket.emit('join_error', { message: 'Требуется авторизация' });
             return;
@@ -696,7 +1017,6 @@ io.on('connection', (socket) => {
             return;
         }
         
-        // Ищем существующий корабль
         let existingShip = null;
         for (const [id, ship] of players) {
             if (ship.owner === username && !ship.isEliminated) {
@@ -706,13 +1026,11 @@ io.on('connection', (socket) => {
         }
         
         if (existingShip) {
-            // Переподключение
             existingShip.isOnline = true;
             existingShip.lastSeen = Date.now();
             shipId = existingShip.id;
             isGuest = false;
             
-            // Если корабль на мели — даём шанс сняться
             if (existingShip.isGrounded) {
                 socket.emit('ship_status', {
                     status: 'grounded',
@@ -734,18 +1052,16 @@ io.on('connection', (socket) => {
             
             console.log(`♻️ Player ${username} reconnected`);
         } else {
-            // Проверяем лимит
             const activePlayers = Array.from(players.values())
                 .filter(p => p.isOnline && !p.isGuest && !p.isEliminated);
             
             if (activePlayers.length >= MAX_PLAYERS) {
-                socket.emit('join_error', { 
-                    message: `Максимум ${MAX_PLAYERS} игроков одновременно` 
+                socket.emit('join_error', {
+                    message: `Максимум ${MAX_PLAYERS} игроков одновременно`
                 });
                 return;
             }
             
-            // Создаём новый корабль
             const startPos = getRandomStartPosition();
             const ship = new Ship(socket.id, username, startPos.lat, startPos.lng, false, username);
             ship.isOnline = true;
@@ -780,9 +1096,6 @@ io.on('connection', (socket) => {
         broadcastState();
     });
 
-    // ============================================
-    //  УПРАВЛЕНИЕ
-    // ============================================
     const handleAction = (socket, action, handler) => {
         if (isGuest) {
             socket.emit('action_result', { action, success: false, message: 'Гости не могут управлять кораблём' });
@@ -825,9 +1138,6 @@ io.on('connection', (socket) => {
         handleAction(socket, 'help', (ship) => ship.requestHelp());
     });
 
-    // ============================================
-    //  ЧАТ
-    // ============================================
     socket.on('chat', (data) => {
         const ship = players.get(socket.id);
         const name = ship ? ship.name : 'Unknown';
@@ -839,9 +1149,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // ============================================
-    //  ОТКЛЮЧЕНИЕ
-    // ============================================
     socket.on('disconnect', () => {
         const ship = players.get(socket.id);
         if (ship) {
@@ -864,27 +1171,9 @@ io.on('connection', (socket) => {
     });
 });
 
-// =====================
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-// =====================
-function getAllPlayersState() {
-    const result = {};
-    for (const [id, ship] of players) {
-        result[id] = ship.getState();
-    }
-    return result;
-}
-
-function broadcastState() {
-    io.emit('state', {
-        players: getAllPlayersState(),
-        timestamp: Date.now()
-    });
-}
-
-// =====================
-// ИГРОВОЙ ЦИКЛ
-// =====================
+// ============================================
+//  ИГРОВОЙ ЦИКЛ
+// ============================================
 setInterval(async () => {
     const deltaTime = 1 / 30;
     
@@ -902,15 +1191,21 @@ setInterval(async () => {
     broadcastState();
 }, 1000 / 30);
 
-// =====================
-// ЗАПУСК СЕРВЕРА
-// =====================
+// ============================================
+//  ЗАПУСК СЕРВЕРА
+// ============================================
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Regatta server running at http://0.0.0.0:${PORT}`);
     console.log(`👥 Max players: ${MAX_PLAYERS}`);
-    console.log(`⏰ Inactivity timeout: ${INACTIVITY_TIMEOUT / (60 * 60 * 1000)} hours`);
-    console.log(`⏳ Grounded timeout: ${GROUNDED_TIMEOUT / 1000} seconds`);
+    console.log(`⏰ Inactivity timeout: ${INACTIVITY_TIMEOUT_HOURS} hours`);
+    console.log(`⏳ Grounded timeout: ${GROUNDED_TIMEOUT_SECONDS} seconds`);
     console.log(`👤 Registered users: ${registeredUsers.size}`);
     console.log(`🌊 Wind + ocean currents enabled`);
-    console.log(`📡 Socket.IO enabled`);
+    console.log(`📡 Socket.IO enabled\n`);
+});
+
+// Обработка завершения
+process.on('SIGINT', () => {
+    console.log('\n🛑 Server shutting down...');
+    process.exit();
 });
