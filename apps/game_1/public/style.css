@@ -1,0 +1,768 @@
+/* ============================================
+   БАЗОВЫЕ СТИЛИ
+   ============================================ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #0a1a2a;
+    color: #fff;
+    overflow: hidden;
+    height: 100vh;
+}
+
+/* ============================================
+   КАРТА
+   ============================================ */
+#map {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+}
+
+/* ============================================
+   МОДАЛЬНОЕ ОКНО АВТОРИЗАЦИИ
+   ============================================ */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.modal-content {
+    background: linear-gradient(145deg, #1a2a3a, #0d1b2a);
+    padding: 40px 35px;
+    border-radius: 24px;
+    max-width: 420px;
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+    position: relative;
+}
+
+.modal-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.modal-header h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #f5e6c8, #ffd966);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 4px;
+}
+
+.modal-header .subtitle {
+    color: #8899aa;
+    font-size: 0.9rem;
+    -webkit-text-fill-color: #8899aa;
+}
+
+/* Вкладки */
+.auth-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.auth-tabs .tab-btn {
+    flex: 1;
+    padding: 10px 0;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #8899aa;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.auth-tabs .tab-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.auth-tabs .tab-btn.active {
+    background: #4a9eff;
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(74, 158, 255, 0.3);
+}
+
+/* Формы */
+.auth-form {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.auth-form.active {
+    display: flex;
+}
+
+.auth-form input {
+    padding: 12px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    color: #fff;
+    font-size: 0.95rem;
+    transition: border-color 0.3s;
+}
+
+.auth-form input:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.auth-form input::placeholder {
+    color: #556677;
+}
+
+.btn-primary {
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #4a9eff, #6c5ce7);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(74, 158, 255, 0.4);
+}
+
+.btn-secondary {
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    background: transparent;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.error-message {
+    color: #ff6b6b;
+    font-size: 0.85rem;
+    display: none;
+    padding: 4px 0;
+}
+
+.guest-info {
+    color: #8899aa;
+    font-size: 0.95rem;
+    text-align: center;
+    padding: 8px 0;
+}
+
+.auth-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 18px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    color: #667788;
+    font-size: 0.8rem;
+}
+
+.auth-footer #server-status {
+    color: #4caf50;
+}
+
+/* ============================================
+   HUD
+   ============================================ */
+#hud {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 14px 22px;
+    border-radius: 18px;
+    z-index: 100;
+    color: #fff;
+    min-width: 720px;
+    max-width: 95%;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+#hud-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+#ship-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.95rem;
+}
+
+#ship-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.role-badge {
+    background: rgba(74, 158, 255, 0.2);
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    color: #4a9eff;
+}
+
+#hud-stats {
+    display: flex;
+    gap: 18px;
+    color: #8899aa;
+    font-size: 0.85rem;
+}
+
+#hud-stats span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Информация о корабле */
+#ship-info {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+}
+
+.info-item .label {
+    color: #8899aa;
+}
+
+.info-item .value {
+    color: #fff;
+    font-weight: 600;
+    min-width: 30px;
+}
+
+.info-item .unit {
+    color: #667788;
+    font-size: 0.75rem;
+}
+
+.sail-bar {
+    width: 60px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.sail-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ffd966, #f6b26b);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* Управление */
+#controls {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.controls-group {
+    display: flex;
+    gap: 4px;
+    padding: 0 6px;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.controls-group:last-child {
+    border-right: none;
+}
+
+.ctrl-btn {
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ctrl-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.ctrl-btn:active:not(:disabled) {
+    transform: translateY(0px);
+    background: rgba(74, 158, 255, 0.2);
+}
+
+.ctrl-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.anchor-btn {
+    color: #ffd93d;
+}
+
+.anchor-btn.active {
+    background: rgba(255, 217, 61, 0.15);
+    border-color: #ffd93d;
+}
+
+.help-btn {
+    color: #ff6b6b;
+}
+
+.help-btn.active {
+    background: rgba(255, 107, 107, 0.15);
+    border-color: #ff6b6b;
+}
+
+/* Погода */
+#weather-info {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 0.8rem;
+    color: #8899aa;
+}
+
+.weather-item {
+    display: flex;
+    gap: 6px;
+}
+
+.weather-item span:last-child {
+    color: #aabbcc;
+}
+
+/* ============================================
+   ЧАТ
+   ============================================ */
+#chat {
+    position: fixed;
+    bottom: 140px;
+    right: 20px;
+    width: 280px;
+    height: 320px;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 14px;
+    display: none;
+    flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+}
+
+#chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 0.85rem;
+    color: #8899aa;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+#chat-toggle {
+    background: none;
+    border: none;
+    color: #8899aa;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+#chat-messages {
+    flex: 1;
+    padding: 10px 14px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+#chat-messages .chat-system {
+    color: #667788;
+    font-style: italic;
+}
+
+#chat-messages .chat-user {
+    color: #e8e8e8;
+}
+
+#chat-messages .chat-danger {
+    color: #ff6b6b;
+}
+
+#chat-messages .chat-error {
+    color: #ffa94d;
+}
+
+#chat-messages .chat-guest {
+    color: #8899aa;
+}
+
+#chat-input-area {
+    display: flex;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+#chat-input {
+    flex: 1;
+    padding: 8px 14px;
+    border: none;
+    background: rgba(0, 0, 0, 0.3);
+    color: #fff;
+    font-size: 0.85rem;
+}
+
+#chat-input:focus {
+    outline: none;
+}
+
+#chat-send {
+    padding: 8px 14px;
+    border: none;
+    background: rgba(74, 158, 255, 0.2);
+    color: #4a9eff;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.2s;
+}
+
+#chat-send:hover {
+    background: rgba(74, 158, 255, 0.3);
+}
+
+/* ============================================
+   ЛЕГЕНДА
+   ============================================ */
+#legend {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 12px 16px;
+    border-radius: 12px;
+    color: #ccd;
+    z-index: 100;
+    font-size: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    min-width: 130px;
+}
+
+.legend-title {
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #fff;
+    font-size: 0.8rem;
+}
+
+#legend div {
+    margin: 3px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 6px 0;
+}
+
+/* ============================================
+   УВЕДОМЛЕНИЯ
+   ============================================ */
+#notifications {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.notification {
+    padding: 10px 24px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #fff;
+    font-size: 0.9rem;
+    animation: slideDown 0.4s ease;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    pointer-events: auto;
+    max-width: 90%;
+}
+
+.notification.success { border-color: #4caf50; }
+.notification.warning { border-color: #ffa94d; }
+.notification.danger { border-color: #ff6b6b; }
+.notification.info { border-color: #4a9eff; }
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   КНОПКА ТЕЧЕНИЙ
+   ============================================ */
+.toggle-btn {
+    position: fixed;
+    bottom: 140px;
+    left: 20px;
+    z-index: 100;
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #4a9eff;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.toggle-btn:hover {
+    background: rgba(74, 158, 255, 0.15);
+    border-color: #4a9eff;
+}
+
+/* ============================================
+   МАРКЕРЫ КОРАБЛЕЙ (Leaflet)
+   ============================================ */
+.ship-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: transform 0.1s;
+}
+
+.ship-marker .ship-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.ship-marker .ship-icon.online {
+    border-color: #4caf50;
+}
+
+.ship-marker .ship-icon.offline {
+    border-color: #ff9800;
+    opacity: 0.6;
+}
+
+.ship-marker .ship-icon.guest {
+    border-color: #9e9e9e;
+    opacity: 0.5;
+}
+
+.ship-marker .ship-icon.eliminated {
+    border-color: #f44336;
+    filter: grayscale(1);
+}
+
+/* ============================================
+   POPUP КАРТЫ
+   ============================================ */
+.leaflet-popup-content-wrapper {
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    color: #fff !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.leaflet-popup-tip {
+    background: rgba(0, 0, 0, 0.85) !important;
+}
+
+.leaflet-popup-content {
+    color: #fff !important;
+    font-size: 0.85rem !important;
+    line-height: 1.5 !important;
+}
+
+.leaflet-popup-content strong {
+    color: #ffd966 !important;
+}
+
+/* ============================================
+   АДАПТИВНОСТЬ
+   ============================================ */
+@media (max-width: 768px) {
+    .modal-content {
+        padding: 28px 20px;
+        margin: 16px;
+        max-width: 100%;
+    }
+
+    #hud {
+        min-width: unset;
+        width: 98%;
+        padding: 10px 14px;
+        bottom: 10px;
+        border-radius: 14px;
+    }
+
+    #ship-info {
+        gap: 10px;
+        font-size: 0.75rem;
+    }
+
+    #controls .ctrl-btn {
+        width: 38px;
+        height: 38px;
+        font-size: 0.9rem;
+    }
+
+    #chat {
+        width: 240px;
+        height: 260px;
+        right: 10px;
+        bottom: 120px;
+    }
+
+    #legend {
+        display: none;
+    }
+
+    .toggle-btn {
+        bottom: 120px;
+        left: 10px;
+        width: 38px;
+        height: 38px;
+        font-size: 1rem;
+    }
+
+    #hud-top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    #weather-info {
+        flex-direction: column;
+        gap: 4px;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .auth-tabs .tab-btn {
+        font-size: 0.75rem;
+        padding: 8px 0;
+    }
+
+    .modal-header h1 {
+        font-size: 1.6rem;
+    }
+
+    #hud {
+        padding: 8px 10px;
+        font-size: 0.7rem;
+    }
+
+    #ship-info .info-item {
+        font-size: 0.7rem;
+    }
+
+    .sail-bar {
+        width: 40px;
+        height: 4px;
+    }
+
+    #controls .ctrl-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+}
