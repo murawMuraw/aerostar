@@ -7,90 +7,313 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        .admin-container {
-            max-width: 800px;
-            margin: 20px auto;
+        /* Переопределяем стили для админки */
+        body {
+            overflow-y: auto !important;
+            background: #0a1a2a;
+            min-height: 100vh;
             padding: 20px;
-            background: rgba(0,0,0,0.85);
+        }
+
+        .admin-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 25px 30px;
+            background: rgba(0, 0, 0, 0.88);
             border-radius: 20px;
             color: white;
+            border: 1px solid rgba(255, 255, 255, 0.06);
         }
+
         .admin-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
+
         .admin-header h1 {
             font-size: 24px;
+            background: linear-gradient(135deg, #f5e6c8, #ffd966);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
+
+        #admin-status {
+            font-size: 14px;
+            color: #4caf50;
+        }
+
         .admin-tabs {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
         }
+
         .admin-tabs button {
-            padding: 8px 20px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 18px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 8px;
-            color: white;
+            color: #8899aa;
             cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
         }
+
+        .admin-tabs button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
         .admin-tabs button.active {
             background: #4a9eff;
+            color: white;
+            border-color: #4a9eff;
         }
+
         .admin-panel {
             display: none;
+            animation: fadeIn 0.3s ease;
         }
+
         .admin-panel.active {
             display: block;
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .admin-panel h3 {
+            color: #ffd966;
+            margin: 20px 0 12px 0;
+            font-size: 18px;
+        }
+
+        .admin-panel h3:first-child {
+            margin-top: 0;
+        }
+
         .admin-panel label {
             display: block;
-            margin: 10px 0 5px;
+            margin: 8px 0 4px;
             color: #8899aa;
+            font-size: 13px;
         }
-        .admin-panel input, .admin-panel select {
+
+        .admin-panel input,
+        .admin-panel select {
             width: 100%;
-            padding: 10px;
+            padding: 10px 14px;
             border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.4);
             color: white;
+            font-size: 14px;
+            box-sizing: border-box;
         }
+
+        .admin-panel input:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
         .admin-panel .btn-save {
-            margin-top: 15px;
+            margin-top: 12px;
             padding: 10px 30px;
             background: #4a9eff;
             border: none;
             border-radius: 8px;
             color: white;
             cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            margin-right: 8px;
         }
+
         .admin-panel .btn-save:hover {
             background: #3a8eff;
+            transform: translateY(-1px);
         }
+
+        .admin-panel .btn-save.btn-danger {
+            background: #f44336;
+        }
+
+        .admin-panel .btn-save.btn-danger:hover {
+            background: #d32f2f;
+        }
+
+        .admin-panel .btn-save.btn-success {
+            background: #4caf50;
+        }
+
+        .admin-panel .btn-save.btn-success:hover {
+            background: #388e3c;
+        }
+
         .admin-map {
-            height: 300px;
+            height: 250px;
             border-radius: 12px;
-            margin: 10px 0;
+            margin: 10px 0 15px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
         }
+
         .current-race {
-            background: rgba(255,255,255,0.05);
-            padding: 15px;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 15px 18px;
             border-radius: 12px;
             margin: 10px 0;
+            border-left: 3px solid #4a9eff;
         }
-        .race-status {
+
+        .current-race .race-status {
             display: inline-block;
-            padding: 4px 12px;
+            padding: 3px 14px;
             border-radius: 20px;
             font-size: 12px;
+            font-weight: 600;
         }
-        .race-status.scheduled { background: #ffa94d; }
-        .race-status.active { background: #4caf50; }
-        .race-status.finished { background: #4a9eff; }
+
+        .race-status.scheduled {
+            background: #ffa94d;
+            color: #1a1a2e;
+        }
+        .race-status.active {
+            background: #4caf50;
+            color: white;
+        }
+        .race-status.finished {
+            background: #4a9eff;
+            color: white;
+        }
+
+        .race-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 10px 0;
+        }
+
+        .race-info-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 10px 14px;
+            border-radius: 8px;
+        }
+
+        .race-info-item .label {
+            color: #8899aa;
+            font-size: 12px;
+        }
+
+        .race-info-item .value {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .players-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .players-list .player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .players-list .player-item .status {
+            font-size: 12px;
+        }
+
+        .players-list .player-item .status.online {
+            color: #4caf50;
+        }
+        .players-list .player-item .status.offline {
+            color: #ff9800;
+        }
+        .players-list .player-item .status.eliminated {
+            color: #f44336;
+        }
+
+        .schedule-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .schedule-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 8px;
+        }
+
+        .btn-add {
+            margin-top: 12px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #8899aa;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        .btn-add:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        /* Адаптив */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .admin-container {
+                padding: 15px;
+            }
+            .race-info-grid {
+                grid-template-columns: 1fr;
+            }
+            .admin-header h1 {
+                font-size: 20px;
+            }
+            .admin-tabs button {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+            .admin-panel .btn-save {
+                width: 100%;
+                margin-right: 0;
+            }
+            .btn-group {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
@@ -106,46 +329,83 @@
             <button data-tab="players">👥 Игроки</button>
         </div>
 
-        <!-- Панель: Гонка -->
+        <!-- ========================================== -->
+        <!-- ПАНЕЛЬ: ГОНКА                              -->
+        <!-- ========================================== -->
         <div class="admin-panel active" id="panel-race">
-            <h3>Текущая гонка</h3>
-            <div id="current-race-info">
-                <p>Гонка не активна</p>
+
+            <h3>📊 Текущая гонка</h3>
+            <div class="current-race" id="current-race-info">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <span style="font-weight:600;">Гонка не активна</span>
+                    <span class="race-status scheduled">⏳ Запланирована</span>
+                </div>
             </div>
 
-            <h3>📍 Точка старта</h3>
+            <div class="race-info-grid">
+                <div class="race-info-item">
+                    <div class="label">🏁 Старт</div>
+                    <div class="value" id="display-start">—</div>
+                </div>
+                <div class="race-info-item">
+                    <div class="label">🎯 Финиш</div>
+                    <div class="value" id="display-finish">—</div>
+                </div>
+            </div>
+
+            <h3>📍 Настройка маршрута</h3>
+
             <div class="admin-map" id="start-map"></div>
-            <label>Название</label>
-            <input type="text" id="start-name" value="Порт Ливерпуль">
-            <label>Широта</label>
-            <input type="number" id="start-lat" value="53.4" step="0.01">
-            <label>Долгота</label>
-            <input type="number" id="start-lng" value="-3.0" step="0.01">
 
-            <h3>📍 Точка финиша</h3>
-            <label>Название</label>
-            <input type="text" id="finish-name" value="Порт Нью-Йорк">
-            <label>Широта</label>
-            <input type="number" id="finish-lat" value="40.7" step="0.01">
-            <label>Долгота</label>
-            <input type="number" id="finish-lng" value="-74.0" step="0.01">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                <div>
+                    <label>🏁 Старт — название</label>
+                    <input type="text" id="start-name" value="Порт Ливерпуль">
+                    <label>Широта</label>
+                    <input type="number" id="start-lat" value="53.4" step="0.01">
+                    <label>Долгота</label>
+                    <input type="number" id="start-lng" value="-3.0" step="0.01">
+                </div>
+                <div>
+                    <label>🎯 Финиш — название</label>
+                    <input type="text" id="finish-name" value="Порт Нью-Йорк">
+                    <label>Широта</label>
+                    <input type="number" id="finish-lat" value="40.7" step="0.01">
+                    <label>Долгота</label>
+                    <input type="number" id="finish-lng" value="-74.0" step="0.01">
+                </div>
+            </div>
 
-            <button class="btn-save" id="btn-save-race">💾 Сохранить гонку</button>
-            <button class="btn-save" id="btn-start-race" style="background: #4caf50;">🚀 Старт гонки</button>
-            <button class="btn-save" id="btn-finish-race" style="background: #f44336;">🏁 Финиш</button>
+            <div class="btn-group">
+                <button class="btn-save" id="btn-save-race">💾 Сохранить маршрут</button>
+                <button class="btn-save btn-success" id="btn-start-race">🚀 Старт гонки</button>
+                <button class="btn-save btn-danger" id="btn-finish-race">🏁 Финиш</button>
+            </div>
         </div>
 
-        <!-- Панель: Расписание -->
+        <!-- ========================================== -->
+        <!-- ПАНЕЛЬ: РАСПИСАНИЕ                        -->
+        <!-- ========================================== -->
         <div class="admin-panel" id="panel-schedule">
-            <h3>Расписание гонок</h3>
-            <div id="schedule-list"></div>
-            <button class="btn-save" id="btn-add-race">➕ Добавить гонку</button>
+            <h3>📅 Расписание гонок</h3>
+            <div class="schedule-list" id="schedule-list">
+                <div class="schedule-item" style="color:#8899aa; font-style:italic;">
+                    Нет запланированных гонок
+                </div>
+            </div>
+            <button class="btn-add" id="btn-add-race">➕ Добавить гонку</button>
         </div>
 
-        <!-- Панель: Игроки -->
+        <!-- ========================================== -->
+        <!-- ПАНЕЛЬ: ИГРОКИ                            -->
+        <!-- ========================================== -->
         <div class="admin-panel" id="panel-players">
-            <h3>Активные игроки</h3>
-            <div id="players-list"></div>
+            <h3>👥 Активные игроки</h3>
+            <div class="players-list" id="players-list">
+                <div style="color:#8899aa; font-style:italic; padding:10px;">
+                    Загрузка...
+                </div>
+            </div>
         </div>
     </div>
 
