@@ -321,7 +321,7 @@ class RegattaGame {
 
     createCurrentArrow(point) {
         const { lat, lng, speed, direction } = point;
-        const length = Math.min(speed * 0.03, 0.5);
+        const length = Math.min(speed * 0.08, 1.2);
         const angle = (direction - 90) * Math.PI / 180;
 
         const endLat = lat + length * Math.cos(angle);
@@ -333,15 +333,15 @@ class RegattaGame {
             [[lat, lng], [endLat, endLng]],
             {
                 color: color,
-                weight: 1.5 + speed * 0.3,
-                opacity: 0.5,
-                dashArray: '4, 4'
+                weight: 3 + speed * 0.5,
+                opacity: 0.7,
+                dashArray: null
             }
         );
 
         // Наконечник
-        const headSize = 0.08;
-        const headAngle = 0.5;
+        const headSize = 0.15;
+        const headAngle = 0.6;
         const headPoints = [
             [endLat, endLng],
             [
@@ -356,8 +356,8 @@ class RegattaGame {
 
         const head = L.polyline(headPoints, {
             color: color,
-            weight: 1.5,
-            opacity: 0.5
+            weight: 3,
+            opacity: 0.7
         });
 
         return L.layerGroup([line, head]);
