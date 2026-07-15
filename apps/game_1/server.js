@@ -649,6 +649,65 @@ app.get('/regatta.html', (req, res) => {
 app.get('/favicon.ico', (req, res) => {
     res.status(204).end();
 });
+// ============================================
+//  АДМИН-API
+// ============================================
+
+let currentRace = {
+    startName: 'Порт Ливерпуль',
+    startLat: 53.4,
+    startLng: -3.0,
+    finishName: 'Порт Нью-Йорк',
+    finishLat: 40.7,
+    finishLng: -74.0,
+    status: 'scheduled', // scheduled, active, finished
+    startTime: null,
+    finishTime: null
+};
+
+// Получить текущую гонку
+app.get('/api/admin/race', (req, res) => {
+    res.json(currentRace);
+});
+
+// Сохранить гонку
+app.post('/api/admin/race', (req, res) => {
+    const { startName, startLat, startLng, finishName, finishLat, finishLng } = req.body;
+    if (startName) currentRace.startName = startName;
+    if (startLat) currentRace.startLat = startLat;
+    if (startLng) currentRace.startLng = startLng;
+    if (finishName) currentRace.finishName = finishName;
+    if (finishLat) currentRace.finishLat = finishLat;
+    if (finishLng) currentRace.finishLng = finishLng;
+    res.json({ success: true });
+});
+
+// Старт гонки
+app.post('/api/admin/race/start', (req, res) => {
+    currentRace.status = 'active';
+    currentRace.startTime = Date.now();
+    io.emit('race_started', currentRace);
+    res.json({ success: true });
+});
+
+// Финиш гонки
+app.post('/api/admin/race/finish', (req, res) => {
+    currentRace.status = 'finished';
+    currentRace.finishTime = Date.now();
+    io.emit('race_finished', currentRace);
+    res.json({ success: true });
+});
+
+// Выбор парусника и старта
+app.post('/api/select', (req, res) => {
+    const { shipId, startPoint } = req.body;
+    // Сохраняем выбор в сессии игрока
+    // Здесь можно сохранить в базу или в память
+    res.json({ success: true });
+});
+
+
+
 
 // ============================================
 //  РАБОТА С ПОЛЬЗОВАТЕЛЯМИ (JSON)
