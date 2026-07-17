@@ -681,6 +681,40 @@ class RegattaGame {
     }
 }
 
+// Добавьте в setupSocketHandlers()
+
+this.socket.on('admin_message', (data) => {
+    // Показываем сообщение вверху чата
+    const adminMsg = document.createElement('div');
+    adminMsg.className = 'admin-message';
+    adminMsg.innerHTML = `
+        <div style="
+            background: linear-gradient(135deg, #ffd966, #f7971e);
+            color: #1a1a2e;
+            padding: 10px 16px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(247,151,30,0.3);
+        ">
+            📢 ${data.text}
+        </div>
+    `;
+    
+    const messages = document.getElementById('chat-messages');
+    messages.prepend(adminMsg);
+    
+    // Авто-удаление через 30 секунд
+    setTimeout(() => {
+        if (adminMsg.parentNode) {
+            adminMsg.style.transition = 'opacity 0.5s';
+            adminMsg.style.opacity = '0';
+            setTimeout(() => adminMsg.remove(), 500);
+        }
+    }, 30000);
+});
+
 // ============================================
 //  ЗАПУСК
 // ============================================
