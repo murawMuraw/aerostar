@@ -6,17 +6,18 @@
     <title>Админ-панель Regatta</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
-        /* Переопределяем стили для админки */
         body {
             overflow-y: auto !important;
             background: #0a1a2a;
             min-height: 100vh;
             padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .admin-container {
-            max-width: 900px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 25px 30px;
             background: rgba(0, 0, 0, 0.88);
@@ -35,7 +36,7 @@
         }
 
         .admin-header h1 {
-            font-size: 24px;
+            font-size: 26px;
             background: linear-gradient(135deg, #f5e6c8, #ffd966);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -106,7 +107,8 @@
         }
 
         .admin-panel input,
-        .admin-panel select {
+        .admin-panel select,
+        .admin-panel textarea {
             width: 100%;
             padding: 10px 14px;
             border-radius: 8px;
@@ -117,7 +119,13 @@
             box-sizing: border-box;
         }
 
-        .admin-panel input:focus {
+        .admin-panel textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .admin-panel input:focus,
+        .admin-panel textarea:focus {
             outline: none;
             border-color: #4a9eff;
         }
@@ -156,11 +164,24 @@
             background: #388e3c;
         }
 
+        .admin-panel .btn-save.btn-warning {
+            background: #ff9800;
+        }
+
+        .admin-panel .btn-save.btn-warning:hover {
+            background: #f57c00;
+        }
+
         .admin-map {
-            height: 250px;
+            height: 350px;
             border-radius: 12px;
             margin: 10px 0 15px;
             border: 1px solid rgba(255, 255, 255, 0.06);
+            cursor: crosshair;
+        }
+
+        .admin-map .leaflet-container {
+            cursor: crosshair !important;
         }
 
         .current-race {
@@ -194,7 +215,7 @@
 
         .race-info-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 15px;
             margin: 10px 0;
         }
@@ -288,16 +309,87 @@
             margin-top: 10px;
         }
 
+        .flatpickr-input {
+            background: rgba(0, 0, 0, 0.4) !important;
+            color: white !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 8px !important;
+            padding: 10px 14px !important;
+            width: 100% !important;
+        }
+
+        .flatpickr-calendar {
+            background: #1a2a3a !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+        }
+
+        .flatpickr-day {
+            color: #fff !important;
+        }
+
+        .flatpickr-day.selected {
+            background: #4a9eff !important;
+        }
+
+        .flatpickr-day:hover {
+            background: rgba(74, 158, 255, 0.3) !important;
+        }
+
+        .flatpickr-months .flatpickr-month {
+            color: #fff !important;
+        }
+
+        .flatpickr-weekdays {
+            color: #8899aa !important;
+        }
+
+        .flatpickr-current-month .flatpickr-monthDropdown-months {
+            color: #fff !important;
+        }
+
+        .date-time-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .marker-info {
+            background: rgba(74, 158, 255, 0.1);
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin: 8px 0;
+            border-left: 3px solid #4a9eff;
+            font-size: 14px;
+        }
+
+        .marker-info .coord {
+            color: #4a9eff;
+            font-weight: 600;
+        }
+
         /* Адаптив */
-        @media (max-width: 600px) {
-            body {
-                padding: 10px;
+        @media (max-width: 768px) {
+            .race-info-grid {
+                grid-template-columns: 1fr;
+            }
+            .date-time-group {
+                grid-template-columns: 1fr;
             }
             .admin-container {
                 padding: 15px;
             }
-            .race-info-grid {
-                grid-template-columns: 1fr;
+            .admin-map {
+                height: 250px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            .admin-container {
+                padding: 12px;
             }
             .admin-header h1 {
                 font-size: 20px;
@@ -306,12 +398,12 @@
                 font-size: 12px;
                 padding: 6px 12px;
             }
+            .btn-group {
+                flex-direction: column;
+            }
             .admin-panel .btn-save {
                 width: 100%;
                 margin-right: 0;
-            }
-            .btn-group {
-                flex-direction: column;
             }
         }
     </style>
@@ -327,6 +419,7 @@
             <button class="active" data-tab="race">🏁 Гонка</button>
             <button data-tab="schedule">📅 Расписание</button>
             <button data-tab="players">👥 Игроки</button>
+            <button data-tab="chat">💬 Чат</button>
         </div>
 
         <!-- ========================================== -->
@@ -337,7 +430,7 @@
             <h3>📊 Текущая гонка</h3>
             <div class="current-race" id="current-race-info">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                    <span style="font-weight:600;">Гонка не активна</span>
+                    <span style="font-weight:600;">⏳ Гонка не активна</span>
                     <span class="race-status scheduled">⏳ Запланирована</span>
                 </div>
             </div>
@@ -351,28 +444,49 @@
                     <div class="label">🎯 Финиш</div>
                     <div class="value" id="display-finish">—</div>
                 </div>
+                <div class="race-info-item">
+                    <div class="label">⏰ Время старта</div>
+                    <div class="value" id="display-time">—</div>
+                </div>
             </div>
 
-            <h3>📍 Настройка маршрута</h3>
+            <h3>📍 Кликните по карте для выбора точек</h3>
+            <p style="color:#8899aa; font-size:13px; margin-bottom:8px;">
+                🖱️ Клик по карте → установить СТАРТ (зелёный флаг)<br>
+                🖱️ Shift + клик → установить ФИНИШ (красный флаг)<br>
+                🗑️ Клик по маркеру → удалить точку
+            </p>
 
             <div class="admin-map" id="start-map"></div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+            <div class="marker-info" id="marker-info">
+                <span style="color:#8899aa;">Информация о точках появится здесь</span>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:10px;">
                 <div>
                     <label>🏁 Старт — название</label>
-                    <input type="text" id="start-name" value="Порт Ливерпуль">
-                    <label>Широта</label>
-                    <input type="number" id="start-lat" value="53.4" step="0.01">
-                    <label>Долгота</label>
-                    <input type="number" id="start-lng" value="-3.0" step="0.01">
+                    <input type="text" id="start-name" value="Порт Ливерпуль" placeholder="Название старта">
+                    <label>📌 Координаты</label>
+                    <input type="text" id="start-coords" value="53.4, -3.0" readonly style="color:#4a9eff;">
                 </div>
                 <div>
                     <label>🎯 Финиш — название</label>
-                    <input type="text" id="finish-name" value="Порт Нью-Йорк">
-                    <label>Широта</label>
-                    <input type="number" id="finish-lat" value="40.7" step="0.01">
-                    <label>Долгота</label>
-                    <input type="number" id="finish-lng" value="-74.0" step="0.01">
+                    <input type="text" id="finish-name" value="Порт Нью-Йорк" placeholder="Название финиша">
+                    <label>📌 Координаты</label>
+                    <input type="text" id="finish-coords" value="40.7, -74.0" readonly style="color:#ff6b6b;">
+                </div>
+            </div>
+
+            <h3>⏰ Дата и время старта</h3>
+            <div class="date-time-group">
+                <div>
+                    <label>📅 Дата старта</label>
+                    <input type="text" id="race-date" placeholder="Выберите дату">
+                </div>
+                <div>
+                    <label>🕐 Время старта</label>
+                    <input type="text" id="race-time" placeholder="Выберите время">
                 </div>
             </div>
 
@@ -407,9 +521,23 @@
                 </div>
             </div>
         </div>
+
+        <!-- ========================================== -->
+        <!-- ПАНЕЛЬ: ЧАТ                               -->
+        <!-- ========================================== -->
+        <div class="admin-panel" id="panel-chat">
+            <h3>💬 Сообщение в чат</h3>
+            <p style="color:#8899aa; font-size:13px; margin-bottom:8px;">
+                Текст будет отображён вверху чата у всех игроков
+            </p>
+            <label>📝 Текст сообщения</label>
+            <textarea id="chat-message-text" placeholder="Введите сообщение для всех игроков..."></textarea>
+            <button class="btn-save btn-warning" id="btn-send-chat">📤 Отправить в чат</button>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="admin.js"></script>
 </body>
 </html>
