@@ -1300,6 +1300,26 @@ setInterval(async () => {
 }, 1000 / 30);
 
 // ============================================
+//  АДМИН-API (дополнение)
+// ============================================
+
+// Отправка сообщения в чат
+app.post('/api/admin/chat', (req, res) => {
+    const { message } = req.body;
+    if (!message) {
+        return res.status(400).json({ success: false, error: 'Нет текста' });
+    }
+
+    // Отправляем всем игрокам
+    io.emit('admin_message', {
+        text: message,
+        timestamp: Date.now()
+    });
+
+    res.json({ success: true });
+});
+
+// ============================================
 //  ЗАПУСК СЕРВЕРА
 // ============================================
 server.listen(PORT, '0.0.0.0', () => {
