@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-        /* ========== ОСНОВНЫЕ СТИЛИ ========== */
+        /* ========== MAIN STYLES ========== */
         * {
             margin: 0;
             padding: 0;
@@ -30,7 +30,7 @@
             z-index: 1;
         }
         
-        /* ========== КНОПКА НАЗАД ========== */
+        /* ========== BACK BUTTON ========== */
         .back-button {
             position: absolute;
             top: 20px;
@@ -64,7 +64,7 @@
             transform: scale(0.95);
         }
         
-        /* ========== LIVE БЕЙДЖ ========== */
+        /* ========== LIVE BADGE ========== */
         .live-badge {
             position: absolute;
             top: 20px;
@@ -94,7 +94,7 @@
             }
         }
         
-        /* ========== ИНФОРМАЦИОННАЯ ПАНЕЛЬ ========== */
+        /* ========== INFO PANEL ========== */
         .info-panel {
             position: absolute;
             bottom: 80px;
@@ -151,7 +151,7 @@
             50% { opacity: 0.3; }
         }
         
-        /* ========== СТАТУС ПОДКЛЮЧЕНИЯ ========== */
+        /* ========== CONNECTION STATUS ========== */
         #connectionStatus {
             position: fixed;
             bottom: 20px;
@@ -172,7 +172,7 @@
             user-select: none;
         }
         
-        /* ========== ИНДИКАТОР ЗАГРУЗКИ ========== */
+        /* ========== LOADING INDICATOR ========== */
         .loading {
             position: fixed;
             top: 50%;
@@ -213,7 +213,7 @@
             letter-spacing: 1px;
         }
         
-        /* ========== УВЕЛИЧЕННАЯ ИКОНКА ШАРА ========== */
+        /* ========== ENLARGED BALLOON ICON ========== */
         .double-size-balloon {
             transform-origin: bottom center;
             transform: scale(2);
@@ -225,7 +225,7 @@
             transform: scale(2.5);
         }
         
-        /* ========== АДАПТИВНОСТЬ ========== */
+        /* ========== RESPONSIVE ========== */
         @media (min-width: 768px) {
             .info-panel {
                 left: auto;
@@ -319,7 +319,7 @@
             }
         }
         
-        /* ========== ДОПОЛНИТЕЛЬНЫЕ ЭФФЕКТЫ ========== */
+        /* ========== EXTRA EFFECTS ========== */
         .fade-in {
             animation: fadeIn 0.5s ease-in;
         }
@@ -329,7 +329,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        /* Стиль для скроллбара (опционально) */
         ::-webkit-scrollbar {
             width: 0;
             height: 0;
@@ -338,10 +337,10 @@
 </head>
 <body>
     
-    <!-- ========== КАРТА ========== -->
+    <!-- ========== MAP ========== -->
     <div id="map"></div>
     
-    <!-- ========== КНОПКА НАЗАД ========== -->
+    <!-- ========== BACK BUTTON ========== -->
     <a href="/" class="back-button">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
@@ -349,48 +348,46 @@
         HOME
     </a>
     
-    <!-- ========== LIVE БЕЙДЖ ========== -->
+    <!-- ========== LIVE BADGE ========== -->
     <div class="live-badge">
         ● LIVE
     </div>
     
-    <!-- ========== ИНФОРМАЦИОННАЯ ПАНЕЛЬ ========== -->
+    <!-- ========== INFO PANEL ========== -->
     <div class="info-panel fade-in">
         <h3>🎈 Aerostar Public Balloon</h3>
         <p class="subtitle">Live tracking • Real-time updates</p>
         <div id="coords">
             <span class="status-dot"></span>
-            Load...
+            Waiting for data...
         </div>
     </div>
     
-    <!-- ========== СТАТУС ПОДКЛЮЧЕНИЯ ========== -->
+    <!-- ========== CONNECTION STATUS ========== -->
     <div id="connectionStatus">
-        ⏳ ...
+        ⏳ Connecting...
     </div>
     
-    <!-- ========== ИНДИКАТОР ЗАГРУЗКИ ========== -->
+    <!-- ========== LOADING INDICATOR ========== -->
     <div id="loading" class="loading">
         <div class="spinner"></div>
-        <div class="loading-text">Загрузка карты...</div>
+        <div class="loading-text">Loading map...</div>
     </div>
     
-    <!-- ========== СКРИПТЫ ========== -->
+    <!-- ========== SCRIPTS ========== -->
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
-    <!-- Socket.IO клиент -->
+    <!-- Socket.IO client -->
     <script src="/socket.io/socket.io.js"></script>
     
-    <!-- Основной скрипт -->
+    <!-- Main script -->
     <script src="js/watch.js"></script>
     
-    <!-- ========== ДОПОЛНИТЕЛЬНЫЙ СКРИПТ ДЛЯ ОТЛАДКИ ========== -->
+    <!-- ========== DEBUG SCRIPT ========== -->
     <script>
-        // Проверка загрузки всех элементов
-        console.log('📄 HTML загружен');
+        console.log('📄 HTML loaded');
         
-        // Проверка наличия необходимых элементов
         document.addEventListener('DOMContentLoaded', () => {
             const elements = {
                 'map': document.getElementById('map'),
@@ -401,28 +398,27 @@
             
             Object.entries(elements).forEach(([name, el]) => {
                 if (el) {
-                    console.log(`✅ Элемент #${name} найден`);
+                    console.log(`✅ Element #${name} found`);
                 } else {
-                    console.error(`❌ Элемент #${name} НЕ НАЙДЕН!`);
+                    console.error(`❌ Element #${name} NOT FOUND!`);
                 }
             });
             
-            // Скрываем загрузку через 10 секунд, если данные не пришли
+            // Hide loading after 10 seconds if no data
             setTimeout(() => {
                 const loading = document.getElementById('loading');
                 if (loading && loading.style.display !== 'none') {
                     loading.style.display = 'none';
-                    console.warn('⏰ Таймаут загрузки - скрываем индикатор');
+                    console.warn('⏰ Loading timeout - hiding indicator');
                 }
             }, 10000);
         });
         
-        // Обработка ошибок
         window.addEventListener('error', (e) => {
-            console.error('❌ Глобальная ошибка:', e.message);
+            console.error('❌ Global error:', e.message);
             const status = document.getElementById('connectionStatus');
             if (status) {
-                status.textContent = '❌ Ошибка';
+                status.textContent = '❌ Error';
                 status.style.borderLeftColor = '#ff4444';
             }
         });
