@@ -5,7 +5,7 @@ let map;
 let publicBalloonMarker = null;
 let publicPathLine = null;
 let lastPosition = null;
-const socket = io('/'); // Укажите правильный путь к серверу
+const socket = io('/'); // Подключение к серверу
 
 // Инициализация страницы
 document.addEventListener('DOMContentLoaded', () => {
@@ -50,8 +50,8 @@ function initMap() {
     // Переключение слоев
     L.control.layers(
         { 
-            "🛰️ Спутник (ESRI)": esriSatellite, 
-            "🗺️ OSM Standard": osmStandard 
+            "🛰️ Спутник": esriSatellite, 
+            "🗺️ OSM": osmStandard 
         },
         null,
         { position: 'topleft', collapsed: false }
@@ -80,7 +80,7 @@ function setupWebSocketListeners() {
             
             if (publicBalloon) {
                 renderBalloon(publicBalloon);
-                updateStatus(`🟢 LIVE: ${new Date().toLocaleTimeString()}`);
+                updateStatus(`🟢 LIVE ${new Date().toLocaleTimeString()}`);
             } else {
                 updateStatus('⏳ Ожидание публичного шара...');
             }
@@ -98,12 +98,12 @@ function setupWebSocketListeners() {
 
     socket.on('connect_error', (err) => {
         console.error('❌ WebSocket connection error:', err);
-        updateStatus('❌ Ошибка подключения к серверу');
+        updateStatus('❌ Ошибка подключения');
     });
 
     socket.on('disconnect', () => {
         console.warn('⚠️ WebSocket disconnected');
-        updateStatus('⏸️ Отключено от сервера');
+        updateStatus('⏸️ Отключено');
     });
 
     socket.on('reconnect', () => {
@@ -119,7 +119,7 @@ function renderBalloon(data) {
         return;
     }
 
-    // Извлекаем координаты (поддержка разных форматов)
+    // Извлекаем координаты
     const lat = data?.position?.lat ?? data?.latitude;
     const lng = data?.position?.lng ?? data?.longitude;
 
@@ -139,6 +139,12 @@ function renderBalloon(data) {
     if (positionChanged) {
         console.log(`📍 Новая позиция: ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
         lastPosition = currentPos;
+        
+        // Обновляем координаты в info-panel
+        const coordsEl = document.getElementById('coords');
+        if (coordsEl) {
+            coordsEl.textContent = `📍 ${lat.toFixed(6)}°, ${lng.toFixed(6)}°`;
+        }
     }
 
     // === 1. ОБНОВЛЕНИЕ МАРКЕРА ===
@@ -147,13 +153,13 @@ function renderBalloon(data) {
         publicBalloonMarker = null;
     }
 
-    // Создаем иконку (увеличенная через CSS)
+    // Создаем иконку (увеличенная через CSS класс)
     const balloonIcon = L.icon({
         iconUrl: '/images/balloon.png',
         iconSize: [32, 32],
         iconAnchor: [16, 32],
         popupAnchor: [0, -32],
-        className: 'double-size-balloon'
+        className: 'double-size-balloon' // CSS класс для увеличения
     });
 
     // Добавляем маркер
@@ -164,7 +170,7 @@ function renderBalloon(data) {
 
     // Попап с информацией
     publicBalloonMarker.bindPopup(`
-        <div style="text-align: center; min-width: 150px;">
+        <div style="text-align: center; min-width: 150px; padding: 5px;">
             <strong>🎈 Aerostar Balloon</strong><br>
             📍 ${lat.toFixed(6)}°, ${lng.toFixed(6)}°<br>
             🕐 ${new Date().toLocaleTimeString()}
@@ -195,34 +201,16 @@ function renderBalloon(data) {
                 color: '#ff4444',
                 weight: 4,
                 opacity: 0.8,
-                smoothFactor: 1,
-                dashArray: null
+                smoothFactor: 1
             }).addTo(map);
-
-            // Добавляем точки маршрута (маленькие кружки)
-            const routePoints = L.layerGroup();
-            pathPoints.forEach((point, index) => {
-                // Каждая 5-я точка или первая/последняя
-                if (index % 5 === 0 || index === 0 || index === pathPoints.length - 1) {
-                    const circle = L.circleMarker(point, {
-                        radius: 3,
-                        color: '#ff4444',
-                        fillColor: '#ff4444',
-                        fillOpacity: 0.5
-                    }).addTo(routePoints);
-                }
-            });
-            routePoints.addTo(map);
 
             console.log(`📏 Отрисован трек из ${pathPoints.length} точек`);
         }
     } else if (data.path && data.path.length === 1) {
-        // Только начальная точка
         console.log('📍 Только начальная позиция, трека пока нет');
     }
 
     // === 3. ЦЕНТРИРОВАНИЕ КАРТЫ ===
-    // Если позиция изменилась значительно - центрируем
     if (positionChanged) {
         const center = map.getCenter();
         const distance = map.distance(center, currentPos);
@@ -231,7 +219,6 @@ function renderBalloon(data) {
             map.setView(currentPos, map.getZoom());
             console.log(`🎯 Центрирование на новую позицию (${distance.toFixed(0)}м)`);
         } else if (distance > 100) {
-            // Плавный сдвиг при небольших изменениях
             map.panTo(currentPos);
         }
     }
@@ -248,17 +235,16 @@ function updateStatus(message) {
     const statusEl = document.getElementById('connectionStatus');
     if (statusEl) {
         statusEl.textContent = message;
-        statusEl.style.opacity = '1';
+        
+        // Меняем цвет индикатора в зависимости от статуса
+        if (message.includes('LIVE') || message.includes('Подключено')) {
+            statusEl.style.borderLeftColor = '#00ff88';
+        } else if (message.includes('Ошибка') || message.includes('Отключено')) {
+            statusEl.style.borderLeftColor = '#ff4444';
+        } else {
+            statusEl.style.borderLeftColor = '#ffaa00';
+        }
     }
 }
-
-// ========== ДОПОЛНИТЕЛЬНО: ОБРАБОТКА ОШИБОК КАРТЫ ==========
-// Если карта не загрузилась
-setTimeout(() => {
-    if (!map) {
-        console.error('❌ Карта не загрузилась!');
-        updateStatus('❌ Ошибка загрузки карты');
-    }
-}, 5000);
 
 console.log('🎈 Watch script loaded with WebSocket + tracking');
