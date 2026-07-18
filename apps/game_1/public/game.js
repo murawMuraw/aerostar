@@ -410,6 +410,21 @@ class RegattaGame {
             this.markers[id].setPopupContent(this.createPopup(player));
             this.markers[id].setIcon(icon);
         }
+         // Создаём попап с информацией о ветре и течении
+    const popupContent = this.createPopupWithWeather(player);
+
+    if (!this.markers[id]) {
+        this.markers[id] = L.marker([player.lat, player.lng], { icon })
+            .addTo(this.map)
+            .bindPopup(popupContent, {
+                className: 'ship-popup',
+                maxWidth: 260
+            });
+    } else {
+        this.markers[id].setLatLng([player.lat, player.lng]);
+        this.markers[id].setPopupContent(popupContent);
+        this.markers[id].setIcon(icon);
+    }
     }
 
     createPopup(player) {
