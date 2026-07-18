@@ -49,13 +49,8 @@
             overflow-y: auto;
         }
 
-        #ship-panel::-webkit-scrollbar {
-            width: 3px;
-        }
-        #ship-panel::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-        }
+        #ship-panel::-webkit-scrollbar { width: 3px; }
+        #ship-panel::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
 
         .ship-btn {
             width: 60px;
@@ -81,23 +76,13 @@
             transition: all 0.3s;
         }
 
-        .ship-btn .ship-label {
-            font-size: 8px;
-            color: #667788;
-            margin-top: 2px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .ship-btn:hover {
+        .ship-btn:hover:not(.taken) {
             border-color: rgba(255, 255, 255, 0.3);
             background: rgba(255, 255, 255, 0.08);
             transform: scale(1.05);
         }
 
-        .ship-btn:hover img {
-            filter: brightness(1);
-        }
+        .ship-btn:hover:not(.taken) img { filter: brightness(1); }
 
         .ship-btn.selected {
             border-color: #4a9eff;
@@ -105,9 +90,7 @@
             box-shadow: 0 0 20px rgba(74, 158, 255, 0.2);
         }
 
-        .ship-btn.selected img {
-            filter: brightness(1);
-        }
+        .ship-btn.selected img { filter: brightness(1); }
 
         .ship-btn.taken {
             border-color: #f44336;
@@ -139,7 +122,7 @@
         .ship-btn .status-dot.racing { background: #ff9800; }
 
         /* ============================================
-           КНОПКА HOME
+           КНОПКА HOME → aerost.art
         ============================================ */
         #btn-home {
             position: fixed;
@@ -159,6 +142,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            text-decoration: none;
         }
 
         #btn-home:hover {
@@ -168,7 +152,7 @@
         }
 
         /* ============================================
-           ПАНЕЛЬ УПРАВЛЕНИЯ (появляется после выбора)
+           ПАНЕЛЬ УПРАВЛЕНИЯ
         ============================================ */
         #controls-panel {
             position: fixed;
@@ -197,9 +181,7 @@
             border-right: 1px solid rgba(255, 255, 255, 0.06);
         }
 
-        #controls-panel .ctrl-group:last-child {
-            border-right: none;
-        }
+        #controls-panel .ctrl-group:last-child { border-right: none; }
 
         #controls-panel .ctrl-btn {
             width: 44px;
@@ -221,9 +203,7 @@
             transform: translateY(-2px);
         }
 
-        #controls-panel .ctrl-btn:active {
-            transform: translateY(0);
-        }
+        #controls-panel .ctrl-btn:active { transform: translateY(0); }
 
         #controls-panel .ctrl-btn.anchor-btn.active {
             background: rgba(255, 217, 61, 0.15);
@@ -243,6 +223,8 @@
             font-size: 13px;
             color: #8899aa;
             padding: 0 12px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         #controls-panel .ship-info-display span {
@@ -251,10 +233,7 @@
             gap: 4px;
         }
 
-        #controls-panel .ship-info-display .value {
-            color: #fff;
-            font-weight: 600;
-        }
+        #controls-panel .ship-info-display .value { color: #fff; font-weight: 600; }
 
         .sail-bar-mini {
             width: 50px;
@@ -357,9 +336,7 @@
             transition: background 0.2s;
         }
 
-        #chat-send:hover {
-            background: rgba(74, 158, 255, 0.3);
-        }
+        #chat-send:hover { background: rgba(74, 158, 255, 0.3); }
 
         /* ============================================
            УВЕДОМЛЕНИЯ
@@ -401,197 +378,101 @@
         }
 
         /* ============================================
-           ВЫБОР СТАРТА (модальное окно)
+           КАСТОМНЫЙ POPUP ДЛЯ КОРАБЛЕЙ (с ветром и течением)
         ============================================ */
-        #start-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(8px);
-            z-index: 3000;
-            display: none;
-            align-items: center;
-            justify-content: center;
+        .leaflet-popup-content-wrapper {
+            background: rgba(0, 0, 0, 0.9) !important;
+            backdrop-filter: blur(12px) !important;
+            border-radius: 12px !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            color: #fff !important;
+            min-width: 200px !important;
         }
 
-        #start-modal.active {
-            display: flex;
+        .leaflet-popup-tip {
+            background: rgba(0, 0, 0, 0.9) !important;
         }
 
-        .start-modal-content {
-            background: #1a2a3a;
-            padding: 30px 35px;
-            border-radius: 20px;
-            max-width: 420px;
-            width: 100%;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+        .leaflet-popup-content {
+            color: #fff !important;
+            font-size: 13px !important;
+            line-height: 1.6 !important;
+            margin: 12px 14px !important;
         }
 
-        .start-modal-content h2 {
-            text-align: center;
-            margin-bottom: 10px;
-            color: #ffd966;
-        }
-
-        .start-modal-content p {
-            text-align: center;
-            color: #8899aa;
-            font-size: 14px;
-            margin-bottom: 15px;
-        }
-
-        .start-points-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin: 15px 0;
-        }
-
-        .start-point-btn {
-            padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 2px solid transparent;
-            border-radius: 10px;
-            color: #fff;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-align: left;
-            font-size: 14px;
-        }
-
-        .start-point-btn:hover {
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .start-point-btn.selected {
-            border-color: #4a9eff;
-            background: rgba(74, 158, 255, 0.15);
-        }
-
-        .start-point-btn .coords {
-            color: #8899aa;
-            font-size: 12px;
-        }
-
-        .start-modal-content .btn-start-race {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #4a9eff, #6c5ce7);
-            border: none;
-            border-radius: 10px;
-            color: white;
+        .popup-ship-name {
             font-size: 16px;
             font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 10px;
+            color: #ffd966;
+            margin-bottom: 4px;
         }
 
-        .start-modal-content .btn-start-race:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(74, 158, 255, 0.4);
+        .popup-status {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 6px;
         }
 
-        .start-modal-content .btn-start-race:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            transform: none;
+        .popup-status.online { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
+        .popup-status.offline { background: rgba(255, 152, 0, 0.2); color: #ff9800; }
+        .popup-status.grounded { background: rgba(255, 0, 0, 0.2); color: #ff6b6b; }
+        .popup-status.anchored { background: rgba(255, 217, 61, 0.2); color: #ffd93d; }
+        .popup-status.eliminated { background: rgba(255, 0, 0, 0.3); color: #ff1744; }
+
+        .popup-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
         }
 
-        .start-modal-content .btn-cancel {
-            width: 100%;
-            padding: 10px;
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            color: #8899aa;
-            cursor: pointer;
-            margin-top: 8px;
-            transition: all 0.3s;
+        .popup-row:last-child { border-bottom: none; }
+
+        .popup-label { color: #8899aa; }
+        .popup-value { color: #fff; font-weight: 500; }
+
+        .popup-weather {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
 
-        .start-modal-content .btn-cancel:hover {
-            background: rgba(255, 255, 255, 0.05);
+        .popup-weather .weather-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            padding: 1px 0;
         }
+
+        .popup-weather .weather-item .label { color: #667788; }
+        .popup-weather .weather-item .value { color: #aabbcc; }
 
         /* ============================================
            АДАПТИВ
         ============================================ */
         @media (max-width: 768px) {
-            #ship-panel {
-                left: 8px;
-                padding: 8px 6px;
-                gap: 6px;
-            }
-            .ship-btn {
-                width: 44px;
-                height: 44px;
-            }
-            .ship-btn img {
-                width: 28px;
-                height: 28px;
-            }
-            .ship-btn .ship-label {
-                font-size: 6px;
-            }
+            #ship-panel { left: 8px; padding: 8px 6px; gap: 6px; }
+            .ship-btn { width: 44px; height: 44px; }
+            .ship-btn img { width: 28px; height: 28px; }
             #controls-panel {
                 min-width: unset;
                 width: 98%;
                 padding: 10px 12px;
                 bottom: 15px;
             }
-            #controls-panel .ctrl-btn {
-                width: 36px;
-                height: 36px;
-                font-size: 14px;
-            }
-            #controls-panel .ship-info-display {
-                font-size: 11px;
-                gap: 8px;
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-            #chat {
-                width: 220px;
-                height: 220px;
-                right: 10px;
-                bottom: 80px;
-            }
-            #btn-home {
-                left: 8px;
-                bottom: 80px;
-                width: 40px;
-                height: 40px;
-                font-size: 18px;
-            }
-            .start-modal-content {
-                padding: 20px;
-                margin: 16px;
-            }
+            #controls-panel .ctrl-btn { width: 36px; height: 36px; font-size: 14px; }
+            #controls-panel .ship-info-display { font-size: 11px; gap: 8px; }
+            #chat { width: 220px; height: 220px; right: 10px; bottom: 80px; }
+            #btn-home { left: 8px; bottom: 80px; width: 40px; height: 40px; font-size: 18px; }
         }
 
         @media (max-width: 480px) {
-            #ship-panel {
-                left: 4px;
-                padding: 6px 4px;
-                gap: 4px;
-            }
-            .ship-btn {
-                width: 36px;
-                height: 36px;
-                border-radius: 8px;
-            }
-            .ship-btn img {
-                width: 22px;
-                height: 22px;
-            }
-            .ship-btn .ship-label {
-                display: none;
-            }
+            #ship-panel { left: 4px; padding: 6px 4px; gap: 4px; }
+            .ship-btn { width: 36px; height: 36px; border-radius: 8px; }
+            .ship-btn img { width: 22px; height: 22px; }
         }
     </style>
 </head>
@@ -608,48 +489,41 @@
     <div id="ship-panel">
         <button class="ship-btn" data-ship="klip_10" data-name="Клипер-10">
             <img src="images/klip_10.png" alt="Клипер-10">
-            <span class="ship-label">Клипер-10</span>
             <span class="status-dot free"></span>
         </button>
         <button class="ship-btn" data-ship="klip_20" data-name="Клипер-20">
             <img src="images/klip_20.png" alt="Клипер-20">
-            <span class="ship-label">Клипер-20</span>
             <span class="status-dot free"></span>
         </button>
         <button class="ship-btn" data-ship="klip_30" data-name="Клипер-30">
             <img src="images/klip_30.png" alt="Клипер-30">
-            <span class="ship-label">Клипер-30</span>
             <span class="status-dot free"></span>
         </button>
         <button class="ship-btn" data-ship="columb" data-name="Колумб">
             <img src="images/columb.png" alt="Колумб">
-            <span class="ship-label">Колумб</span>
             <span class="status-dot free"></span>
         </button>
         <button class="ship-btn" data-ship="pirat" data-name="Пират">
             <img src="images/pirat.png" alt="Пират">
-            <span class="ship-label">Пират</span>
             <span class="status-dot free"></span>
         </button>
         <button class="ship-btn" data-ship="ap" data-name="АП">
             <img src="images/ap.png" alt="АП">
-            <span class="ship-label">АП</span>
             <span class="status-dot free"></span>
         </button>
         <button class="ship-btn" data-ship="19c_m" data-name="19-й век">
             <img src="images/19c_m.png" alt="19-й век">
-            <span class="ship-label">19-й век</span>
             <span class="status-dot free"></span>
         </button>
     </div>
 
     <!-- ========================================== -->
-    <!-- 3. КНОПКА HOME                             -->
+    <!-- 3. КНОПКА HOME → https://aerost.art/      -->
     <!-- ========================================== -->
-    <button id="btn-home" title="На главную">🏠</button>
+    <a id="btn-home" href="https://aerost.art/" title="На главную Aerost.art">🏠</a>
 
     <!-- ========================================== -->
-    <!-- 4. ПАНЕЛЬ УПРАВЛЕНИЯ (появляется после выбора) -->
+    <!-- 4. ПАНЕЛЬ УПРАВЛЕНИЯ                      -->
     <!-- ========================================== -->
     <div id="controls-panel">
         <div class="ctrl-group">
@@ -686,7 +560,7 @@
         </div>
         <div id="chat-messages">
             <div class="chat-system">👋 Добро пожаловать в Regatta!</div>
-            <div class="chat-system">Выберите корабль слева для начала</div>
+            <div class="chat-system">Выберите корабль слева, затем кликните по карте для старта</div>
         </div>
         <div id="chat-input-area">
             <input type="text" id="chat-input" placeholder="Сообщение..." disabled />
@@ -695,28 +569,12 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- 6. МОДАЛЬНОЕ ОКНО ВЫБОРА СТАРТА           -->
-    <!-- ========================================== -->
-    <div id="start-modal">
-        <div class="start-modal-content">
-            <h2>⛵ Выбор старта</h2>
-            <p id="start-modal-ship">Корабль: <strong>—</strong></p>
-            <p style="font-size:13px;color:#667788;">Выберите точку старта для гонки</p>
-            <div class="start-points-list" id="start-points-list">
-                <!-- Заполняется из JS -->
-            </div>
-            <button class="btn-start-race" id="btn-confirm-start" disabled>🚀 Начать гонку</button>
-            <button class="btn-cancel" id="btn-cancel-start">Отмена</button>
-        </div>
-    </div>
-
-    <!-- ========================================== -->
-    <!-- 7. УВЕДОМЛЕНИЯ                             -->
+    <!-- 6. УВЕДОМЛЕНИЯ                             -->
     <!-- ========================================== -->
     <div id="notifications"></div>
 
     <!-- ========================================== -->
-    <!-- 8. ПОДКЛЮЧЕНИЕ СКРИПТОВ                    -->
+    <!-- 7. ПОДКЛЮЧЕНИЕ СКРИПТОВ                    -->
     <!-- ========================================== -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
