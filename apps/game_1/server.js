@@ -1320,6 +1320,84 @@ app.post('/api/admin/chat', (req, res) => {
 });
 
 // ============================================
+//  СОСТОЯНИЕ КОРАБЛЕЙ
+// ============================================
+const shipStates = {
+    'klip_10': { taken: false, playerId: null },
+    'klip_20': { taken: false, playerId: null },
+    'klip_30': { taken: false, playerId: null },
+    'columb': { taken: false, playerId: null },
+    'pirat': { taken: false, playerId: null },
+    'ap': { taken: false, playerId: null },
+    '19c_m': { taken: false, playerId: null }
+};
+
+// Получить состояние кораблей
+app.get('/api/ships/state', (req, res) => {
+    res.json(shipStates);
+});
+
+// Вход с кораблём
+socket.on('join_with_ship', (data) => {
+    const { shipId, shipName, startPoint } = data;
+
+    // Проверяем, свободен ли корабль
+    if (shipStates[shipId] && shipStates[shipId].taken) {
+        socket.emit('join_error', { message: 'Этот корабль уже занят' });
+        return;
+    }
+
+    // Создаём игрока
+    const player = new Ship(
+        socket.id,
+        shipName,
+        startPoint.lat,
+        startPoint.lng,
+        false,
+        socket.id
+    );
+    player.shipType = shipId;
+    players.set(socket.id, player);
+
+    // Помечаем корабль как занятый
+    shipStates[shipId].taken = true;
+    shipStates[shipId].playerId = socket.id;
+
+    socket.emit('joined', {
+        role: 'player',
+        ship: player.getState(),
+        players: getAllPlayersState()
+    });
+
+    io.emit('player_joined', {
+        playerId: socket.id,
+        name: player.name,
+        shipId: shipId
+    });
+
+    broadcastState();
+});
+
+// Выход из гонки
+socket.on('leave_race', () => {
+    const ship = players.get(socket.id);
+    if (ship) {
+        // Освобождаем корабль
+        for (const [id, state] of Object.entries(shipStates)) {
+            if (state.playerId === socket.id) {
+                state.taken = false;
+                state.playerId = null;
+                break;
+            }
+        }
+        players.delete(socket.id);
+        io.emit('player_left', { playerId: socket.id, name: ship.name });
+        broadcastState();
+    }
+});
+
+
+// ============================================
 //  ЗАПУСК СЕРВЕРА
 // ============================================
 server.listen(PORT, '0.0.0.0', () => {
