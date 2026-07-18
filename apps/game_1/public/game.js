@@ -1,53 +1,36 @@
-// ============================================
-//  GAME.JS — основная логика клиента
-// ============================================
+// game.js — новая концепция
 
 class RegattaGame {
     constructor() {
         this.map = null;
         this.socket = null;
         this.playerId = null;
-        this.role = null;
         this.ship = null;
-        this.isGuest = true;
         this.markers = {};
-        this.currentLayer = null;
-        this.showCurrents = true;
+        this.selectedShip = null;
+        this.selectedStart = null;
+        this.isRacing = false;
         this.chatMessages = document.getElementById('chat-messages');
         this.notifications = document.getElementById('notifications');
-        this.isAnchored = false;
-        this.gameTime = 0;
-        this.timeInterval = null;
     }
 
     // ============================================
     //  ИНИЦИАЛИЗАЦИЯ
     // ============================================
     async init() {
-        // 1. Карта
         this.initMap();
-
-        // 2. Socket.IO
-        this.socket = io();
-
-        // 3. Обработчики событий
-        this.setupSocketHandlers();
-
-        // 4. UI
-        this.setupUI();
-
-        // 5. Чат
-        this.setupChat();
-
-        // 6. Управление
+        this.initSocket();
+        this.setupShipPanel();
         this.setupControls();
+        this.setupChat();
+        this.setupHomeButton();
+        this.setupStartModal();
 
-        // 7. Загрузка течений
-        this.currentLayer = L.layerGroup().addTo(this.map);
-        this.map.on('moveend', () => this.loadCurrents());
-        
-        // 8. Проверка статуса сервера
-        this.checkServerStatus();
+        // Загружаем состояние кораблей
+        this.loadShipsState();
+
+        // Обновляем погоду каждые 30 секунд
+        setInterval(() => this.updateWeather(), 30000);
     }
 
     // ============================================
@@ -57,8 +40,7 @@ class RegattaGame {
         this.map = L.map('map', {
             center: [20, 0],
             zoom: 2.5,
-            zoomControl: false,
-            attributionControl: false
+            zoomControl: true
         });
 
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -66,66 +48,26 @@ class RegattaGame {
             maxZoom: 19
         }).addTo(this.map);
 
-        // Масштаб
-        L.control.zoom({
-            position: 'bottomright'
-        }).addTo(this.map);
+        // Показываем маркеры старта/финиша если есть
+        this.loadRaceMarkers();
     }
 
     // ============================================
-    //  SOCKET ОБРАБОТЧИКИ
+    //  SOCKET
     // ============================================
-    setupSocketHandlers() {
-        // Подключение
+    initSocket() {
+        this.socket = io({
+            transports: ['websocket', 'polling']
+        });
+
         this.socket.on('connect', () => {
             console.log('✅ Socket connected');
-            this.updateServerStatus(true);
+            this.updateStatus('connected');
         });
 
         this.socket.on('disconnect', () => {
             console.log('❌ Socket disconnected');
-            this.updateServerStatus(false);
-        });
-
-        // Присоединение
-        this.socket.on('joined', (data) => {
-            this.playerId = data.ship.id;
-            this.role = data.role;
-            this.ship = data.ship;
-            this.isGuest = data.role === 'guest';
-
-            // Скрываем модалку
-            document.getElementById('auth-modal').style.display = 'none';
-            document.getElementById('hud').style.display = 'block';
-            document.getElementById('chat').style.display = 'flex';
-
-            // Обновляем HUD
-            document.getElementById('ship-name').textContent = this.ship.name;
-            document.getElementById('ship-role').textContent = this.isGuest ? '👁 Наблюдатель' : '⛵ Игрок';
-
-            // Блокируем управление для гостей
-            if (this.isGuest) {
-                document.querySelectorAll('#controls .ctrl-btn').forEach(btn => {
-                    btn.disabled = true;
-                });
-            }
-
-            // Показываем уведомление
-            if (data.isReconnect) {
-                this.showNotification('♻️ Вы вернулись к своему кораблю!', 'success');
-            } else if (this.isGuest) {
-                this.showNotification('👁 Вы вошли как наблюдатель', 'info');
-            } else {
-                this.showNotification('⛵ Добро пожаловать в регату!', 'success');
-            }
-
-            // Обновляем состояние
-            this.updateHUD();
-            this.updatePlayers(data.players);
-            this.updateWeather(data.wind, data.current);
-
-            // Запускаем таймер
-            this.startTimer();
+            this.updateStatus('disconnected');
         });
 
         // Состояние игры
@@ -135,27 +77,35 @@ class RegattaGame {
                 const updated = data.players[this.playerId];
                 if (updated) {
                     this.ship = updated;
-                    this.updateHUD();
+                    this.updateShipInfo();
                 }
             }
         });
 
-        // События игроков
-        this.socket.on('player_joined', (data) => {
-            this.addChatMessage(`🚢 ${data.name} присоединился к гонке`, 'system');
+        // Чат
+        this.socket.on('chat', (data) => {
+            const prefix = data.isGuest ? '👁' : '⛵';
+            this.addChatMessage(`${prefix} ${data.name}: ${data.message}`, 'user');
         });
 
-        this.socket.on('player_left', (data) => {
-            if (data.isOffline) {
-                this.addChatMessage(`💤 ${data.name} вышел, корабль продолжает путь`, 'system');
+        // Сообщения от админа
+        this.socket.on('admin_message', (data) => {
+            this.showAdminMessage(data.text);
+        });
+
+        // Результаты действий
+        this.socket.on('action_result', (data) => {
+            if (!data.success) {
+                this.showNotification(`❌ ${data.message}`, 'warning');
             }
         });
 
-        this.socket.on('player_removed', (data) => {
-            this.addChatMessage(`🧹 ${data.name} ${data.reason || 'покинул игру'}`, 'system');
+        // Ошибки
+        this.socket.on('join_error', (data) => {
+            this.showNotification(`❌ ${data.message}`, 'danger');
         });
 
-        // События корабля
+        // События кораблей
         this.socket.on('ship_grounded', (data) => {
             this.showNotification(`⚠️ ${data.name} сел на мель!`, 'danger');
             this.addChatMessage(`⚠️ ${data.name} сел на мель!`, 'danger');
@@ -168,31 +118,191 @@ class RegattaGame {
         this.socket.on('ship_eliminated', (data) => {
             this.showNotification(`💀 ${data.name} выбыл: ${data.reason}`, 'danger');
             this.addChatMessage(`💀 ${data.name} выбыл: ${data.reason}`, 'danger');
+            // Обновляем панель кораблей
+            this.loadShipsState();
         });
 
         this.socket.on('help_requested', (data) => {
             this.showNotification(`🆘 ${data.name} просит помощи!`, 'warning');
             this.addChatMessage(`🆘 ${data.name} просит помощи!`, 'danger');
         });
+    }
 
-        // Результаты действий
-        this.socket.on('action_result', (data) => {
-            if (!data.success) {
-                this.showNotification(`❌ ${data.message}`, 'warning');
-            }
+    // ============================================
+    //  ПАНЕЛЬ КОРАБЛЕЙ
+    // ============================================
+    setupShipPanel() {
+        document.querySelectorAll('.ship-btn').forEach(btn => {
+            btn.onclick = () => this.selectShip(btn);
+        });
+    }
+
+    selectShip(btn) {
+        // Если корабль занят — игнорируем
+        if (btn.classList.contains('taken')) {
+            this.showNotification('🚫 Этот корабль уже занят', 'warning');
+            return;
+        }
+
+        // Если уже выбран этот корабль — снимаем выбор
+        if (btn.classList.contains('selected')) {
+            btn.classList.remove('selected');
+            this.selectedShip = null;
+            document.getElementById('controls-panel').style.display = 'none';
+            return;
+        }
+
+        // Снимаем выделение с других
+        document.querySelectorAll('.ship-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        this.selectedShip = btn.dataset.ship;
+        this.selectedShipName = btn.dataset.name;
+
+        // Показываем модалку выбора старта
+        this.showStartModal(btn.dataset.name);
+    }
+
+    // ============================================
+    //  МОДАЛКА ВЫБОРА СТАРТА
+    // ============================================
+    setupStartModal() {
+        document.getElementById('btn-cancel-start').onclick = () => {
+            this.closeStartModal();
+        };
+
+        document.getElementById('btn-confirm-start').onclick = () => {
+            this.confirmStart();
+        };
+    }
+
+    showStartModal(shipName) {
+        const modal = document.getElementById('start-modal');
+        document.getElementById('start-modal-ship').innerHTML = `Корабль: <strong>${shipName}</strong>`;
+        modal.classList.add('active');
+
+        // Загружаем точки старта
+        const list = document.getElementById('start-points-list');
+        list.innerHTML = '';
+
+        const startPoints = [
+            { id: 'sp1', name: 'Порт Ливерпуль', lat: 53.4, lng: -3.0 },
+            { id: 'sp2', name: 'Порт Саутгемптон', lat: 50.9, lng: -1.4 },
+            { id: 'sp3', name: 'Порт Брест', lat: 48.4, lng: -4.5 },
+            { id: 'sp4', name: 'Порт Нью-Йорк', lat: 40.7, lng: -74.0 },
+            { id: 'sp5', name: 'Порт Гавр', lat: 49.5, lng: 0.1 },
+            { id: 'sp6', name: 'Порт Роттердам', lat: 51.9, lng: 4.5 }
+        ];
+
+        startPoints.forEach(point => {
+            const btn = document.createElement('button');
+            btn.className = 'start-point-btn';
+            btn.innerHTML = `
+                <div>📍 ${point.name}</div>
+                <div class="coords">${point.lat.toFixed(2)}°, ${point.lng.toFixed(2)}°</div>
+            `;
+            btn.dataset.pointId = point.id;
+            btn.onclick = () => {
+                document.querySelectorAll('.start-point-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                this.selectedStart = point;
+                document.getElementById('btn-confirm-start').disabled = false;
+            };
+            list.appendChild(btn);
+        });
+    }
+
+    closeStartModal() {
+        document.getElementById('start-modal').classList.remove('active');
+        document.querySelectorAll('.ship-btn').forEach(b => b.classList.remove('selected'));
+        this.selectedShip = null;
+        this.selectedStart = null;
+        document.getElementById('btn-confirm-start').disabled = true;
+    }
+
+    confirmStart() {
+        if (!this.selectedShip || !this.selectedStart) {
+            this.showNotification('❌ Выберите корабль и точку старта', 'warning');
+            return;
+        }
+
+        // Отправляем на сервер
+        this.socket.emit('join_with_ship', {
+            shipId: this.selectedShip,
+            shipName: this.selectedShipName,
+            startPoint: this.selectedStart
         });
 
-        // Чат
-        this.socket.on('chat', (data) => {
-            const prefix = data.isGuest ? '👁' : '⛵';
-            this.addChatMessage(`${prefix} ${data.name}: ${data.message}`, 'user');
-        });
+        // Закрываем модалку
+        document.getElementById('start-modal').classList.remove('active');
 
-        // Ошибки
-        this.socket.on('join_error', (data) => {
-            document.getElementById('login-error').textContent = data.message;
-            document.getElementById('login-error').style.display = 'block';
-        });
+        // Показываем панель управления
+        document.getElementById('controls-panel').style.display = 'flex';
+        document.getElementById('chat-input').disabled = false;
+        document.getElementById('chat-send').disabled = false;
+
+        // Блокируем кнопку корабля
+        const shipBtn = document.querySelector(`.ship-btn[data-ship="${this.selectedShip}"]`);
+        if (shipBtn) {
+            shipBtn.classList.add('taken');
+            shipBtn.querySelector('.status-dot').className = 'status-dot racing';
+        }
+
+        this.isRacing = true;
+        this.showNotification('🚀 Вы присоединились к гонке!', 'success');
+        this.addChatMessage(`🚀 ${this.selectedShipName} вышел в море!`, 'system');
+    }
+
+    // ============================================
+    //  ЗАГРУЗКА СОСТОЯНИЯ КОРАБЛЕЙ
+    // ============================================
+    loadShipsState() {
+        fetch('/api/ships/state')
+            .then(r => r.json())
+            .then(data => {
+                document.querySelectorAll('.ship-btn').forEach(btn => {
+                    const shipId = btn.dataset.ship;
+                    const state = data[shipId];
+                    if (state && state.taken) {
+                        btn.classList.add('taken');
+                        btn.querySelector('.status-dot').className = 'status-dot racing';
+                    } else {
+                        btn.classList.remove('taken');
+                        btn.querySelector('.status-dot').className = 'status-dot free';
+                    }
+                });
+            })
+            .catch(() => {});
+    }
+
+    // ============================================
+    //  ЗАГРУЗКА МАРКЕРОВ СТАРТА/ФИНИША
+    // ============================================
+    loadRaceMarkers() {
+        fetch('/api/admin/race')
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.startLat && data.startLng) {
+                    L.marker([data.startLat, data.startLng], {
+                        icon: L.divIcon({
+                            className: 'race-marker',
+                            html: '🏁 СТАРТ',
+                            iconSize: [60, 24],
+                            iconAnchor: [30, 12]
+                        })
+                    }).addTo(this.map).bindPopup(`🏁 Старт: ${data.startName || ''}`);
+                }
+                if (data && data.finishLat && data.finishLng) {
+                    L.marker([data.finishLat, data.finishLng], {
+                        icon: L.divIcon({
+                            className: 'race-marker',
+                            html: '🎯 ФИНИШ',
+                            iconSize: [60, 24],
+                            iconAnchor: [30, 12]
+                        })
+                    }).addTo(this.map).bindPopup(`🎯 Финиш: ${data.finishName || ''}`);
+                }
+            })
+            .catch(() => {});
     }
 
     // ============================================
@@ -204,7 +314,6 @@ class RegattaGame {
             this.updatePlayer(id, player);
         }
 
-        // Удаляем отсутствующих
         for (const [id, marker] of Object.entries(this.markers)) {
             if (id !== this.playerId && !players[id]) {
                 this.map.removeLayer(marker);
@@ -214,53 +323,29 @@ class RegattaGame {
     }
 
     updatePlayer(id, player) {
-        const isOffline = !player.isOnline;
-        const isGuest = player.isGuest;
-        const isEliminated = player.isEliminated;
-
         if (!this.markers[id]) {
-            const icon = this.createShipIcon(player);
+            const icon = L.divIcon({
+                className: 'ship-marker',
+                html: `<div style="
+                    width: 28px; height: 28px;
+                    background: ${player.color || '#4CAF50'};
+                    border: 2px solid ${player.isOnline ? '#fff' : '#666'};
+                    border-radius: 50%;
+                    display: flex; align-items: center; justify-content: center;
+                    font-size: 14px;
+                    opacity: ${player.isOnline ? 1 : 0.5};
+                ">⛵</div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+            });
+
             this.markers[id] = L.marker([player.lat, player.lng], { icon })
                 .addTo(this.map)
                 .bindPopup(this.createPopup(player));
         } else {
             this.markers[id].setLatLng([player.lat, player.lng]);
             this.markers[id].setPopupContent(this.createPopup(player));
-
-            // Обновляем иконку
-            this.markers[id].setIcon(this.createShipIcon(player));
         }
-    }
-
-    createShipIcon(player) {
-        const color = player.color || '#4CAF50';
-        let statusClass = 'online';
-        let statusIcon = '⛵';
-
-        if (player.isEliminated) {
-            statusClass = 'eliminated';
-            statusIcon = '💀';
-        } else if (!player.isOnline) {
-            statusClass = 'offline';
-            statusIcon = '💤';
-        } else if (player.isGuest) {
-            statusClass = 'guest';
-            statusIcon = '👁';
-        }
-
-        if (player.isAnchored) statusIcon = '⚓';
-        if (player.isGrounded) statusIcon = '⚠';
-
-        return L.divIcon({
-            className: 'ship-marker',
-            html: `
-                <div class="ship-icon ${statusClass}" style="border-color: ${color};">
-                    ${statusIcon}
-                </div>
-            `,
-            iconSize: [36, 36],
-            iconAnchor: [18, 18]
-        });
     }
 
     createPopup(player) {
@@ -270,195 +355,12 @@ class RegattaGame {
         else if (player.isAnchored) status = '⚓ На якоре';
         else if (!player.isOnline) status = '💤 Офлайн';
 
-        const role = player.isGuest ? '👁 Гость' : '⛵ Игрок';
-
         return `
             <strong>${player.name}</strong><br>
-            ${role}<br>
             ${status}<br>
             🧭 ${player.heading || 0}° | ⛵ ${(player.speed || 0).toFixed(1)} уз<br>
             📏 ${(player.distanceTraveled || 0).toFixed(0)} км
-            ${player.eliminationReason ? `<br>💀 ${player.eliminationReason}` : ''}
         `;
-    }
-
-    // ============================================
-    //  ТЕЧЕНИЯ
-    // ============================================
-    async loadCurrents() {
-        if (!this.showCurrents) {
-            this.currentLayer.clearLayers();
-            return;
-        }
-
-        const bounds = this.map.getBounds();
-        const gridSize = 5;
-
-        const params = new URLSearchParams({
-            latMin: bounds.getSouth(),
-            latMax: bounds.getNorth(),
-            lngMin: bounds.getWest(),
-            lngMax: bounds.getEast(),
-            step: gridSize
-        });
-
-        try {
-            const response = await fetch(`/api/currents/grid?${params}`);
-            const data = await response.json();
-
-            this.currentLayer.clearLayers();
-
-            for (const point of data) {
-                if (point.speed > 0.1) {
-                    const arrow = this.createCurrentArrow(point);
-                    this.currentLayer.addLayer(arrow);
-                }
-            }
-        } catch (error) {
-            console.error('Failed to load currents:', error);
-        }
-    }
-
-    createCurrentArrow(point) {
-        const { lat, lng, speed, direction } = point;
-        const length = Math.min(speed * 0.08, 1.2);
-        const angle = (direction - 90) * Math.PI / 180;
-
-        const endLat = lat + length * Math.cos(angle);
-        const endLng = lng + length * Math.sin(angle);
-
-        const color = this.getCurrentColor(speed);
-
-        const line = L.polyline(
-            [[lat, lng], [endLat, endLng]],
-            {
-                color: color,
-                weight: 3 + speed * 0.5,
-                opacity: 0.7,
-                dashArray: null
-            }
-        );
-
-        // Наконечник
-        const headSize = 0.15;
-        const headAngle = 0.6;
-        const headPoints = [
-            [endLat, endLng],
-            [
-                endLat - headSize * Math.cos(angle - headAngle),
-                endLng - headSize * Math.sin(angle - headAngle)
-            ],
-            [
-                endLat - headSize * Math.cos(angle + headAngle),
-                endLng - headSize * Math.sin(angle + headAngle)
-            ]
-        ];
-
-        const head = L.polyline(headPoints, {
-            color: color,
-            weight: 3,
-            opacity: 0.7
-        });
-
-        return L.layerGroup([line, head]);
-    }
-
-    getCurrentColor(speed) {
-        if (speed < 0.5) return '#4CAF50';
-        if (speed < 1.0) return '#8BC34A';
-        if (speed < 1.5) return '#FFC107';
-        if (speed < 2.0) return '#FF9800';
-        if (speed < 3.0) return '#FF5722';
-        return '#F44336';
-    }
-
-    // ============================================
-    //  HUD
-    // ============================================
-    updateHUD() {
-        if (!this.ship) return;
-
-        document.getElementById('heading-display').textContent = `${this.ship.heading || 0}°`;
-        document.getElementById('speed-display').textContent = (this.ship.speed || 0).toFixed(1);
-        document.getElementById('sail-display').textContent = `${Math.round((this.ship.sailPosition || 0) * 100)}%`;
-        document.getElementById('sail-fill').style.width = `${Math.round((this.ship.sailPosition || 0) * 100)}%`;
-        document.getElementById('distance-display').textContent = (this.ship.distanceTraveled || 0).toFixed(0);
-
-        let status = 'В пути';
-        let statusIcon = '🟢';
-        if (this.ship.isEliminated) {
-            status = 'Выбыл';
-            statusIcon = '💀';
-        } else if (this.ship.isGrounded) {
-            status = 'На мели!';
-            statusIcon = '⚠️';
-        } else if (this.ship.isAnchored) {
-            status = 'На якоре';
-            statusIcon = '⚓';
-        } else if (!this.ship.isOnline) {
-            status = 'Офлайн';
-            statusIcon = '💤';
-        }
-
-        document.getElementById('status-display').textContent = status;
-        document.getElementById('ship-status-icon').textContent = statusIcon;
-
-        // Обновляем кнопку якоря
-        const anchorBtn = document.getElementById('btn-anchor');
-        if (this.ship.isAnchored) {
-            anchorBtn.classList.add('active');
-            anchorBtn.textContent = '⚓ Сняться';
-        } else {
-            anchorBtn.classList.remove('active');
-            anchorBtn.textContent = '⚓ Якорь';
-        }
-
-        // Обновляем кнопку помощи
-        const helpBtn = document.getElementById('btn-help');
-        if (this.ship.isGrounded) {
-            helpBtn.classList.add('active');
-        } else {
-            helpBtn.classList.remove('active');
-        }
-    }
-
-    updateWeather(wind, current) {
-        if (wind) {
-            document.getElementById('wind-display').textContent =
-                `${wind.speed.toFixed(1)} уз, ${wind.direction}°`;
-        }
-        if (current) {
-            document.getElementById('current-display').textContent =
-                `${current.speed.toFixed(1)} уз, ${current.direction}°`;
-        }
-    }
-
-    startTimer() {
-        if (this.timeInterval) clearInterval(this.timeInterval);
-        this.gameTime = 0;
-        this.timeInterval = setInterval(() => {
-            this.gameTime++;
-            const minutes = Math.floor(this.gameTime / 60);
-            const seconds = this.gameTime % 60;
-            document.getElementById('time-display').textContent =
-                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        }, 1000);
-    }
-
-    // ============================================
-    //  УВЕДОМЛЕНИЯ
-    // ============================================
-    showNotification(message, type = 'info') {
-        const div = document.createElement('div');
-        div.className = `notification ${type}`;
-        div.textContent = message;
-        this.notifications.appendChild(div);
-
-        setTimeout(() => {
-            div.style.opacity = '0';
-            div.style.transition = 'opacity 0.5s';
-            setTimeout(() => div.remove(), 500);
-        }, 4000);
     }
 
     // ============================================
@@ -467,7 +369,7 @@ class RegattaGame {
     setupControls() {
         // Клавиатура
         document.addEventListener('keydown', (e) => {
-            if (this.isGuest || !this.socket) return;
+            if (!this.isRacing || !this.socket) return;
             if (document.activeElement?.tagName === 'INPUT') return;
 
             switch (e.key) {
@@ -514,12 +416,40 @@ class RegattaGame {
         };
         document.getElementById('btn-help').onclick = () =>
             this.socket.emit('request_help');
+    }
 
-        // Течения
-        document.getElementById('toggle-currents').onclick = () => {
-            this.showCurrents = !this.showCurrents;
-            this.loadCurrents();
-        };
+    // ============================================
+    //  ОБНОВЛЕНИЕ ИНФОРМАЦИИ О КОРАБЛЕ
+    // ============================================
+    updateShipInfo() {
+        if (!this.ship) return;
+
+        document.getElementById('ship-name-display').textContent = this.ship.name || '—';
+        document.getElementById('heading-display').textContent = `${this.ship.heading || 0}°`;
+        document.getElementById('speed-display').textContent = (this.ship.speed || 0).toFixed(1);
+        document.getElementById('sail-display-mini').textContent = `${Math.round((this.ship.sailPosition || 0) * 100)}%`;
+        document.getElementById('sail-fill-mini').style.width = `${Math.round((this.ship.sailPosition || 0) * 100)}%`;
+
+        const anchorBtn = document.getElementById('btn-anchor');
+        if (this.ship.isAnchored) {
+            anchorBtn.classList.add('active');
+        } else {
+            anchorBtn.classList.remove('active');
+        }
+
+        const helpBtn = document.getElementById('btn-help');
+        if (this.ship.isGrounded) {
+            helpBtn.classList.add('active');
+        } else {
+            helpBtn.classList.remove('active');
+        }
+    }
+
+    // ============================================
+    //  ПОГОДА
+    // ============================================
+    updateWeather() {
+        // Можно добавить отображение погоды
     }
 
     // ============================================
@@ -527,7 +457,7 @@ class RegattaGame {
     // ============================================
     setupChat() {
         document.getElementById('chat-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && this.socket) {
+            if (e.key === 'Enter' && this.socket && this.isRacing) {
                 const msg = e.target.value.trim();
                 if (msg) {
                     this.socket.emit('chat', { message: msg });
@@ -537,6 +467,7 @@ class RegattaGame {
         });
 
         document.getElementById('chat-send').onclick = () => {
+            if (!this.isRacing) return;
             const input = document.getElementById('chat-input');
             const msg = input.value.trim();
             if (msg && this.socket) {
@@ -563,157 +494,55 @@ class RegattaGame {
         this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     }
 
-    // ============================================
-    //  UI
-    // ============================================
-    setupUI() {
-        // Вкладки авторизации
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.onclick = () => {
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-                document.getElementById(`${btn.dataset.tab}-form`).classList.add('active');
-                document.getElementById('login-error').style.display = 'none';
-                document.getElementById('register-error').style.display = 'none';
-            };
-        });
+    showAdminMessage(text) {
+        const div = document.createElement('div');
+        div.className = 'chat-admin';
+        div.textContent = `📢 ${text}`;
+        this.chatMessages.prepend(div);
+        this.showNotification(`📢 ${text}`, 'info');
 
-        // Вход
-        document.getElementById('login-btn').onclick = () => {
-            const username = document.getElementById('login-username').value;
-            const password = document.getElementById('login-password').value;
-
-            fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    this.socket.emit('join_as_player', { token: data.token });
-                } else {
-                    document.getElementById('login-error').textContent = data.message;
-                    document.getElementById('login-error').style.display = 'block';
-                }
-            })
-            .catch(() => {
-                document.getElementById('login-error').textContent = 'Ошибка соединения с сервером';
-                document.getElementById('login-error').style.display = 'block';
-            });
-        };
-
-        // Регистрация
-        document.getElementById('register-btn').onclick = () => {
-            const username = document.getElementById('reg-username').value;
-            const password = document.getElementById('reg-password').value;
-            const confirm = document.getElementById('reg-password-confirm').value;
-
-            if (password !== confirm) {
-                document.getElementById('register-error').textContent = 'Пароли не совпадают';
-                document.getElementById('register-error').style.display = 'block';
-                return;
+        setTimeout(() => {
+            if (div.parentNode) {
+                div.style.transition = 'opacity 0.5s';
+                div.style.opacity = '0';
+                setTimeout(() => div.remove(), 500);
             }
+        }, 30000);
+    }
 
-            fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('register-error').style.display = 'none';
-                    this.showNotification('✅ Регистрация успешна! Теперь войдите.', 'success');
-                    document.querySelector('[data-tab="login"]').click();
-                    document.getElementById('login-username').value = username;
-                } else {
-                    document.getElementById('register-error').textContent = data.message;
-                    document.getElementById('register-error').style.display = 'block';
-                }
-            });
+    // ============================================
+    //  HOME
+    // ============================================
+    setupHomeButton() {
+        document.getElementById('btn-home').onclick = () => {
+            if (this.isRacing) {
+                if (!confirm('Вы уверены, что хотите выйти из гонки?')) return;
+                this.socket.emit('leave_race');
+            }
+            location.reload();
         };
-
-        // Гость
-        document.getElementById('guest-btn').onclick = () => {
-            this.socket.emit('join_as_guest');
-        };
-
-        // Enter для форм
-        document.getElementById('login-password').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') document.getElementById('login-btn').click();
-        });
-        document.getElementById('reg-password-confirm').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') document.getElementById('register-btn').click();
-        });
-
-        // Получение количества игроков
-        this.updatePlayerCount();
-        setInterval(() => this.updatePlayerCount(), 30000);
     }
 
-    updatePlayerCount() {
-        fetch('/api/players')
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById('players-count').textContent =
-                    `👥 Игроков: ${data.current || 0} / ${data.maxPlayers || 12}`;
-            })
-            .catch(() => {});
+    // ============================================
+    //  УВЕДОМЛЕНИЯ
+    // ============================================
+    showNotification(message, type = 'info') {
+        const div = document.createElement('div');
+        div.className = `notification ${type}`;
+        div.textContent = message;
+        this.notifications.appendChild(div);
+
+        setTimeout(() => {
+            div.style.opacity = '0';
+            div.style.transition = 'opacity 0.5s';
+            setTimeout(() => div.remove(), 500);
+        }, 4000);
     }
 
-    updateServerStatus(isOnline) {
-        const status = document.getElementById('server-status');
-        if (isOnline) {
-            status.textContent = '🟢 Онлайн';
-            status.style.color = '#4caf50';
-        } else {
-            status.textContent = '🔴 Офлайн';
-            status.style.color = '#ff6b6b';
-        }
-    }
-
-    checkServerStatus() {
-        fetch('/api/players')
-            .then(() => this.updateServerStatus(true))
-            .catch(() => this.updateServerStatus(false));
+    updateStatus(status) {
+        // Можно обновить статус в UI
     }
 }
-
-// Добавьте в setupSocketHandlers()
-
-this.socket.on('admin_message', (data) => {
-    // Показываем сообщение вверху чата
-    const adminMsg = document.createElement('div');
-    adminMsg.className = 'admin-message';
-    adminMsg.innerHTML = `
-        <div style="
-            background: linear-gradient(135deg, #ffd966, #f7971e);
-            color: #1a1a2e;
-            padding: 10px 16px;
-            border-radius: 10px;
-            margin-bottom: 8px;
-            font-weight: 600;
-            font-size: 14px;
-            box-shadow: 0 4px 15px rgba(247,151,30,0.3);
-        ">
-            📢 ${data.text}
-        </div>
-    `;
-    
-    const messages = document.getElementById('chat-messages');
-    messages.prepend(adminMsg);
-    
-    // Авто-удаление через 30 секунд
-    setTimeout(() => {
-        if (adminMsg.parentNode) {
-            adminMsg.style.transition = 'opacity 0.5s';
-            adminMsg.style.opacity = '0';
-            setTimeout(() => adminMsg.remove(), 500);
-        }
-    }, 30000);
-});
 
 // ============================================
 //  ЗАПУСК
