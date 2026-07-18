@@ -388,20 +388,51 @@ class RegattaGame {
     // ============================================
     //  ОБНОВЛЕНИЕ ИГРОКОВ
     // ============================================
-    updatePlayers(players) {
-        for (const [id, player] of Object.entries(players)) {
-            if (id === this.playerId) continue;
-            this.updatePlayer(id, player);
-        }
+  
+updatePlayers(players) {
+    // 1. СВОЙ КОРАБЛЬ
+    if (this.ship && this.playerId) {
+        if (!this.markers[this.playerId]) {
+            const icon = L.divIcon({
+                className: 'ship-marker',
+                html: `<div style="
+                    width: 36px; height: 36px;
+                    background: ${this.ship.color || '#4CAF50'};
+                    border: 2px solid #fff;
+                    border-radius: 50%;
+                    display: flex; align-items: center; justify-content: center;
+                    font-size: 18px;
+                    box-shadow: 0 0 20px rgba(74, 158, 255, 0.4);
+                    transform: rotate(${this.ship.heading || 0}deg);
+                    transition: transform 0.3s;
+                ">⛵</div>`,
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+            });
 
-        // Удаляем отсутствующих
-        for (const [id, marker] of Object.entries(this.markers)) {
-            if (id !== this.playerId && !players[id]) {
-                this.map.removeLayer(marker);
-                delete this.markers[id];
-            }
+            this.markers[this.playerId] = L.marker([this.ship.lat, this.ship.lng], { icon })
+                .addTo(this.map)
+                .bindPopup(this.createPopupWithWeather(this.ship));
+        } else {
+            this.markers[this.playerId].setLatLng([this.ship.lat, this.ship.lng]);
+            this.markers[this.playerId].setPopupContent(this.createPopupWithWeather(this.ship));
         }
     }
+
+    // 2. ДРУГИЕ ИГРОКИ
+    for (const [id, player] of Object.entries(players)) {
+        if (id === this.playerId) continue;
+        this.updatePlayer(id, player);
+    }
+
+    // 3. УДАЛЯЕМ ОТСУТСТВУЮЩИХ
+    for (const [id, marker] of Object.entries(this.markers)) {
+        if (id !== this.playerId && !players[id]) {
+            this.map.removeLayer(marker);
+            delete this.markers[id];
+        }
+    }
+}
 
     // ============================================
     //  ОБНОВЛЕНИЕ ОДНОГО ИГРОКА
