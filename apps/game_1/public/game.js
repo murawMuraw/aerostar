@@ -157,6 +157,11 @@ class RegattaGame {
     }
 
     selectShip(btn) {
+       
+        if (this.role === 'guest') {
+        this.showNotification('👁 Гости не могут выбирать корабль', 'warning');
+        return;
+    }
         if (this.hasSelectedShip) {
             this.showNotification('🚫 Вы уже выбрали корабль', 'warning');
             return;
@@ -219,6 +224,10 @@ class RegattaGame {
         if (this.startHint) { this.map.removeLayer(this.startHint); this.startHint = null; }
         if (this.startTimeout) { clearTimeout(this.startTimeout); this.startTimeout = null; }
 
+        if (this.role === 'guest') {
+        this.showNotification('👁 Гости не могут запускать корабль', 'warning');
+        return;
+    }
         this.socket.emit('join_with_ship', {
             shipId: this.selectedShip,
             shipName: this.selectedShipName,
