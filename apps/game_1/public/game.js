@@ -1,4 +1,4 @@
-// game.js — полная версия для Regatta
+// game.js — полная версия для Regatta (без кнопки старта)
 
 class RegattaGame {
     constructor() {
@@ -17,6 +17,11 @@ class RegattaGame {
         this.weatherInterval = null;
         this.startMarker = null;
         this.finishMarker = null;
+        this.lastState = null;
+        this.cachedWindData = null;
+        this.cachedCurrentData = null;
+        this.startHint = null;
+        this.startTimeout = null;
     }
 
     // ============================================
@@ -101,16 +106,27 @@ class RegattaGame {
                 b.style.pointerEvents = 'none';
             });
 
+            // Помечаем выбранный корабль как занятый
+            const shipBtn = document.querySelector(`.ship-btn[data-ship="${this.selectedShip}"]`);
+            if (shipBtn) {
+                shipBtn.classList.add('taken');
+                shipBtn.querySelector('.status-dot').className = 'status-dot racing';
+                shipBtn.style.opacity = '0.4';
+                shipBtn.style.cursor = 'not-allowed';
+                shipBtn.style.pointerEvents = 'none';
+            }
+
             this.updateShipInfo();
             this.updatePlayers(data.players);
-            this.showNotification('🚀 Добро пожаловать в регату!', 'success');
-            this.addChatMessage('🚀 Вы в игре! Управляйте кораблём с помощью клавиатуры', 'system');
+            this.showNotification('🚀 Корабль установлен!', 'success');
+            this.addChatMessage(`🚀 ${this.ship.name} вышел в море!`, 'system');
         });
 
         // ==========================================
         //  СОСТОЯНИЕ ИГРЫ
         // ==========================================
         this.socket.on('state', (data) => {
+            this.lastState = data;
             this.updatePlayers(data.players);
             if (this.ship) {
                 const updated = data.players[this.playerId];
@@ -202,6 +218,9 @@ class RegattaGame {
         });
     }
 
+    // ============================================
+    //  ВЫБОР КОРАБЛЯ
+    // ============================================
     selectShip(btn) {
         if (this.hasSelectedShip) {
             this.showNotification('🚫 Вы уже выбрали корабль', 'warning');
@@ -249,25 +268,38 @@ class RegattaGame {
         if (this.startTimeout) clearTimeout(this.startTimeout);
         this.startTimeout = setTimeout(() => {
             if (this.isSelectingStart) {
-                this.isSelectingStart = false;
-                this.map.getContainer().style.cursor = 'default';
-                this.hasSelectedShip = false;
-                this.selectedShip = null;
-                document.querySelectorAll('.ship-btn').forEach(b => {
-                    b.classList.remove('selected');
-                    b.style.opacity = '1';
-                    b.style.cursor = 'pointer';
-                    b.style.pointerEvents = 'auto';
-                });
-                if (this.startHint) {
-                    this.map.removeLayer(this.startHint);
-                    this.startHint = null;
-                }
-                this.showNotification('⏰ Время выбора истекло, попробуйте снова', 'warning');
+                this.cancelShipSelection();
             }
         }, 30000);
     }
 
+    // ============================================
+    //  ОТМЕНА ВЫБОРА КОРАБЛЯ
+    // ============================================
+    cancelShipSelection() {
+        this.isSelectingStart = false;
+        this.map.getContainer().style.cursor = 'default';
+        this.hasSelectedShip = false;
+        this.selectedShip = null;
+        
+        document.querySelectorAll('.ship-btn').forEach(b => {
+            b.classList.remove('selected');
+            b.style.opacity = '1';
+            b.style.cursor = 'pointer';
+            b.style.pointerEvents = 'auto';
+        });
+        
+        if (this.startHint) {
+            this.map.removeLayer(this.startHint);
+            this.startHint = null;
+        }
+        
+        this.showNotification('⏰ Время выбора истекло, попробуйте снова', 'warning');
+    }
+
+    // ============================================
+    //  ПОДТВЕРЖДЕНИЕ СТАРТА
+    // ============================================
     confirmStart(lat, lng) {
         // Убираем подсказку
         if (this.startHint) {
@@ -279,8 +311,7 @@ class RegattaGame {
             this.startTimeout = null;
         }
 
-        // Проверяем, что точка в океане (не на суше)
-        // Делаем запрос к API течений — если точка на суше, вернётся ошибка
+        // Проверяем, что точка в океане
         fetch(`/api/current?lat=${lat}&lng=${lng}`)
             .then(response => {
                 if (!response.ok) {
@@ -303,7 +334,6 @@ class RegattaGame {
             })
             .catch((error) => {
                 this.showNotification('❌ Нельзя стартовать на суше! Выберите точку в океане', 'danger');
-                // Возвращаем возможность выбора
                 this.isSelectingStart = true;
                 this.map.getContainer().style.cursor = 'crosshair';
             });
@@ -341,7 +371,6 @@ class RegattaGame {
     //  ЗАГРУЗКА МАРКЕРОВ СТАРТА/ФИНИША
     // ============================================
     loadRaceMarkers() {
-        // Показываем стартовый порт (Санлукар-де-Баррамеда)
         const startPort = { lat: 36.78, lng: -6.35, name: 'Санлукар-де-Баррамеда' };
 
         if (!this.startMarker) {
@@ -374,6 +403,9 @@ class RegattaGame {
         }
     }
 
+    // ============================================
+    //  ОБНОВЛЕНИЕ ОДНОГО ИГРОКА
+    // ============================================
     updatePlayer(id, player) {
         const isOffline = !player.isOnline;
         const isEliminated = player.isEliminated;
@@ -404,59 +436,80 @@ class RegattaGame {
         if (!this.markers[id]) {
             this.markers[id] = L.marker([player.lat, player.lng], { icon })
                 .addTo(this.map)
-                .bindPopup(this.createPopup(player));
+                .bindPopup(this.createPopupWithWeather(player));
         } else {
             this.markers[id].setLatLng([player.lat, player.lng]);
-            this.markers[id].setPopupContent(this.createPopup(player));
+            this.markers[id].setPopupContent(this.createPopupWithWeather(player));
             this.markers[id].setIcon(icon);
         }
-         // Создаём попап с информацией о ветре и течении
-    const popupContent = this.createPopupWithWeather(player);
-
-    if (!this.markers[id]) {
-        this.markers[id] = L.marker([player.lat, player.lng], { icon })
-            .addTo(this.map)
-            .bindPopup(popupContent, {
-                className: 'ship-popup',
-                maxWidth: 260
-            });
-    } else {
-        this.markers[id].setLatLng([player.lat, player.lng]);
-        this.markers[id].setPopupContent(popupContent);
-        this.markers[id].setIcon(icon);
-    }
     }
 
-    createPopup(player) {
-        let status = '🟢 В пути';
-        if (player.isEliminated) status = '💀 Выбыл';
-        else if (player.isGrounded) status = '⚠ На мели';
-        else if (player.isAnchored) status = '⚓ На якоре';
-        else if (!player.isOnline) status = '💤 Офлайн';
-
+    // ============================================
+    //  СОЗДАНИЕ POPUP С ВЕТРОМ И ТЕЧЕНИЕМ
+    // ============================================
+    createPopupWithWeather(player) {
         const shipNames = {
             'klip_10': 'Клипер-10',
             'klip_20': 'Клипер-20',
             'klip_30': 'Клипер-30',
-            'Columb': 'Колумб',
+            'columb': 'Колумб',
             'pirat': 'Пират',
             'ap': 'АП',
             '19c_m': '19-й век'
         };
 
+        let statusText = '🟢 В пути';
+        let statusClass = 'online';
+        if (player.isEliminated) { statusText = '💀 Выбыл'; statusClass = 'eliminated'; }
+        else if (player.isGrounded) { statusText = '⚠ На мели'; statusClass = 'grounded'; }
+        else if (player.isAnchored) { statusText = '⚓ На якоре'; statusClass = 'anchored'; }
+        else if (!player.isOnline) { statusText = '💤 Офлайн'; statusClass = 'offline'; }
+
+        const windData = this.cachedWindData || { speed: 0, direction: 0 };
+        const currentData = this.cachedCurrentData || { speed: 0, direction: 0, name: '—' };
+
         return `
-            <strong>${player.name}</strong><br>
-            🚢 ${shipNames[player.shipType] || player.shipType}<br>
-            ${status}<br>
-            🧭 ${player.heading || 0}° | ⛵ ${(player.speed || 0).toFixed(1)} уз<br>
-            📏 ${(player.distanceTraveled || 0).toFixed(0)} км
+            <div class="popup-ship-name">${player.name}</div>
+            <div>
+                <span class="popup-status ${statusClass}">${statusText}</span>
+            </div>
+            <div class="popup-row">
+                <span class="popup-label">🚢 Корабль</span>
+                <span class="popup-value">${shipNames[player.shipType] || player.shipType}</span>
+            </div>
+            <div class="popup-row">
+                <span class="popup-label">🧭 Курс</span>
+                <span class="popup-value">${player.heading || 0}°</span>
+            </div>
+            <div class="popup-row">
+                <span class="popup-label">⛵ Скорость</span>
+                <span class="popup-value">${(player.speed || 0).toFixed(1)} уз</span>
+            </div>
+            <div class="popup-row">
+                <span class="popup-label">📏 Пройдено</span>
+                <span class="popup-value">${(player.distanceTraveled || 0).toFixed(0)} км</span>
+            </div>
+            <div class="popup-weather">
+                <div class="weather-item">
+                    <span class="label">🌬️ Ветер</span>
+                    <span class="value">${windData.speed.toFixed(1)} уз, ${windData.direction}°</span>
+                </div>
+                <div class="weather-item">
+                    <span class="label">🌊 Течение</span>
+                    <span class="value">${currentData.speed.toFixed(1)} уз, ${currentData.direction}°</span>
+                </div>
+                <div class="weather-item">
+                    <span class="label">📌 Течение</span>
+                    <span class="value">${currentData.name || '—'}</span>
+                </div>
+            </div>
         `;
     }
 
     // ============================================
     //  ОБНОВЛЕНИЕ ИНФОРМАЦИИ О КОРАБЛЕ
     // ============================================
-    updateShipInfo() {
+    async updateShipInfo() {
         if (!this.ship) return;
 
         document.getElementById('ship-name-display').textContent = this.ship.name || '—';
@@ -479,6 +532,31 @@ class RegattaGame {
             helpBtn.classList.add('active');
         } else {
             helpBtn.classList.remove('active');
+        }
+
+        // Обновляем кеш ветра и течения для popup
+        try {
+            const windResponse = await fetch(`/api/wind?lat=${this.ship.lat}&lng=${this.ship.lng}`);
+            this.cachedWindData = await windResponse.json();
+
+            const currentResponse = await fetch(`/api/current?lat=${this.ship.lat}&lng=${this.ship.lng}`);
+            const currentData = await currentResponse.json();
+            this.cachedCurrentData = {
+                speed: currentData.speed || 0,
+                direction: currentData.direction || 0,
+                name: currentData.components ? currentData.components.join(', ') : 'Фоновое'
+            };
+        } catch (error) {
+            console.warn('Failed to fetch weather data:', error);
+        }
+
+        // Обновляем попапы всех игроков
+        if (this.lastState) {
+            for (const [id, marker] of Object.entries(this.markers)) {
+                if (this.lastState.players[id]) {
+                    marker.setPopupContent(this.createPopupWithWeather(this.lastState.players[id]));
+                }
+            }
         }
     }
 
