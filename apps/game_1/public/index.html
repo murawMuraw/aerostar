@@ -523,32 +523,32 @@
     <a id="btn-home" href="https://aerost.art/" title="На главную Aerost.art">🏠</a>
 
     <!-- ========================================== -->
-    <!-- 4. ПАНЕЛЬ УПРАВЛЕНИЯ                      -->
-    <!-- ========================================== -->
-    <div id="controls-panel">
-        <div class="ctrl-group">
-            <button class="ctrl-btn" id="btn-left" title="Влево (←)">◄</button>
-            <button class="ctrl-btn" id="btn-right" title="Вправо (→)">►</button>
-        </div>
-        <div class="ctrl-group">
-            <button class="ctrl-btn" id="btn-raise" title="Поднять паруса (↑)">▲</button>
-            <button class="ctrl-btn" id="btn-lower" title="Опустить паруса (↓)">▼</button>
-        </div>
-        <div class="ctrl-group">
-            <button class="ctrl-btn anchor-btn" id="btn-anchor" title="Якорь (Space)">⚓</button>
-            <button class="ctrl-btn help-btn" id="btn-help" title="Запросить помощь">🆘</button>
-        </div>
-        <div class="ship-info-display">
-            <span>⛵ <span class="value" id="ship-name-display">—</span></span>
-            <span>🧭 <span class="value" id="heading-display">0°</span></span>
-            <span>⚡ <span class="value" id="speed-display">0.0</span></span>
-            <span>
-                📈
-                <div class="sail-bar-mini"><div class="fill" id="sail-fill-mini" style="width:50%"></div></div>
-                <span class="value" id="sail-display-mini">50%</span>
-            </span>
-        </div>
+<!-- 4. ПАНЕЛЬ УПРАВЛЕНИЯ (без SOS)             -->
+<!-- ========================================== -->
+<div id="controls-panel">
+    <div class="ctrl-group">
+        <button class="ctrl-btn" id="btn-left" title="Влево (←)">◄</button>
+        <button class="ctrl-btn" id="btn-right" title="Вправо (→)">►</button>
     </div>
+    <div class="ctrl-group">
+        <button class="ctrl-btn" id="btn-raise" title="Поднять паруса (↑)">▲</button>
+        <button class="ctrl-btn" id="btn-lower" title="Опустить паруса (↓)">▼</button>
+    </div>
+    <div class="ctrl-group" style="border-right: none;">
+        <button class="ctrl-btn anchor-btn" id="btn-anchor" title="Якорь (Space)">⚓</button>
+        <!-- Кнопка SOS УДАЛЕНА -->
+    </div>
+    <div class="ship-info-display">
+        <span>⛵ <span class="value" id="ship-name-display">—</span></span>
+        <span>🧭 <span class="value" id="heading-display">0°</span></span>
+        <span>⚡ <span class="value" id="speed-display">0.0</span></span>
+        <span>
+            📈
+            <div class="sail-bar-mini"><div class="fill" id="sail-fill-mini" style="width:50%"></div></div>
+            <span class="value" id="sail-display-mini">50%</span>
+        </span>
+    </div>
+</div>
 
     <!-- ========================================== -->
     <!-- 5. ЧАТ                                     -->
