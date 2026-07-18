@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Выбор парусника — Regatta</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        body {
+            background: #0a1a2a;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .selection-container {
+            max-width: 700px;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
+            padding: 40px 35px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+        }
+
+        .selection-container h1 {
+            text-align: center;
+            font-size: 28px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #f5e6c8, #ffd966);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .selection-container .subtitle {
+            text-align: center;
+            color: #8899aa;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+
+        .ship-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 600px) {
+            .ship-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .ship-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 2px solid rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .ship-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-3px);
+        }
+
+        .ship-card.selected {
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.12);
+            box-shadow: 0 0 30px rgba(74, 158, 255, 0.15);
+        }
+
+        .ship-card.taken {
+            opacity: 0.3;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+
+        .ship-card.taken::after {
+            content: '🔒';
+            position: absolute;
+            top: 6px;
+            right: 10px;
+            font-size: 16px;
+        }
+
+        .ship-card {
+            position: relative;
+        }
+
+        .ship-card img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            filter: brightness(0.8);
+            transition: all 0.3s;
+        }
+
+        .ship-card.selected img {
+            filter: brightness(1);
+        }
+
+        .ship-card .ship-name {
+            margin-top: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .ship-card .ship-status {
+            font-size: 12px;
+            color: #8899aa;
+            margin-top: 4px;
+        }
+
+        .ship-card .ship-status.free { color: #4caf50; }
+        .ship-card .ship-status.taken { color: #f44336; }
+
+        .btn-start {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #4a9eff, #6c5ce7);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-start:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(74, 158, 255, 0.4);
+        }
+
+        .btn-start:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-back {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #8899aa;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .error-message {
+            color: #ff6b6b;
+            text-align: center;
+            margin-top: 12px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .loading-ships {
+            text-align: center;
+            color: #8899aa;
+            padding: 30px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="selection-container">
+        <h1>⛵ Выбор парусника</h1>
+        <p class="subtitle">Выберите корабль для участия в регате</p>
+
+        <div id="ship-grid" class="ship-grid">
+            <div class="loading-ships">Загрузка...</div>
+        </div>
+
+        <button class="btn-start" id="btn-start" disabled>🚀 Начать плавание</button>
+        <button class="btn-back" id="btn-back">← Вернуться</button>
+        <div class="error-message" id="error-message"></div>
+    </div>
+
+    <script>
+        // selection.js
+        const shipGrid = document.getElementById('ship-grid');
+        const startBtn = document.getElementById('btn-start');
+        const backBtn = document.getElementById('btn-back');
+        const errorDiv = document.getElementById('error-message');
+
+        let selectedShip = null;
+        let shipData = {};
+
+        // Загрузка состояния кораблей
+        async function loadShips() {
+            try {
+                const response = await fetch('/api/ships/state');
+                shipData = await response.json();
+                renderShips();
+            } catch (error) {
+                shipGrid.innerHTML = '<div class="loading-ships">❌ Ошибка загрузки</div>';
+            }
+        }
+
+        function renderShips() {
+            const shipList = [
+                { id: 'klip_10', name: 'Клипер-10', img: 'images/ships/klip_10.png' },
+                { id: 'klip_20', name: 'Клипер-20', img: 'images/ships/klip_20.png' },
+                { id: 'klip_30', name: 'Клипер-30', img: 'images/ships/klip_30.png' },
+                { id: 'columb', name: 'Колумб', img: 'images/ships/columb.png' },
+                { id: 'pirat', name: 'Пират', img: 'images/ships/pirat.png' },
+                { id: 'ap', name: 'АП', img: 'images/ships/ap.png' },
+                { id: '19c_m', name: '19-й век', img: 'images/ships/19c_m.png' }
+            ];
+
+            shipGrid.innerHTML = '';
+
+            shipList.forEach(ship => {
+                const state = shipData[ship.id];
+                const isTaken = state && state.taken;
+
+                const card = document.createElement('div');
+                card.className = `ship-card${isTaken ? ' taken' : ''}`;
+                card.dataset.shipId = ship.id;
+
+                card.innerHTML = `
+                    <img src="${ship.img}" alt="${ship.name}">
+                    <div class="ship-name">${ship.name}</div>
+                    <div class="ship-status ${isTaken ? 'taken' : 'free'}">
+                        ${isTaken ? '🔒 Занят' : '✅ Доступен'}
+                    </div>
+                `;
+
+                if (!isTaken) {
+                    card.onclick = () => selectShip(ship.id);
+                }
+
+                shipGrid.appendChild(card);
+            });
+        }
+
+        function selectShip(shipId) {
+            // Снимаем выделение с других
+            document.querySelectorAll('.ship-card').forEach(c => c.classList.remove('selected'));
+            
+            // Выделяем выбранный
+            const card = document.querySelector(`.ship-card[data-ship-id="${shipId}"]`);
+            if (card) {
+                card.classList.add('selected');
+                selectedShip = shipId;
+                startBtn.disabled = false;
+                errorDiv.style.display = 'none';
+            }
+        }
+
+        // Начать плавание
+        startBtn.addEventListener('click', async () => {
+            if (!selectedShip) return;
+
+            try {
+                const response = await fetch('/api/select_ship', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shipId: selectedShip })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    errorDiv.textContent = data.message || 'Ошибка выбора корабля';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Ошибка соединения с сервером';
+                errorDiv.style.display = 'block';
+            }
+        });
+
+        // Назад
+        backBtn.addEventListener('click', () => {
+            window.location.href = '/';
+        });
+
+        // Загрузка
+        loadShips();
+
+        // Обновление состояния каждые 10 секунд
+        setInterval(loadShips, 10000);
+    </script>
+</body>
+</html>
