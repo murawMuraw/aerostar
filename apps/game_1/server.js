@@ -543,6 +543,83 @@ io.on('connection', (socket) => {
 });
 
 // ============================================
+//  ВЫБОР КОРАБЛЯ (для зарегистрированных)
+// ============================================
+
+// Временно храним выбор игрока (в реальном проекте — в БД)
+const playerShipSelection = new Map(); // playerId -> shipId
+
+app.post('/api/select_ship', (req, res) => {
+    const { shipId } = req.body;
+    
+    // Проверяем, авторизован ли пользователь
+    // В текущей реализации используем сессию или токен
+    // Для простоты — используем заголовок
+    const playerId = req.headers['x-player-id'];
+    
+    if (!playerId) {
+        return res.status(401).json({ success: false, message: 'Требуется авторизация' });
+    }
+    
+    // Проверяем, свободен ли корабль
+    if (shipStates[shipId] && shipStates[shipId].taken) {
+        return res.status(400).json({ success: false, message: 'Этот корабль уже занят' });
+    }
+    
+    // Сохраняем выбор
+    playerShipSelection.set(playerId, shipId);
+    shipStates[shipId].taken = true;
+    
+    res.json({ success: true, message: 'Корабль выбран' });
+});
+
+// ============================================
+//  ВХОД С КОРАБЛЁМ (обновлённый)
+// ============================================
+socket.on('join_with_ship', (data) => {
+    // Для гостей — создаём наблюдателя
+    if (data.isGuest) {
+        const ship = new Ship(socket.id, 'Гость', data.lat, data.lng, 'guest');
+        ship.isOnline = true;
+        players.set(socket.id, ship);
+        
+        socket.emit('joined', {
+            role: 'guest',
+            ship: ship.getState(),
+            players: getAllPlayersState()
+        });
+        
+        console.log(`👁 Guest joined at ${data.lat}, ${data.lng}`);
+        return;
+    }
+    
+    // Для зарегистрированных — используем выбранный корабль
+    const { shipId, shipName, lat, lng } = data;
+    
+    // Проверка, что корабль свободен
+    if (shipStates[shipId] && shipStates[shipId].taken) {
+        socket.emit('join_error', { message: 'Этот корабль уже занят' });
+        return;
+    }
+    
+    // Создаём игрока
+    const player = new Ship(socket.id, shipName, lat, lng, shipId);
+    players.set(socket.id, player);
+    shipStates[shipId].taken = true;
+    
+    socket.emit('joined', {
+        role: 'player',
+        ship: player.getState(),
+        players: getAllPlayersState()
+    });
+    
+    io.emit('player_joined', { playerId: socket.id, name: player.name });
+    broadcastState();
+    console.log(`⛵ ${shipName} joined at ${lat}, ${lng}`);
+});
+
+
+// ============================================
 //  ЗАПУСК
 // ============================================
 server.listen(PORT, '0.0.0.0', () => {
