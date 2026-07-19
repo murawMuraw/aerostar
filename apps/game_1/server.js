@@ -417,7 +417,7 @@ setInterval(() => {
 setInterval(async () => {
     const deltaTime = 1 / 30;
     for (const [id, ship] of players) {
-        if (ship.isEliminated) continue;
+        if (ship.isEliminated || ship.shipType === 'guest') continue;
         try {
             const wind = await fetchWindData(ship.lat, ship.lng);
             const current = await fetchCurrentData(ship.lat, ship.lng);
@@ -436,6 +436,26 @@ io.on('connection', (socket) => {
     console.log('🔗 New connection:', socket.id);
 
     // ==========================================
+    //  ВХОД КАК ГОСТЬ
+    // ==========================================
+    socket.on('join_as_guest', (data) => {
+        const { lat, lng } = data;
+        
+        const guest = new Ship(socket.id, 'Гость', lat, lng, 'guest');
+        guest.isOnline = true;
+        players.set(socket.id, guest);
+        
+        socket.emit('joined', {
+            role: 'guest',
+            ship: guest.getState(),
+            players: getAllPlayersState()
+        });
+        
+        console.log(`👁 Guest joined at ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        broadcastState();
+    });
+
+    // ==========================================
     //  ВХОД С КОРАБЛЁМ
     // ==========================================
     socket.on('join_with_ship', (data) => {
@@ -448,7 +468,7 @@ io.on('connection', (socket) => {
         }
 
         // Проверяем лимит игроков
-        const activePlayers = Array.from(players.values()).filter(p => p.isOnline && !p.isEliminated);
+        const activePlayers = Array.from(players.values()).filter(p => p.isOnline && !p.isEliminated && p.shipType !== 'guest');
         if (activePlayers.length >= MAX_PLAYERS) {
             socket.emit('join_error', { message: `Максимум ${MAX_PLAYERS} игроков` });
             return;
@@ -483,7 +503,7 @@ io.on('connection', (socket) => {
     // ==========================================
     socket.on('turn', (data) => {
         const ship = players.get(socket.id);
-        if (ship && ship.isOnline && !ship.isEliminated) {
+        if (ship && ship.isOnline && !ship.isEliminated && ship.shipType !== 'guest') {
             const result = ship.turn(data.delta || 0);
             socket.emit('action_result', { action: 'turn', success: result.success, ...result });
             if (result.success) broadcastState();
@@ -492,7 +512,7 @@ io.on('connection', (socket) => {
 
     socket.on('sail', (data) => {
         const ship = players.get(socket.id);
-        if (ship && ship.isOnline && !ship.isEliminated) {
+        if (ship && ship.isOnline && !ship.isEliminated && ship.shipType !== 'guest') {
             let result;
             if (data.action === 'raise') result = ship.raiseSail();
             else if (data.action === 'lower') result = ship.lowerSail();
@@ -504,17 +524,10 @@ io.on('connection', (socket) => {
 
     socket.on('anchor', (data) => {
         const ship = players.get(socket.id);
-        if (ship && ship.isOnline && !ship.isEliminated) {
+        if (ship && ship.isOnline && !ship.isEliminated && ship.shipType !== 'guest') {
             const result = data.action === 'drop' ? ship.dropAnchor() : ship.weighAnchor();
             socket.emit('action_result', { action: 'anchor', success: result.success, ...result });
             if (result.success) broadcastState();
-        }
-    });
-
-    socket.on('request_help', () => {
-        const ship = players.get(socket.id);
-        if (ship && ship.isOnline && !ship.isEliminated) {
-            ship.requestHelp();
         }
     });
 
@@ -545,79 +558,25 @@ io.on('connection', (socket) => {
 // ============================================
 //  ВЫБОР КОРАБЛЯ (для зарегистрированных)
 // ============================================
-
-// Временно храним выбор игрока (в реальном проекте — в БД)
-const playerShipSelection = new Map(); // playerId -> shipId
+const playerShipSelection = new Map();
 
 app.post('/api/select_ship', (req, res) => {
     const { shipId } = req.body;
-    
-    // Проверяем, авторизован ли пользователь
-    // В текущей реализации используем сессию или токен
-    // Для простоты — используем заголовок
     const playerId = req.headers['x-player-id'];
     
     if (!playerId) {
         return res.status(401).json({ success: false, message: 'Требуется авторизация' });
     }
     
-    // Проверяем, свободен ли корабль
     if (shipStates[shipId] && shipStates[shipId].taken) {
         return res.status(400).json({ success: false, message: 'Этот корабль уже занят' });
     }
     
-    // Сохраняем выбор
     playerShipSelection.set(playerId, shipId);
     shipStates[shipId].taken = true;
     
     res.json({ success: true, message: 'Корабль выбран' });
 });
-
-// ============================================
-//  ВХОД С КОРАБЛЁМ (обновлённый)
-// ============================================
-socket.on('join_with_ship', (data) => {
-    // Для гостей — создаём наблюдателя
-    if (data.isGuest) {
-        const ship = new Ship(socket.id, 'Гость', data.lat, data.lng, 'guest');
-        ship.isOnline = true;
-        players.set(socket.id, ship);
-        
-        socket.emit('joined', {
-            role: 'guest',
-            ship: ship.getState(),
-            players: getAllPlayersState()
-        });
-        
-        console.log(`👁 Guest joined at ${data.lat}, ${data.lng}`);
-        return;
-    }
-    
-    // Для зарегистрированных — используем выбранный корабль
-    const { shipId, shipName, lat, lng } = data;
-    
-    // Проверка, что корабль свободен
-    if (shipStates[shipId] && shipStates[shipId].taken) {
-        socket.emit('join_error', { message: 'Этот корабль уже занят' });
-        return;
-    }
-    
-    // Создаём игрока
-    const player = new Ship(socket.id, shipName, lat, lng, shipId);
-    players.set(socket.id, player);
-    shipStates[shipId].taken = true;
-    
-    socket.emit('joined', {
-        role: 'player',
-        ship: player.getState(),
-        players: getAllPlayersState()
-    });
-    
-    io.emit('player_joined', { playerId: socket.id, name: player.name });
-    broadcastState();
-    console.log(`⛵ ${shipName} joined at ${lat}, ${lng}`);
-});
-
 
 // ============================================
 //  ЗАПУСК
