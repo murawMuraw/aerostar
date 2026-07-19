@@ -63,11 +63,145 @@ const shipStates = {
 };
 
 // ============================================
+//  АВТОРИЗАЦИЯ
+// ============================================
+
+// Простая БД в памяти (для демонстрации)
+const users = new Map(); // username -> { id, username, email, passwordHash }
+const sessions = new Map(); // sessionId -> userId
+
+// Хэширование (в реальном проекте используйте bcrypt)
+function hashPassword(password) {
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+        const char = password.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return `hash_${hash}_${password.length}`;
+}
+
+// Регистрация
+app.post('/api/register', (req, res) => {
+    const { username, email, password } = req.body;
+    
+    if (!username || !email || !password) {
+        return res.status(400).json({ success: false, message: 'Все поля обязательны' });
+    }
+    
+    if (username.length < 3 || username.length > 20) {
+        return res.status(400).json({ success: false, message: 'Имя от 3 до 20 символов' });
+    }
+    
+    if (password.length < 6) {
+        return res.status(400).json({ success: false, message: 'Пароль минимум 6 символов' });
+    }
+    
+    if (users.has(username)) {
+        return res.status(400).json({ success: false, message: 'Пользователь уже существует' });
+    }
+    
+    const id = `user_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    users.set(username, {
+        id,
+        username,
+        email,
+        passwordHash: hashPassword(password),
+        createdAt: Date.now()
+    });
+    
+    console.log(`✅ User registered: ${username}`);
+    res.json({ success: true, message: 'Регистрация успешна' });
+});
+
+// Вход
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    
+    const user = users.get(username);
+    if (!user) {
+        return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
+    }
+    
+    if (user.passwordHash !== hashPassword(password)) {
+        return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
+    }
+    
+    // Создаём сессию
+    const sessionId = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    sessions.set(sessionId, user.id);
+    
+    console.log(`🔓 User logged in: ${username}`);
+    res.json({ 
+        success: true, 
+        user: { id: user.id, username: user.username, email: user.email },
+        sessionId
+    });
+});
+
+// Проверка сессии
+app.get('/api/session', (req, res) => {
+    const sessionId = req.headers['x-session-id'];
+    if (!sessionId || !sessions.has(sessionId)) {
+        return res.json({ user: null });
+    }
+    
+    const userId = sessions.get(sessionId);
+    let foundUser = null;
+    for (const [_, user] of users) {
+        if (user.id === userId) {
+            foundUser = { id: user.id, username: user.username, email: user.email };
+            break;
+        }
+    }
+    
+    res.json({ user: foundUser });
+});
+
+// Выход
+app.post('/api/logout', (req, res) => {
+    const sessionId = req.headers['x-session-id'];
+    if (sessionId) {
+        sessions.delete(sessionId);
+        console.log(`🚪 User logged out`);
+    }
+    res.json({ success: true });
+});
+
+// ============================================
+//  ВЫБОР КОРАБЛЯ (для зарегистрированных)
+// ============================================
+app.post('/api/select_ship', (req, res) => {
+    const { shipId } = req.body;
+    const sessionId = req.headers['x-session-id'];
+    
+    if (!sessionId || !sessions.has(sessionId)) {
+        return res.status(401).json({ success: false, message: 'Требуется авторизация' });
+    }
+    
+    const userId = sessions.get(sessionId);
+    
+    // Проверяем, свободен ли корабль
+    if (shipStates[shipId] && shipStates[shipId].taken) {
+        // Проверяем, не принадлежит ли он этому пользователю
+        if (shipStates[shipId].playerId !== userId) {
+            return res.status(400).json({ success: false, message: 'Этот корабль уже занят' });
+        }
+    }
+    
+    // Сохраняем выбор
+    shipStates[shipId].taken = true;
+    shipStates[shipId].playerId = userId;
+    
+    console.log(`⛵ User ${userId} selected ship: ${shipId}`);
+    res.json({ success: true, message: 'Корабль выбран' });
+});
+
+// ============================================
 //  МОДЕЛЬ ТЕЧЕНИЙ (упрощённая)
 // ============================================
 class OceanCurrentModel {
     getCurrent(lat, lng) {
-        // Простая модель течений
         const speed = 0.3 + Math.sin(lat * 0.1) * 0.2 + Math.cos(lng * 0.08) * 0.2;
         const direction = (Math.atan2(Math.sin(lat * 0.3), Math.cos(lng * 0.2)) * 180 / Math.PI + 180) % 360;
         const rad = direction * Math.PI / 180;
@@ -130,109 +264,6 @@ async function fetchCurrentData(lat, lng) {
 // ============================================
 //  API
 // ============================================
-// ============================================
-//  АВТОРИЗАЦИЯ (добавить в server.js)
-// ============================================
-
-// Простая БД в памяти (для демонстрации)
-const users = new Map(); // username -> { id, username, email, passwordHash }
-const sessions = new Map(); // sessionId -> userId
-
-// Хэширование (в реальном проекте используйте bcrypt)
-function hashPassword(password) {
-    // ВНИМАНИЕ: это упрощённый хэш, для продакшена используйте bcrypt!
-    let hash = 0;
-    for (let i = 0; i < password.length; i++) {
-        const char = password.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return `hash_${hash}_${password.length}`;
-}
-
-// Регистрация
-app.post('/api/register', (req, res) => {
-    const { username, email, password } = req.body;
-    
-    if (!username || !email || !password) {
-        return res.status(400).json({ success: false, message: 'Все поля обязательны' });
-    }
-    
-    if (username.length < 3 || username.length > 20) {
-        return res.status(400).json({ success: false, message: 'Имя от 3 до 20 символов' });
-    }
-    
-    if (password.length < 6) {
-        return res.status(400).json({ success: false, message: 'Пароль минимум 6 символов' });
-    }
-    
-    if (users.has(username)) {
-        return res.status(400).json({ success: false, message: 'Пользователь уже существует' });
-    }
-    
-    const id = `user_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    users.set(username, {
-        id,
-        username,
-        email,
-        passwordHash: hashPassword(password),
-        createdAt: Date.now()
-    });
-    
-    res.json({ success: true, message: 'Регистрация успешна' });
-});
-
-// Вход
-app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
-    
-    const user = users.get(username);
-    if (!user) {
-        return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
-    }
-    
-    if (user.passwordHash !== hashPassword(password)) {
-        return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
-    }
-    
-    // Создаём сессию
-    const sessionId = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-    sessions.set(sessionId, user.id);
-    
-    res.json({ 
-        success: true, 
-        user: { id: user.id, username: user.username, email: user.email },
-        sessionId
-    });
-});
-
-// Проверка сессии
-app.get('/api/session', (req, res) => {
-    const sessionId = req.headers['x-session-id'];
-    if (!sessionId || !sessions.has(sessionId)) {
-        return res.json({ user: null });
-    }
-    
-    const userId = sessions.get(sessionId);
-    let foundUser = null;
-    for (const [_, user] of users) {
-        if (user.id === userId) {
-            foundUser = { id: user.id, username: user.username, email: user.email };
-            break;
-        }
-    }
-    
-    res.json({ user: foundUser });
-});
-
-// Выход
-app.post('/api/logout', (req, res) => {
-    const sessionId = req.headers['x-session-id'];
-    if (sessionId) {
-        sessions.delete(sessionId);
-    }
-    res.json({ success: true });
-});
 app.get('/api/players', (req, res) => {
     const playerList = [];
     for (const [id, ship] of players) {
@@ -289,6 +320,10 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/selection.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'selection.html'));
+});
+
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // ============================================
@@ -329,12 +364,10 @@ class Ship {
         }
         this.groundTime = null;
 
-        // Паруса
         const sailDiff = this.targetSailPosition - this.sailPosition;
         this.sailPosition += sailDiff * deltaTime * 0.5;
         this.sailPosition = Math.max(0, Math.min(1, this.sailPosition));
 
-        // Ветер
         const windSpeed = wind.speed || 5;
         const windDirection = wind.direction || 0;
         const angleToWind = this.heading - windDirection;
@@ -354,7 +387,6 @@ class Ship {
             lngDelta += lngPerSecond * Math.sin(this.heading * Math.PI / 180);
         }
 
-        // Течение
         if (current && current.speed > 0.05) {
             const currentSpeedMs = current.speed * 0.514;
             const latPerSecond = currentSpeedMs / 111320;
@@ -659,137 +691,18 @@ io.on('connection', (socket) => {
 });
 
 // ============================================
-//  ВЫБОР КОРАБЛЯ (для зарегистрированных)
-// ============================================
-const playerShipSelection = new Map();
-
-app.post('/api/select_ship', (req, res) => {
-    const { shipId } = req.body;
-    const playerId = req.headers['x-player-id'];
-    
-    if (!playerId) {
-        return res.status(401).json({ success: false, message: 'Требуется авторизация' });
-    }
-    
-    if (shipStates[shipId] && shipStates[shipId].taken) {
-        return res.status(400).json({ success: false, message: 'Этот корабль уже занят' });
-    }
-    
-    playerShipSelection.set(playerId, shipId);
-    shipStates[shipId].taken = true;
-    
-    res.json({ success: true, message: 'Корабль выбран' });
-});
-// ============================================
-//  АВТОРИЗАЦИЯ (добавить в server.js)
-// ============================================
-
-// Простая БД в памяти (для демонстрации)
-const users = new Map(); // username -> { id, username, email, passwordHash }
-const sessions = new Map(); // sessionId -> userId
-
-// Хэширование (в реальном проекте используйте bcrypt)
-function hashPassword(password) {
-    // ВНИМАНИЕ: это упрощённый хэш, для продакшена используйте bcrypt!
-    let hash = 0;
-    for (let i = 0; i < password.length; i++) {
-        const char = password.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return `hash_${hash}_${password.length}`;
-}
-
-// Регистрация
-app.post('/api/register', (req, res) => {
-    const { username, email, password } = req.body;
-    
-    if (!username || !email || !password) {
-        return res.status(400).json({ success: false, message: 'Все поля обязательны' });
-    }
-    
-    if (username.length < 3 || username.length > 20) {
-        return res.status(400).json({ success: false, message: 'Имя от 3 до 20 символов' });
-    }
-    
-    if (password.length < 6) {
-        return res.status(400).json({ success: false, message: 'Пароль минимум 6 символов' });
-    }
-    
-    if (users.has(username)) {
-        return res.status(400).json({ success: false, message: 'Пользователь уже существует' });
-    }
-    
-    const id = `user_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    users.set(username, {
-        id,
-        username,
-        email,
-        passwordHash: hashPassword(password),
-        createdAt: Date.now()
-    });
-    
-    res.json({ success: true, message: 'Регистрация успешна' });
-});
-
-// Вход
-app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
-    
-    const user = users.get(username);
-    if (!user) {
-        return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
-    }
-    
-    if (user.passwordHash !== hashPassword(password)) {
-        return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
-    }
-    
-    // Создаём сессию
-    const sessionId = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-    sessions.set(sessionId, user.id);
-    
-    res.json({ 
-        success: true, 
-        user: { id: user.id, username: user.username, email: user.email },
-        sessionId
-    });
-});
-
-// Проверка сессии
-app.get('/api/session', (req, res) => {
-    const sessionId = req.headers['x-session-id'];
-    if (!sessionId || !sessions.has(sessionId)) {
-        return res.json({ user: null });
-    }
-    
-    const userId = sessions.get(sessionId);
-    let foundUser = null;
-    for (const [_, user] of users) {
-        if (user.id === userId) {
-            foundUser = { id: user.id, username: user.username, email: user.email };
-            break;
-        }
-    }
-    
-    res.json({ user: foundUser });
-});
-
-// Выход
-app.post('/api/logout', (req, res) => {
-    const sessionId = req.headers['x-session-id'];
-    if (sessionId) {
-        sessions.delete(sessionId);
-    }
-    res.json({ success: true });
-});
-
-
-// ============================================
 //  ЗАПУСК
 // ============================================
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Regatta server running at http://0.0.0.0:${PORT}`);
     console.log(`👥 Max players: ${MAX_PLAYERS}`);
     console.log(`🌊 Wind + currents enabled\n`);
+    console.log(`📋 API endpoints:`);
+    console.log(`  - POST /api/register`);
+    console.log(`  - POST /api/login`);
+    console.log(`  - GET  /api/session`);
+    console.log(`  - POST /api/logout`);
+    console.log(`  - POST /api/select_ship`);
+    console.log(`  - GET  /api/ships/state`);
+    console.log(`  - GET  /api/players\n`);
 });
