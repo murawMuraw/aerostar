@@ -16,10 +16,11 @@ class RegattaGame {
         this.startHint = null;
         this.startTimeout = null;
         this.lastState = null;
+        this.role = null; // 'guest' или 'player'
+        this.isGuest = false;
     }
 
     init() {
-        this.role = null; // 'guest' или 'player'
         this.initMap();
         this.initSocket();
         this.setupShipPanel();
@@ -40,7 +41,7 @@ class RegattaGame {
         L.control.zoom({ position: 'bottomright' }).addTo(this.map);
 
         this.map.on('click', (e) => {
-            if (this.isSelectingStart && this.selectedShip) {
+            if (this.isSelectingStart && this.selectedShip && !this.isGuest) {
                 this.confirmStart(e.latlng.lat, e.latlng.lng);
             }
         });
@@ -55,52 +56,46 @@ class RegattaGame {
             this.playerId = data.ship.id;
             this.ship = data.ship;
             this.role = data.role; // 'guest' или 'player'
-            if (this.role === 'guest') {
-        // Гость — только наблюдение
-        document.getElementById('guest-message').style.display = 'block';
-        document.getElementById('player-ships').style.display = 'none';
-        document.getElementById('controls-panel').style.display = 'none';
-        document.getElementById('chat-input').disabled = true;
-        document.getElementById('chat-send').disabled = true;
-        document.getElementById('startBtn').disabled = true;
-        document.getElementById('hint').textContent = '👁 Вы наблюдатель';
-        this.showNotification('👁 Вы вошли как наблюдатель', 'info');
-    } else {
-        // Игрок — полное управление
-        document.getElementById('guest-message').style.display = 'none';
-        document.getElementById('player-ships').style.display = 'flex';
-        document.getElementById('controls-panel').style.display = 'flex';
-        document.getElementById('chat-input').disabled = false;
-        document.getElementById('chat-send').disabled = false;
-        document.getElementById('hint').textContent = '⛵ Корабль в море!';
-        this.showNotification('⛵ Вы управляете кораблём!', 'success');
-    }
-            this.updatePlayers(data.players);
-            this.isRacing = true;
-            this.hasSelectedShip = true;
+            this.isGuest = (this.role === 'guest');
+            
+            if (this.isGuest) {
+                // Гость — только наблюдение
+                document.getElementById('guest-message').style.display = 'block';
+                document.getElementById('player-ships').style.display = 'none';
+                document.getElementById('controls-panel').style.display = 'none';
+                document.getElementById('chat-input').disabled = true;
+                document.getElementById('chat-send').disabled = true;
+                this.showNotification('👁 Вы вошли как наблюдатель', 'info');
+                this.addChatMessage('👁 Вы наблюдатель', 'system');
+            } else {
+                // Игрок — полное управление
+                document.getElementById('guest-message').style.display = 'none';
+                document.getElementById('player-ships').style.display = 'flex';
+                document.getElementById('controls-panel').style.display = 'flex';
+                document.getElementById('chat-input').disabled = false;
+                document.getElementById('chat-send').disabled = false;
+                this.showNotification('⛵ Вы управляете кораблём!', 'success');
+                this.addChatMessage('⛵ Вы управляете кораблём!', 'system');
+                
+                this.isRacing = true;
+                this.hasSelectedShip = true;
+                
+                // Блокируем выбор других кораблей
+                document.querySelectorAll('.ship-btn').forEach(b => {
+                    b.style.opacity = '0.3';
+                    b.style.cursor = 'not-allowed';
+                    b.style.pointerEvents = 'none';
+                });
 
-            document.getElementById('controls-panel').style.display = 'flex';
-            document.getElementById('chat-input').disabled = false;
-            document.getElementById('chat-send').disabled = false;
+                const btn = document.querySelector(`.ship-btn[data-ship="${this.selectedShip}"]`);
+                if (btn) {
+                    btn.classList.add('taken');
+                    btn.querySelector('.status-dot').className = 'status-dot taken';
+                }
 
-            document.querySelectorAll('.ship-btn').forEach(b => {
-                b.style.opacity = '0.3';
-                b.style.cursor = 'not-allowed';
-                b.style.pointerEvents = 'none';
-            });
-
-            const btn = document.querySelector(`.ship-btn[data-ship="${this.selectedShip}"]`);
-            if (btn) {
-                btn.classList.add('taken');
-                btn.querySelector('.status-dot').className = 'status-dot taken';
+                this.updateShipInfo();
+                this.updatePlayers(data.players);
             }
-
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('hint').textContent = '⛵ Корабль в море!';
-
-            this.updateShipInfo();
-            this.updatePlayers(data.players);
-            this.showNotification('⛵ Корабль в море!', 'success');
         });
 
         this.socket.on('state', (data) => {
@@ -147,6 +142,14 @@ class RegattaGame {
             this.isSelectingStart = false;
             this.map.getContainer().style.cursor = 'default';
             this.loadShipsState();
+            
+            // Разблокируем выбор кораблей
+            document.querySelectorAll('.ship-btn').forEach(b => {
+                b.style.opacity = '1';
+                b.style.cursor = 'pointer';
+                b.style.pointerEvents = 'auto';
+                b.classList.remove('selected');
+            });
         });
     }
 
@@ -157,11 +160,10 @@ class RegattaGame {
     }
 
     selectShip(btn) {
-       
-        if (this.role === 'guest') {
-        this.showNotification('👁 Гости не могут выбирать корабль', 'warning');
-        return;
-    }
+        if (this.isGuest) {
+            this.showNotification('👁 Гости не могут выбирать корабль', 'warning');
+            return;
+        }
         if (this.hasSelectedShip) {
             this.showNotification('🚫 Вы уже выбрали корабль', 'warning');
             return;
@@ -187,9 +189,8 @@ class RegattaGame {
 
         this.isSelectingStart = true;
         this.map.getContainer().style.cursor = 'crosshair';
-        document.getElementById('hint').textContent = '📍 Кликните по карте для старта';
-        document.getElementById('startBtn').disabled = false;
         this.showNotification('📍 Кликните по карте для старта', 'info');
+        this.addChatMessage('📍 Кликните по карте для старта', 'system');
 
         if (this.startHint) this.map.removeLayer(this.startHint);
         this.startHint = L.popup()
@@ -213,8 +214,6 @@ class RegattaGame {
                     this.map.removeLayer(this.startHint);
                     this.startHint = null;
                 }
-                document.getElementById('hint').textContent = '👆 Выберите корабль, затем кликните на карту';
-                document.getElementById('startBtn').disabled = true;
                 this.showNotification('⏰ Время истекло', 'warning');
             }
         }, 30000);
@@ -224,10 +223,11 @@ class RegattaGame {
         if (this.startHint) { this.map.removeLayer(this.startHint); this.startHint = null; }
         if (this.startTimeout) { clearTimeout(this.startTimeout); this.startTimeout = null; }
 
-        if (this.role === 'guest') {
-        this.showNotification('👁 Гости не могут запускать корабль', 'warning');
-        return;
-    }
+        if (this.isGuest) {
+            this.showNotification('👁 Гости не могут запускать корабль', 'warning');
+            return;
+        }
+        
         this.socket.emit('join_with_ship', {
             shipId: this.selectedShip,
             shipName: this.selectedShipName,
@@ -237,7 +237,6 @@ class RegattaGame {
 
         this.isSelectingStart = false;
         this.map.getContainer().style.cursor = 'default';
-        document.getElementById('hint').textContent = '⏳ Запуск...';
     }
 
     loadShipsState() {
@@ -260,7 +259,8 @@ class RegattaGame {
                         btn.querySelector('.status-dot').className = 'status-dot free';
                     }
                 });
-            });
+            })
+            .catch(err => console.error('Failed to load ships state:', err));
     }
 
     updatePlayers(players) {
@@ -383,7 +383,7 @@ class RegattaGame {
 
     setupControls() {
         document.addEventListener('keydown', (e) => {
-            if (!this.isRacing || !this.socket) return;
+            if (!this.isRacing || this.isGuest || !this.socket) return;
             if (document.activeElement?.tagName === 'INPUT') return;
 
             switch (e.key) {
@@ -395,40 +395,42 @@ class RegattaGame {
             }
         });
 
-        document.getElementById('btn-left').onclick = () => this.socket.emit('turn', { delta: -15 });
-        document.getElementById('btn-right').onclick = () => this.socket.emit('turn', { delta: 15 });
-        document.getElementById('btn-raise').onclick = () => this.socket.emit('sail', { action: 'raise' });
-        document.getElementById('btn-lower').onclick = () => this.socket.emit('sail', { action: 'lower' });
-        document.getElementById('btn-anchor').onclick = () => {
-            this.socket.emit('anchor', { action: this.ship?.isAnchored ? 'weigh' : 'drop' });
+        document.getElementById('btn-left').onclick = () => {
+            if (!this.isGuest) this.socket.emit('turn', { delta: -15 });
         };
-
-        document.getElementById('resetBtn').onclick = () => {
-            if (this.isRacing && confirm('Сбросить корабль?')) {
-                this.socket.emit('leave_race');
-                location.reload();
+        document.getElementById('btn-right').onclick = () => {
+            if (!this.isGuest) this.socket.emit('turn', { delta: 15 });
+        };
+        document.getElementById('btn-raise').onclick = () => {
+            if (!this.isGuest) this.socket.emit('sail', { action: 'raise' });
+        };
+        document.getElementById('btn-lower').onclick = () => {
+            if (!this.isGuest) this.socket.emit('sail', { action: 'lower' });
+        };
+        document.getElementById('btn-anchor').onclick = () => {
+            if (!this.isGuest) {
+                this.socket.emit('anchor', { action: this.ship?.isAnchored ? 'weigh' : 'drop' });
             }
         };
 
-        document.getElementById('startBtn').onclick = () => {
-            if (this.selectedShip && this.isSelectingStart) {
-                this.map.getContainer().style.cursor = 'crosshair';
-                document.getElementById('hint').textContent = '📍 Кликните по карте для старта';
-                this.showNotification('📍 Кликните по карте для старта', 'info');
+        document.getElementById('resetBtn').onclick = () => {
+            if (this.isRacing && !this.isGuest && confirm('Сбросить корабль?')) {
+                this.socket.emit('leave_race');
+                location.reload();
             }
         };
     }
 
     setupChat() {
         document.getElementById('chat-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && this.socket && this.isRacing) {
+            if (e.key === 'Enter' && this.socket && this.isRacing && !this.isGuest) {
                 const msg = e.target.value.trim();
                 if (msg) { this.socket.emit('chat', { message: msg }); e.target.value = ''; }
             }
         });
 
         document.getElementById('chat-send').onclick = () => {
-            if (!this.isRacing) return;
+            if (!this.isRacing || this.isGuest) return;
             const input = document.getElementById('chat-input');
             const msg = input.value.trim();
             if (msg && this.socket) { this.socket.emit('chat', { message: msg }); input.value = ''; }
@@ -444,28 +446,21 @@ class RegattaGame {
     }
 
     setupUI() {
-        // Профиль
-        document.getElementById('profileButton').addEventListener('click', () => {
-            const modal = document.getElementById('authModal');
-            modal.classList.toggle('visible');
-            modal.classList.toggle('hidden');
-        });
-
-        // Авторизация
-        document.getElementById('continueGuestBtn').addEventListener('click', () => {
-            document.getElementById('authModal').classList.add('hidden');
-            document.getElementById('authModal').classList.remove('visible');
-        });
-
-        document.querySelectorAll('.auth-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                const target = tab.dataset.tab;
-                document.getElementById('loginForm').classList.toggle('hidden', target !== 'login');
-                document.getElementById('registerForm').classList.toggle('hidden', target !== 'register');
-            });
-        });
+        // Чат
+        document.getElementById('chat-toggle').onclick = () => {
+            const chat = document.getElementById('chat');
+            const messages = document.getElementById('chat-messages');
+            const inputArea = document.getElementById('chat-input-area');
+            if (chat.style.height === '40px') {
+                chat.style.height = '300px';
+                messages.style.display = 'block';
+                inputArea.style.display = 'flex';
+            } else {
+                chat.style.height = '40px';
+                messages.style.display = 'none';
+                inputArea.style.display = 'none';
+            }
+        };
     }
 
     showNotification(message, type = 'info') {
