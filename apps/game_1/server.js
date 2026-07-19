@@ -130,6 +130,109 @@ async function fetchCurrentData(lat, lng) {
 // ============================================
 //  API
 // ============================================
+// ============================================
+//  АВТОРИЗАЦИЯ (добавить в server.js)
+// ============================================
+
+// Простая БД в памяти (для демонстрации)
+const users = new Map(); // username -> { id, username, email, passwordHash }
+const sessions = new Map(); // sessionId -> userId
+
+// Хэширование (в реальном проекте используйте bcrypt)
+function hashPassword(password) {
+    // ВНИМАНИЕ: это упрощённый хэш, для продакшена используйте bcrypt!
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+        const char = password.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return `hash_${hash}_${password.length}`;
+}
+
+// Регистрация
+app.post('/api/register', (req, res) => {
+    const { username, email, password } = req.body;
+    
+    if (!username || !email || !password) {
+        return res.status(400).json({ success: false, message: 'Все поля обязательны' });
+    }
+    
+    if (username.length < 3 || username.length > 20) {
+        return res.status(400).json({ success: false, message: 'Имя от 3 до 20 символов' });
+    }
+    
+    if (password.length < 6) {
+        return res.status(400).json({ success: false, message: 'Пароль минимум 6 символов' });
+    }
+    
+    if (users.has(username)) {
+        return res.status(400).json({ success: false, message: 'Пользователь уже существует' });
+    }
+    
+    const id = `user_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    users.set(username, {
+        id,
+        username,
+        email,
+        passwordHash: hashPassword(password),
+        createdAt: Date.now()
+    });
+    
+    res.json({ success: true, message: 'Регистрация успешна' });
+});
+
+// Вход
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    
+    const user = users.get(username);
+    if (!user) {
+        return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
+    }
+    
+    if (user.passwordHash !== hashPassword(password)) {
+        return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
+    }
+    
+    // Создаём сессию
+    const sessionId = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    sessions.set(sessionId, user.id);
+    
+    res.json({ 
+        success: true, 
+        user: { id: user.id, username: user.username, email: user.email },
+        sessionId
+    });
+});
+
+// Проверка сессии
+app.get('/api/session', (req, res) => {
+    const sessionId = req.headers['x-session-id'];
+    if (!sessionId || !sessions.has(sessionId)) {
+        return res.json({ user: null });
+    }
+    
+    const userId = sessions.get(sessionId);
+    let foundUser = null;
+    for (const [_, user] of users) {
+        if (user.id === userId) {
+            foundUser = { id: user.id, username: user.username, email: user.email };
+            break;
+        }
+    }
+    
+    res.json({ user: foundUser });
+});
+
+// Выход
+app.post('/api/logout', (req, res) => {
+    const sessionId = req.headers['x-session-id'];
+    if (sessionId) {
+        sessions.delete(sessionId);
+    }
+    res.json({ success: true });
+});
 app.get('/api/players', (req, res) => {
     const playerList = [];
     for (const [id, ship] of players) {
@@ -577,6 +680,110 @@ app.post('/api/select_ship', (req, res) => {
     
     res.json({ success: true, message: 'Корабль выбран' });
 });
+// ============================================
+//  АВТОРИЗАЦИЯ (добавить в server.js)
+// ============================================
+
+// Простая БД в памяти (для демонстрации)
+const users = new Map(); // username -> { id, username, email, passwordHash }
+const sessions = new Map(); // sessionId -> userId
+
+// Хэширование (в реальном проекте используйте bcrypt)
+function hashPassword(password) {
+    // ВНИМАНИЕ: это упрощённый хэш, для продакшена используйте bcrypt!
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+        const char = password.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return `hash_${hash}_${password.length}`;
+}
+
+// Регистрация
+app.post('/api/register', (req, res) => {
+    const { username, email, password } = req.body;
+    
+    if (!username || !email || !password) {
+        return res.status(400).json({ success: false, message: 'Все поля обязательны' });
+    }
+    
+    if (username.length < 3 || username.length > 20) {
+        return res.status(400).json({ success: false, message: 'Имя от 3 до 20 символов' });
+    }
+    
+    if (password.length < 6) {
+        return res.status(400).json({ success: false, message: 'Пароль минимум 6 символов' });
+    }
+    
+    if (users.has(username)) {
+        return res.status(400).json({ success: false, message: 'Пользователь уже существует' });
+    }
+    
+    const id = `user_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    users.set(username, {
+        id,
+        username,
+        email,
+        passwordHash: hashPassword(password),
+        createdAt: Date.now()
+    });
+    
+    res.json({ success: true, message: 'Регистрация успешна' });
+});
+
+// Вход
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    
+    const user = users.get(username);
+    if (!user) {
+        return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
+    }
+    
+    if (user.passwordHash !== hashPassword(password)) {
+        return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
+    }
+    
+    // Создаём сессию
+    const sessionId = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    sessions.set(sessionId, user.id);
+    
+    res.json({ 
+        success: true, 
+        user: { id: user.id, username: user.username, email: user.email },
+        sessionId
+    });
+});
+
+// Проверка сессии
+app.get('/api/session', (req, res) => {
+    const sessionId = req.headers['x-session-id'];
+    if (!sessionId || !sessions.has(sessionId)) {
+        return res.json({ user: null });
+    }
+    
+    const userId = sessions.get(sessionId);
+    let foundUser = null;
+    for (const [_, user] of users) {
+        if (user.id === userId) {
+            foundUser = { id: user.id, username: user.username, email: user.email };
+            break;
+        }
+    }
+    
+    res.json({ user: foundUser });
+});
+
+// Выход
+app.post('/api/logout', (req, res) => {
+    const sessionId = req.headers['x-session-id'];
+    if (sessionId) {
+        sessions.delete(sessionId);
+    }
+    res.json({ success: true });
+});
+
 
 // ============================================
 //  ЗАПУСК
