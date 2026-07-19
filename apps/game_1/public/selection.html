@@ -212,7 +212,7 @@
         }
 
         /* ============================================
-           КОРАБЛИ
+           КОРАБЛИ - БЕЗ ПОДПИСЕЙ
         ============================================ */
         .ship-grid {
             display: grid;
@@ -231,11 +231,15 @@
             background: rgba(255, 255, 255, 0.04);
             border: 2px solid rgba(255, 255, 255, 0.06);
             border-radius: 14px;
-            padding: 14px 8px;
+            padding: 20px 10px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
             position: relative;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .ship-card:hover:not(.taken):not(.disabled) {
@@ -269,10 +273,10 @@
         }
 
         .ship-card img {
-            width: 55px;
-            height: 55px;
+            width: 70px;
+            height: 70px;
             object-fit: contain;
-            filter: brightness(0.7);
+            filter: brightness(0.8);
             transition: all 0.3s;
         }
 
@@ -280,15 +284,10 @@
             filter: brightness(1);
         }
 
-        .ship-card .ship-name {
-            margin-top: 6px;
-            font-weight: 600;
-            font-size: 13px;
-        }
-
         .ship-card .ship-status {
-            font-size: 11px;
-            margin-top: 3px;
+            position: absolute;
+            bottom: 6px;
+            font-size: 10px;
         }
 
         .ship-card .ship-status.free {
@@ -297,7 +296,6 @@
         .ship-card .ship-status.taken {
             color: #f44336;
         }
-
         .ship-card .ship-status.owned {
             color: #ffd966;
         }
@@ -345,10 +343,6 @@
 
         .btn-back:hover {
             background: rgba(255, 255, 255, 0.05);
-        }
-
-        .btn-back i {
-            margin-right: 6px;
         }
 
         .error-message {
@@ -410,19 +404,6 @@
 
         .player-info .logout-btn:hover {
             background: rgba(255, 107, 107, 0.1);
-        }
-
-        .no-auth-msg {
-            text-align: center;
-            color: #8899aa;
-            padding: 20px;
-            font-size: 14px;
-        }
-
-        .no-auth-msg .icon {
-            font-size: 40px;
-            display: block;
-            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -507,10 +488,9 @@
 
     <script>
         // ============================================
-        //  SELECTION.JS — ПОЛНАЯ ЛОГИКА
+        //  SELECTION.JS
         // ============================================
 
-        // DOM элементы
         const shipGrid = document.getElementById('shipGrid');
         const btnStart = document.getElementById('btnStart');
         const btnBack = document.getElementById('btnBack');
@@ -520,20 +500,17 @@
         const playerName = document.getElementById('playerName');
         const logoutBtn = document.getElementById('logoutBtn');
 
-        // Вкладки
         const tabBtns = document.querySelectorAll('.tab-btn');
         const tabContents = {
             login: document.getElementById('tab-login'),
             register: document.getElementById('tab-register')
         };
 
-        // Формы
         const loginForm = document.getElementById('loginForm');
         const registerForm = document.getElementById('registerForm');
         const loginError = document.getElementById('loginError');
         const registerError = document.getElementById('registerError');
 
-        // Состояние
         let selectedShip = null;
         let shipData = {};
         let currentUser = null;
@@ -550,7 +527,6 @@
                 Object.keys(tabContents).forEach(key => {
                     tabContents[key].classList.toggle('active', key === tab);
                 });
-                // Очищаем ошибки
                 loginError.style.display = 'none';
                 registerError.style.display = 'none';
             });
@@ -568,7 +544,6 @@
             const password = document.getElementById('registerPassword').value;
             const password2 = document.getElementById('registerPassword2').value;
 
-            // Валидация
             if (username.length < 3) {
                 registerError.textContent = 'Имя должно быть минимум 3 символа';
                 registerError.style.display = 'block';
@@ -597,7 +572,6 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    // Автоматически входим
                     await loginUser(username, password);
                 } else {
                     registerError.textContent = data.message || 'Ошибка регистрации';
@@ -635,6 +609,10 @@
                 if (data.success) {
                     currentUser = data.user;
                     isAuth = true;
+                    // Сохраняем sessionId
+                    if (data.sessionId) {
+                        localStorage.setItem('sessionId', data.sessionId);
+                    }
                     document.getElementById('loginUsername').value = '';
                     document.getElementById('loginPassword').value = '';
                     loginError.style.display = 'none';
@@ -654,10 +632,15 @@
         //  ВЫХОД
         // ============================================
         logoutBtn.addEventListener('click', async () => {
+            const sessionId = localStorage.getItem('sessionId');
             try {
-                await fetch('/api/logout', { method: 'POST' });
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: { 'x-session-id': sessionId }
+                });
             } catch (e) {}
             
+            localStorage.removeItem('sessionId');
             currentUser = null;
             isAuth = false;
             selectedShip = null;
@@ -682,7 +665,6 @@
                 playerInfo.style.display = 'none';
                 document.getElementById('authTabs').style.display = 'flex';
                 document.getElementById('shipsSection').style.display = 'block';
-                // Показываем вкладку входа по умолчанию
                 tabBtns.forEach(b => b.classList.remove('active'));
                 document.querySelector('[data-tab="login"]').classList.add('active');
                 tabContents.login.classList.add('active');
@@ -698,7 +680,6 @@
                 const response = await fetch('/api/ships/state');
                 shipData = await response.json();
                 renderShips();
-                // Проверяем, есть ли у пользователя выбранный корабль
                 if (isAuth && currentUser) {
                     checkUserShip();
                 }
@@ -709,13 +690,13 @@
 
         function renderShips() {
             const shipList = [
-                { id: 'klip_10', name: 'Клипер-10', img: 'images/ships/klip_10.png' },
-                { id: 'klip_20', name: 'Клипер-20', img: 'images/ships/klip_20.png' },
-                { id: 'klip_30', name: 'Клипер-30', img: 'images/ships/klip_30.png' },
-                { id: 'columb', name: 'Колумб', img: 'images/ships/columb.png' },
-                { id: 'pirat', name: 'Пират', img: 'images/ships/pirat.png' },
-                { id: 'ap', name: 'АП', img: 'images/ships/ap.png' },
-                { id: '19c_m', name: '19-й век', img: 'images/ships/19c_m.png' }
+                { id: 'klip_10', img: 'images/klip_10.png' },
+                { id: 'klip_20', img: 'images/klip_20.png' },
+                { id: 'klip_30', img: 'images/klip_30.png' },
+                { id: 'columb', img: 'images/Columb.png' },
+                { id: 'pirat', img: 'images/pirat.png' },
+                { id: 'ap', img: 'images/ap.png' },
+                { id: '19c_m', img: 'images/19c_m.png' }
             ];
 
             shipGrid.innerHTML = '';
@@ -729,19 +710,18 @@
                 card.className = `ship-card${isTaken && !isOwned ? ' taken' : ''}${!isAuth ? ' disabled' : ''}`;
                 card.dataset.shipId = ship.id;
 
-                let statusText = '✅ Доступен';
+                let statusText = '✅';
                 let statusClass = 'free';
                 if (isOwned) {
-                    statusText = '⭐ Ваш корабль';
+                    statusText = '⭐';
                     statusClass = 'owned';
                 } else if (isTaken) {
-                    statusText = '🔒 Занят';
+                    statusText = '🔒';
                     statusClass = 'taken';
                 }
 
                 card.innerHTML = `
-                    <img src="${ship.img}" alt="${ship.name}" onerror="this.style.display='none'">
-                    <div class="ship-name">${ship.name}</div>
+                    <img src="${ship.img}" alt="" onerror="this.style.display='none'">
                     <div class="ship-status ${statusClass}">${statusText}</div>
                 `;
 
@@ -766,10 +746,8 @@
                 return;
             }
 
-            // Снимаем выделение с других
             document.querySelectorAll('.ship-card').forEach(c => c.classList.remove('selected'));
             
-            // Выделяем выбранный
             const card = document.querySelector(`.ship-card[data-ship-id="${shipId}"]`);
             if (card && !card.classList.contains('taken')) {
                 card.classList.add('selected');
@@ -788,7 +766,6 @@
                 if (state.playerId === currentUser.id) {
                     selectedShip = id;
                     btnStart.disabled = false;
-                    // Подсвечиваем
                     document.querySelectorAll('.ship-card').forEach(c => {
                         if (c.dataset.shipId === id) {
                             c.classList.add('selected');
@@ -810,12 +787,14 @@
                 return;
             }
 
+            const sessionId = localStorage.getItem('sessionId');
+
             try {
                 const response = await fetch('/api/select_ship', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'X-Player-Id': currentUser.id
+                        'x-session-id': sessionId
                     },
                     body: JSON.stringify({ shipId: selectedShip })
                 });
@@ -825,7 +804,6 @@
                 if (data.success) {
                     successDiv.style.display = 'block';
                     errorDiv.style.display = 'none';
-                    // Перенаправляем на главную
                     setTimeout(() => {
                         window.location.href = '/';
                     }, 1000);
@@ -854,8 +832,17 @@
         //  ПРОВЕРКА СЕССИИ ПРИ ЗАГРУЗКЕ
         // ============================================
         async function checkSession() {
+            const sessionId = localStorage.getItem('sessionId');
+            if (!sessionId) {
+                showAuthState(false);
+                await loadShips();
+                return;
+            }
+
             try {
-                const response = await fetch('/api/session');
+                const response = await fetch('/api/session', {
+                    headers: { 'x-session-id': sessionId }
+                });
                 const data = await response.json();
                 if (data.user) {
                     currentUser = data.user;
@@ -863,6 +850,7 @@
                     showAuthState(true);
                     await loadShips();
                 } else {
+                    localStorage.removeItem('sessionId');
                     showAuthState(false);
                     await loadShips();
                 }
@@ -878,7 +866,6 @@
         // ============================================
         checkSession();
 
-        // Обновление состояния каждые 10 секунд
         setInterval(() => {
             if (isAuth) loadShips();
         }, 10000);
