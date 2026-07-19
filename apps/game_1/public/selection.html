@@ -782,38 +782,45 @@
         //  НАЧАЛО ПЛАВАНИЯ
         // ============================================
         btnStart.addEventListener('click', async () => {
-            if (!selectedShip || !isAuth) {
-                showError('Выберите корабль');
-                return;
-            }
+    if (!selectedShip || !isAuth) {
+        showError('Выберите корабль');
+        return;
+    }
 
-            const sessionId = localStorage.getItem('sessionId');
+    const sessionId = localStorage.getItem('sessionId');
 
-            try {
-                const response = await fetch('/api/select_ship', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'x-session-id': sessionId
-                    },
-                    body: JSON.stringify({ shipId: selectedShip })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    successDiv.style.display = 'block';
-                    errorDiv.style.display = 'none';
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1000);
-                } else {
-                    showError(data.message || 'Ошибка выбора корабля');
-                }
-            } catch (error) {
-                showError('Ошибка соединения с сервером');
-            }
+    try {
+        const response = await fetch('/api/select_ship', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-session-id': sessionId
+            },
+            body: JSON.stringify({ shipId: selectedShip })
         });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Сохраняем выбранный корабль в localStorage
+            const shipName = document.querySelector(`.ship-card[data-ship-id="${selectedShip}"]`)?.dataset?.name || selectedShip;
+            localStorage.setItem('selectedShip', JSON.stringify({
+                shipId: selectedShip,
+                shipName: shipName
+            }));
+            
+            successDiv.style.display = 'block';
+            errorDiv.style.display = 'none';
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+        } else {
+            showError(data.message || 'Ошибка выбора корабля');
+        }
+    } catch (error) {
+        showError('Ошибка соединения с сервером');
+    }
+});
 
         // ============================================
         //  ВСПОМОГАТЕЛЬНЫЕ
