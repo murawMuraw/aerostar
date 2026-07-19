@@ -6,6 +6,12 @@
     <title>Выбор парусника — Regatta</title>
     <link rel="stylesheet" href="style.css" />
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             background: #0a1a2a;
             color: #fff;
@@ -16,23 +22,36 @@
             min-height: 100vh;
             margin: 0;
             padding: 20px;
+            background-image: 
+                radial-gradient(ellipse at 20% 50%, rgba(74, 158, 255, 0.05) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 50%, rgba(108, 92, 231, 0.05) 0%, transparent 60%);
         }
 
         .selection-container {
-            max-width: 700px;
+            max-width: 750px;
             width: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(12px);
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(16px);
             padding: 40px 35px;
             border-radius: 24px;
             border: 1px solid rgba(255, 255, 255, 0.06);
             box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+            max-height: 95vh;
+            overflow-y: auto;
+        }
+
+        .selection-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        .selection-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
         }
 
         .selection-container h1 {
             text-align: center;
-            font-size: 28px;
-            margin-bottom: 8px;
+            font-size: 30px;
+            margin-bottom: 4px;
             background: linear-gradient(135deg, #f5e6c8, #ffd966);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -45,11 +64,161 @@
             font-size: 14px;
         }
 
+        /* ============================================
+           ВКЛАДКИ
+        ============================================ */
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 25px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: none;
+            color: #8899aa;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .tab-btn.active {
+            background: rgba(74, 158, 255, 0.15);
+            color: #4a9eff;
+            border-bottom: 2px solid #4a9eff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* ============================================
+           ФОРМЫ
+        ============================================ */
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 10px;
+        }
+
+        .auth-form label {
+            font-size: 13px;
+            color: #8899aa;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .auth-form input {
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            color: #fff;
+            font-size: 14px;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        .auth-form input:focus {
+            border-color: #4a9eff;
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 0 20px rgba(74, 158, 255, 0.05);
+        }
+
+        .auth-form input::placeholder {
+            color: #556677;
+        }
+
+        .auth-form .form-hint {
+            font-size: 12px;
+            color: #556677;
+            margin-top: -6px;
+        }
+
+        .auth-form .btn-submit {
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #4a9eff, #6c5ce7);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 6px;
+        }
+
+        .auth-form .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(74, 158, 255, 0.3);
+        }
+
+        .auth-form .btn-submit:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .auth-form .auth-error {
+            color: #ff6b6b;
+            font-size: 13px;
+            text-align: center;
+            display: none;
+            padding: 8px;
+            background: rgba(255, 107, 107, 0.08);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 107, 107, 0.1);
+        }
+
+        .auth-divider {
+            text-align: center;
+            color: #556677;
+            font-size: 12px;
+            padding: 10px 0;
+            position: relative;
+        }
+
+        .auth-divider::before,
+        .auth-divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 30%;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .auth-divider::before {
+            left: 0;
+        }
+        .auth-divider::after {
+            right: 0;
+        }
+
+        /* ============================================
+           КОРАБЛИ
+        ============================================ */
         .ship-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin: 20px 0;
+            gap: 12px;
+            margin: 15px 0 20px;
         }
 
         @media (max-width: 600px) {
@@ -62,13 +231,14 @@
             background: rgba(255, 255, 255, 0.04);
             border: 2px solid rgba(255, 255, 255, 0.06);
             border-radius: 14px;
-            padding: 15px 10px;
+            padding: 14px 8px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
+            position: relative;
         }
 
-        .ship-card:hover {
+        .ship-card:hover:not(.taken):not(.disabled) {
             background: rgba(255, 255, 255, 0.08);
             transform: translateY(-3px);
         }
@@ -85,6 +255,11 @@
             filter: grayscale(1);
         }
 
+        .ship-card.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
         .ship-card.taken::after {
             content: '🔒';
             position: absolute;
@@ -93,15 +268,11 @@
             font-size: 16px;
         }
 
-        .ship-card {
-            position: relative;
-        }
-
         .ship-card img {
-            width: 60px;
-            height: 60px;
+            width: 55px;
+            height: 55px;
             object-fit: contain;
-            filter: brightness(0.8);
+            filter: brightness(0.7);
             transition: all 0.3s;
         }
 
@@ -110,20 +281,30 @@
         }
 
         .ship-card .ship-name {
-            margin-top: 8px;
+            margin-top: 6px;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .ship-card .ship-status {
-            font-size: 12px;
-            color: #8899aa;
-            margin-top: 4px;
+            font-size: 11px;
+            margin-top: 3px;
         }
 
-        .ship-card .ship-status.free { color: #4caf50; }
-        .ship-card .ship-status.taken { color: #f44336; }
+        .ship-card .ship-status.free {
+            color: #4caf50;
+        }
+        .ship-card .ship-status.taken {
+            color: #f44336;
+        }
 
+        .ship-card .ship-status.owned {
+            color: #ffd966;
+        }
+
+        /* ============================================
+           КНОПКИ
+        ============================================ */
         .btn-start {
             width: 100%;
             padding: 14px;
@@ -131,11 +312,11 @@
             border: none;
             border-radius: 12px;
             color: white;
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s;
-            margin-top: 10px;
+            margin-top: 6px;
         }
 
         .btn-start:hover:not(:disabled) {
@@ -153,16 +334,21 @@
             width: 100%;
             padding: 12px;
             background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 12px;
             color: #8899aa;
             cursor: pointer;
             margin-top: 10px;
             transition: all 0.3s;
+            font-size: 14px;
         }
 
         .btn-back:hover {
             background: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-back i {
+            margin-right: 6px;
         }
 
         .error-message {
@@ -171,47 +357,353 @@
             margin-top: 12px;
             font-size: 14px;
             display: none;
+            padding: 10px;
+            background: rgba(255, 107, 107, 0.08);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 107, 107, 0.1);
         }
 
         .loading-ships {
             text-align: center;
             color: #8899aa;
             padding: 30px 0;
+            grid-column: 1 / -1;
+        }
+
+        .success-message {
+            color: #4caf50;
+            text-align: center;
+            padding: 10px;
+            background: rgba(76, 175, 80, 0.08);
+            border-radius: 8px;
+            border: 1px solid rgba(76, 175, 80, 0.1);
+            display: none;
+            margin-top: 10px;
+        }
+
+        .player-info {
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .player-info .name {
+            color: #ffd966;
+            font-weight: 600;
+        }
+
+        .player-info .logout-btn {
+            background: none;
+            border: 1px solid rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+            padding: 4px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .player-info .logout-btn:hover {
+            background: rgba(255, 107, 107, 0.1);
+        }
+
+        .no-auth-msg {
+            text-align: center;
+            color: #8899aa;
+            padding: 20px;
+            font-size: 14px;
+        }
+
+        .no-auth-msg .icon {
+            font-size: 40px;
+            display: block;
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
     <div class="selection-container">
         <h1>⛵ Выбор парусника</h1>
-        <p class="subtitle">Выберите корабль для участия в регате</p>
+        <p class="subtitle">Авторизуйтесь и выберите корабль для участия в регате</p>
 
-        <div id="ship-grid" class="ship-grid">
-            <div class="loading-ships">Загрузка...</div>
+        <!-- Информация о пользователе -->
+        <div class="player-info" id="playerInfo" style="display:none;">
+            <span>👤 <span class="name" id="playerName">—</span></span>
+            <button class="logout-btn" id="logoutBtn">🚪 Выйти</button>
         </div>
 
-        <button class="btn-start" id="btn-start" disabled>🚀 Начать плавание</button>
-        <button class="btn-back" id="btn-back">← Вернуться</button>
-        <div class="error-message" id="error-message"></div>
+        <!-- ============================================ -->
+        <!-- ВКЛАДКИ АВТОРИЗАЦИИ                          -->
+        <!-- ============================================ -->
+        <div class="tabs" id="authTabs">
+            <button class="tab-btn active" data-tab="login">🔑 Вход</button>
+            <button class="tab-btn" data-tab="register">📝 Регистрация</button>
+        </div>
+
+        <!-- Вход -->
+        <div class="tab-content active" id="tab-login">
+            <form class="auth-form" id="loginForm">
+                <label>
+                    Имя пользователя
+                    <input type="text" id="loginUsername" placeholder="Введите имя" required>
+                </label>
+                <label>
+                    Пароль
+                    <input type="password" id="loginPassword" placeholder="Введите пароль" required>
+                </label>
+                <div class="auth-error" id="loginError"></div>
+                <button type="submit" class="btn-submit" id="loginSubmit">🔓 Войти</button>
+            </form>
+        </div>
+
+        <!-- Регистрация -->
+        <div class="tab-content" id="tab-register">
+            <form class="auth-form" id="registerForm">
+                <label>
+                    Имя пользователя
+                    <input type="text" id="registerUsername" placeholder="Придумайте имя" required minlength="3">
+                    <span class="form-hint">От 3 до 20 символов</span>
+                </label>
+                <label>
+                    Email
+                    <input type="email" id="registerEmail" placeholder="Ваш email" required>
+                </label>
+                <label>
+                    Пароль
+                    <input type="password" id="registerPassword" placeholder="Придумайте пароль" required minlength="6">
+                    <span class="form-hint">Минимум 6 символов</span>
+                </label>
+                <label>
+                    Повторите пароль
+                    <input type="password" id="registerPassword2" placeholder="Повторите пароль" required>
+                </label>
+                <div class="auth-error" id="registerError"></div>
+                <button type="submit" class="btn-submit" id="registerSubmit">📝 Зарегистрироваться</button>
+            </form>
+        </div>
+
+        <div class="auth-divider">— или продолжить как гость —</div>
+
+        <!-- ============================================ -->
+        <!-- КОРАБЛИ                                       -->
+        <!-- ============================================ -->
+        <div id="shipsSection">
+            <div class="ship-grid" id="shipGrid">
+                <div class="loading-ships">⏳ Загрузка кораблей...</div>
+            </div>
+
+            <button class="btn-start" id="btnStart" disabled>🚀 Начать плавание</button>
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage">✅ Корабль выбран! Начинаем плавание...</div>
+
+            <button class="btn-back" id="btnBack">← Вернуться на главную</button>
+        </div>
     </div>
 
     <script>
-        // selection.js
-        const shipGrid = document.getElementById('ship-grid');
-        const startBtn = document.getElementById('btn-start');
-        const backBtn = document.getElementById('btn-back');
-        const errorDiv = document.getElementById('error-message');
+        // ============================================
+        //  SELECTION.JS — ПОЛНАЯ ЛОГИКА
+        // ============================================
 
+        // DOM элементы
+        const shipGrid = document.getElementById('shipGrid');
+        const btnStart = document.getElementById('btnStart');
+        const btnBack = document.getElementById('btnBack');
+        const errorDiv = document.getElementById('errorMessage');
+        const successDiv = document.getElementById('successMessage');
+        const playerInfo = document.getElementById('playerInfo');
+        const playerName = document.getElementById('playerName');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        // Вкладки
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = {
+            login: document.getElementById('tab-login'),
+            register: document.getElementById('tab-register')
+        };
+
+        // Формы
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const loginError = document.getElementById('loginError');
+        const registerError = document.getElementById('registerError');
+
+        // Состояние
         let selectedShip = null;
         let shipData = {};
+        let currentUser = null;
+        let isAuth = false;
 
-        // Загрузка состояния кораблей
+        // ============================================
+        //  УПРАВЛЕНИЕ ВКЛАДКАМИ
+        // ============================================
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const tab = btn.dataset.tab;
+                Object.keys(tabContents).forEach(key => {
+                    tabContents[key].classList.toggle('active', key === tab);
+                });
+                // Очищаем ошибки
+                loginError.style.display = 'none';
+                registerError.style.display = 'none';
+            });
+        });
+
+        // ============================================
+        //  РЕГИСТРАЦИЯ
+        // ============================================
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            registerError.style.display = 'none';
+
+            const username = document.getElementById('registerUsername').value.trim();
+            const email = document.getElementById('registerEmail').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const password2 = document.getElementById('registerPassword2').value;
+
+            // Валидация
+            if (username.length < 3) {
+                registerError.textContent = 'Имя должно быть минимум 3 символа';
+                registerError.style.display = 'block';
+                return;
+            }
+
+            if (password.length < 6) {
+                registerError.textContent = 'Пароль должен быть минимум 6 символов';
+                registerError.style.display = 'block';
+                return;
+            }
+
+            if (password !== password2) {
+                registerError.textContent = 'Пароли не совпадают';
+                registerError.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Автоматически входим
+                    await loginUser(username, password);
+                } else {
+                    registerError.textContent = data.message || 'Ошибка регистрации';
+                    registerError.style.display = 'block';
+                }
+            } catch (error) {
+                registerError.textContent = 'Ошибка соединения с сервером';
+                registerError.style.display = 'block';
+            }
+        });
+
+        // ============================================
+        //  ВХОД
+        // ============================================
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loginError.style.display = 'none';
+
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            await loginUser(username, password);
+        });
+
+        async function loginUser(username, password) {
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentUser = data.user;
+                    isAuth = true;
+                    document.getElementById('loginUsername').value = '';
+                    document.getElementById('loginPassword').value = '';
+                    loginError.style.display = 'none';
+                    showAuthState(true);
+                    await loadShips();
+                } else {
+                    loginError.textContent = data.message || 'Неверное имя или пароль';
+                    loginError.style.display = 'block';
+                }
+            } catch (error) {
+                loginError.textContent = 'Ошибка соединения с сервером';
+                loginError.style.display = 'block';
+            }
+        }
+
+        // ============================================
+        //  ВЫХОД
+        // ============================================
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+            } catch (e) {}
+            
+            currentUser = null;
+            isAuth = false;
+            selectedShip = null;
+            showAuthState(false);
+            btnStart.disabled = true;
+            await loadShips();
+        });
+
+        // ============================================
+        //  СОСТОЯНИЕ АВТОРИЗАЦИИ
+        // ============================================
+        function showAuthState(auth) {
+            if (auth && currentUser) {
+                playerInfo.style.display = 'flex';
+                playerName.textContent = currentUser.username;
+                document.getElementById('authTabs').style.display = 'none';
+                tabContents.login.classList.remove('active');
+                tabContents.register.classList.remove('active');
+                document.getElementById('shipsSection').style.display = 'block';
+                errorDiv.style.display = 'none';
+            } else {
+                playerInfo.style.display = 'none';
+                document.getElementById('authTabs').style.display = 'flex';
+                document.getElementById('shipsSection').style.display = 'block';
+                // Показываем вкладку входа по умолчанию
+                tabBtns.forEach(b => b.classList.remove('active'));
+                document.querySelector('[data-tab="login"]').classList.add('active');
+                tabContents.login.classList.add('active');
+                tabContents.register.classList.remove('active');
+            }
+        }
+
+        // ============================================
+        //  ЗАГРУЗКА КОРАБЛЕЙ
+        // ============================================
         async function loadShips() {
             try {
                 const response = await fetch('/api/ships/state');
                 shipData = await response.json();
                 renderShips();
+                // Проверяем, есть ли у пользователя выбранный корабль
+                if (isAuth && currentUser) {
+                    checkUserShip();
+                }
             } catch (error) {
-                shipGrid.innerHTML = '<div class="loading-ships">❌ Ошибка загрузки</div>';
+                shipGrid.innerHTML = '<div class="loading-ships">❌ Ошибка загрузки кораблей</div>';
             }
         }
 
@@ -231,76 +723,165 @@
             shipList.forEach(ship => {
                 const state = shipData[ship.id];
                 const isTaken = state && state.taken;
+                const isOwned = isAuth && currentUser && state && state.playerId === currentUser.id;
 
                 const card = document.createElement('div');
-                card.className = `ship-card${isTaken ? ' taken' : ''}`;
+                card.className = `ship-card${isTaken && !isOwned ? ' taken' : ''}${!isAuth ? ' disabled' : ''}`;
                 card.dataset.shipId = ship.id;
 
+                let statusText = '✅ Доступен';
+                let statusClass = 'free';
+                if (isOwned) {
+                    statusText = '⭐ Ваш корабль';
+                    statusClass = 'owned';
+                } else if (isTaken) {
+                    statusText = '🔒 Занят';
+                    statusClass = 'taken';
+                }
+
                 card.innerHTML = `
-                    <img src="${ship.img}" alt="${ship.name}">
+                    <img src="${ship.img}" alt="${ship.name}" onerror="this.style.display='none'">
                     <div class="ship-name">${ship.name}</div>
-                    <div class="ship-status ${isTaken ? 'taken' : 'free'}">
-                        ${isTaken ? '🔒 Занят' : '✅ Доступен'}
-                    </div>
+                    <div class="ship-status ${statusClass}">${statusText}</div>
                 `;
 
-                if (!isTaken) {
+                if (isAuth && !isTaken) {
                     card.onclick = () => selectShip(ship.id);
+                } else if (isAuth && isOwned) {
+                    card.classList.add('selected');
+                    selectedShip = ship.id;
+                    btnStart.disabled = false;
                 }
 
                 shipGrid.appendChild(card);
             });
         }
 
+        // ============================================
+        //  ВЫБОР КОРАБЛЯ
+        // ============================================
         function selectShip(shipId) {
+            if (!isAuth) {
+                showError('Сначала авторизуйтесь');
+                return;
+            }
+
             // Снимаем выделение с других
             document.querySelectorAll('.ship-card').forEach(c => c.classList.remove('selected'));
             
             // Выделяем выбранный
             const card = document.querySelector(`.ship-card[data-ship-id="${shipId}"]`);
-            if (card) {
+            if (card && !card.classList.contains('taken')) {
                 card.classList.add('selected');
                 selectedShip = shipId;
-                startBtn.disabled = false;
+                btnStart.disabled = false;
                 errorDiv.style.display = 'none';
+                successDiv.style.display = 'none';
             }
         }
 
-        // Начать плавание
-        startBtn.addEventListener('click', async () => {
-            if (!selectedShip) return;
+        // ============================================
+        //  ПРОВЕРКА КОРАБЛЯ ПОЛЬЗОВАТЕЛЯ
+        // ============================================
+        function checkUserShip() {
+            for (const [id, state] of Object.entries(shipData)) {
+                if (state.playerId === currentUser.id) {
+                    selectedShip = id;
+                    btnStart.disabled = false;
+                    // Подсвечиваем
+                    document.querySelectorAll('.ship-card').forEach(c => {
+                        if (c.dataset.shipId === id) {
+                            c.classList.add('selected');
+                        }
+                    });
+                    return;
+                }
+            }
+            selectedShip = null;
+            btnStart.disabled = true;
+        }
+
+        // ============================================
+        //  НАЧАЛО ПЛАВАНИЯ
+        // ============================================
+        btnStart.addEventListener('click', async () => {
+            if (!selectedShip || !isAuth) {
+                showError('Выберите корабль');
+                return;
+            }
 
             try {
                 const response = await fetch('/api/select_ship', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Player-Id': currentUser.id
+                    },
                     body: JSON.stringify({ shipId: selectedShip })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    window.location.href = '/';
+                    successDiv.style.display = 'block';
+                    errorDiv.style.display = 'none';
+                    // Перенаправляем на главную
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
                 } else {
-                    errorDiv.textContent = data.message || 'Ошибка выбора корабля';
-                    errorDiv.style.display = 'block';
+                    showError(data.message || 'Ошибка выбора корабля');
                 }
             } catch (error) {
-                errorDiv.textContent = 'Ошибка соединения с сервером';
-                errorDiv.style.display = 'block';
+                showError('Ошибка соединения с сервером');
             }
         });
 
-        // Назад
-        backBtn.addEventListener('click', () => {
+        // ============================================
+        //  ВСПОМОГАТЕЛЬНЫЕ
+        // ============================================
+        function showError(msg) {
+            errorDiv.textContent = msg;
+            errorDiv.style.display = 'block';
+            successDiv.style.display = 'none';
+        }
+
+        btnBack.addEventListener('click', () => {
             window.location.href = '/';
         });
 
-        // Загрузка
-        loadShips();
+        // ============================================
+        //  ПРОВЕРКА СЕССИИ ПРИ ЗАГРУЗКЕ
+        // ============================================
+        async function checkSession() {
+            try {
+                const response = await fetch('/api/session');
+                const data = await response.json();
+                if (data.user) {
+                    currentUser = data.user;
+                    isAuth = true;
+                    showAuthState(true);
+                    await loadShips();
+                } else {
+                    showAuthState(false);
+                    await loadShips();
+                }
+            } catch (error) {
+                console.error('Session check failed:', error);
+                showAuthState(false);
+                await loadShips();
+            }
+        }
+
+        // ============================================
+        //  ЗАПУСК
+        // ============================================
+        checkSession();
 
         // Обновление состояния каждые 10 секунд
-        setInterval(loadShips, 10000);
+        setInterval(() => {
+            if (isAuth) loadShips();
+        }, 10000);
     </script>
 </body>
 </html>
