@@ -20,6 +20,7 @@ class RegattaGame {
         this.isGuest = false;
         this.shipType = null;
         this.markerUpdateTimeout = null;
+        this.playerName = null;
     }
 
     init() {
@@ -61,11 +62,9 @@ class RegattaGame {
     }
 
     // ============================================
-    //  РАЗМЕР КОРАБЛЯ В ЗАВИСИМОСТИ ОТ ЗУМА
-    //  УВЕЛИЧЕН В 2 РАЗА
+    //  SHIP SIZE DEPENDING ON ZOOM LEVEL (2x LARGER)
     // ============================================
     getShipSize(zoom, isOwn) {
-        // Базовый размер для чужого корабля
         let baseSize;
         if (zoom >= 11) baseSize = 42;
         else if (zoom >= 8) baseSize = 34;
@@ -73,18 +72,18 @@ class RegattaGame {
         else if (zoom >= 3) baseSize = 20;
         else baseSize = 16;
         
-        // УВЕЛИЧИВАЕМ В 2 РАЗА
+        // Double the size
         baseSize = baseSize * 2;
         
-        // Свой корабль на 30% больше
+        // Own ship is 30% larger
         const size = isOwn ? Math.round(baseSize * 1.3) : baseSize;
         
-        // Ограничиваем размеры
+        // Clamp sizes
         return Math.max(24, Math.min(120, size));
     }
 
     // ============================================
-    //  ЧИСТЫЙ МАРКЕР КОРАБЛЯ
+    //  CLEAN SHIP MARKER - NO CIRCLES
     // ============================================
     createShipIcon(player) {
         const isOwn = player.id === this.playerId;
@@ -180,26 +179,31 @@ class RegattaGame {
         });
 
         this.socket.on('joined', (data) => {
+            console.log('📥 Joined event:', data);
+            
             this.playerId = data.ship.id;
             this.ship = data.ship;
             this.role = data.role;
             this.isGuest = (this.role === 'guest');
             this.shipType = this.ship.shipType;
+            this.playerName = this.ship.name;
             
             if (this.isGuest) {
                 document.getElementById('guest-message').style.display = 'block';
                 document.getElementById('controls-panel').style.display = 'none';
                 document.getElementById('chat-input').disabled = true;
                 document.getElementById('chat-send').disabled = true;
-                this.showNotification('👁 Вы вошли как наблюдатель', 'info');
-                this.addChatMessage('👁 Вы наблюдатель', 'system');
+                this.showNotification('👁 You are a spectator', 'info');
+                this.addChatMessage('👁 You are a spectator', 'system');
             } else {
                 document.getElementById('guest-message').style.display = 'none';
                 document.getElementById('controls-panel').style.display = 'flex';
                 document.getElementById('chat-input').disabled = false;
                 document.getElementById('chat-send').disabled = false;
-                this.showNotification(`⛵ ${this.ship.name} в море!`, 'success');
-                this.addChatMessage(`⛵ ${this.ship.name} в море!`, 'system');
+                
+                const shipName = this.ship.name || this.selectedShipName || 'Ship';
+                this.showNotification(`⛵ ${shipName} is at sea!`, 'success');
+                this.addChatMessage(`⛵ ${shipName} is at sea!`, 'system');
                 
                 this.isRacing = true;
                 this.hasSelectedShip = true;
@@ -220,22 +224,22 @@ class RegattaGame {
         });
 
         this.socket.on('player_joined', (data) => {
-            this.addChatMessage(`🚢 ${data.name} присоединился`, 'system');
+            this.addChatMessage(`🚢 ${data.name} joined the race`, 'system');
         });
 
         this.socket.on('player_left', (data) => {
             if (data.isOffline) {
-                this.addChatMessage(`💤 ${data.name} вышел (корабль в пути)`, 'system');
+                this.addChatMessage(`💤 ${data.name} went offline (ship is sailing)`, 'system');
             }
         });
 
         this.socket.on('ship_grounded', (data) => {
-            this.showNotification(`⚠️ ${data.name} на мели!`, 'danger');
-            this.addChatMessage(`⚠️ ${data.name} на мели!`, 'danger');
+            this.showNotification(`⚠️ ${data.name} is grounded!`, 'danger');
+            this.addChatMessage(`⚠️ ${data.name} is grounded!`, 'danger');
         });
 
         this.socket.on('ship_anchored', (data) => {
-            this.addChatMessage(`⚓ ${data.name} на якоре`, 'system');
+            this.addChatMessage(`⚓ ${data.name} dropped anchor`, 'system');
         });
 
         this.socket.on('action_result', (data) => {
@@ -265,6 +269,9 @@ class RegattaGame {
                 this.selectedShip = data.shipId;
                 this.selectedShipName = data.shipName;
                 this.shipType = data.shipId;
+                this.playerName = data.shipName;
+                
+                console.log('📦 Loaded selected ship:', this.selectedShip, this.selectedShipName);
                 
                 if (this.socket && this.socket.connected) {
                     this.autoStartShip();
@@ -281,7 +288,9 @@ class RegattaGame {
         const lat = 20 + (Math.random() - 0.5) * 30;
         const lng = (Math.random() - 0.5) * 60;
         
-        this.showNotification(`⛵ Запуск ${this.selectedShipName}...`, 'info');
+        console.log('🚀 Auto starting ship:', this.selectedShip, this.selectedShipName);
+        
+        this.showNotification(`⛵ Launching ${this.selectedShipName}...`, 'info');
         
         this.socket.emit('join_with_ship', {
             shipId: this.selectedShip,
@@ -349,7 +358,7 @@ class RegattaGame {
 
     selectShip(btn) {
         if (this.isGuest) {
-            this.showNotification('👁 Гости не могут выбирать корабль', 'warning');
+            this.showNotification('👁 Spectators cannot select a ship', 'warning');
             return;
         }
         window.location.href = '/selection.html';
@@ -360,7 +369,7 @@ class RegattaGame {
         if (this.startTimeout) { clearTimeout(this.startTimeout); this.startTimeout = null; }
 
         if (this.isGuest) {
-            this.showNotification('👁 Гости не могут запускать корабль', 'warning');
+            this.showNotification('👁 Spectators cannot start a ship', 'warning');
             return;
         }
         
@@ -426,27 +435,29 @@ class RegattaGame {
 
     createPopup(player) {
         const shipNames = {
-            'klip_10': 'Клипер-10',
-            'klip_20': 'Клипер-20',
-            'klip_30': 'Клипер-30',
-            'columb': 'Колумб',
-            'pirat': 'Пират',
-            'ap': 'АП',
-            '19c_m': '19-й век'
+            'klip_10': 'Clipper-10',
+            'klip_20': 'Clipper-20',
+            'klip_30': 'Clipper-30',
+            'columb': 'Columbus',
+            'pirat': 'Pirate',
+            'ap': 'AP',
+            '19c_m': '19th Century'
         };
 
-        let status = '🟢 В пути';
-        if (player.isEliminated) status = '💀 Выбыл';
-        else if (player.isGrounded) status = '⚠ На мели';
-        else if (player.isAnchored) status = '⚓ На якоре';
-        else if (!player.isOnline) status = '💤 Офлайн';
+        const displayName = player.name || shipNames[player.shipType] || player.shipType || 'Unknown';
+
+        let status = '🟢 Sailing';
+        if (player.isEliminated) status = '💀 Eliminated';
+        else if (player.isGrounded) status = '⚠ Grounded';
+        else if (player.isAnchored) status = '⚓ Anchored';
+        else if (!player.isOnline) status = '💤 Offline';
 
         return `
-            <strong>${player.name}</strong><br>
+            <strong>${displayName}</strong><br>
             🚢 ${shipNames[player.shipType] || player.shipType}<br>
             ${status}<br>
-            🧭 ${player.heading || 0}° | ⛵ ${(player.speed || 0).toFixed(1)} уз<br>
-            📏 ${(player.distanceTraveled || 0).toFixed(0)} км
+            🧭 ${player.heading || 0}° | ⛵ ${(player.speed || 0).toFixed(1)} kn<br>
+            📏 ${(player.distanceTraveled || 0).toFixed(0)} km
         `;
     }
 
@@ -462,10 +473,10 @@ class RegattaGame {
         const anchorBtn = document.getElementById('btn-anchor');
         if (this.ship.isAnchored) {
             anchorBtn.classList.add('active');
-            anchorBtn.textContent = '⚓ Сняться';
+            anchorBtn.textContent = '⚓ Weigh';
         } else {
             anchorBtn.classList.remove('active');
-            anchorBtn.textContent = '⚓ Якорь';
+            anchorBtn.textContent = '⚓ Anchor';
         }
     }
 
@@ -502,7 +513,7 @@ class RegattaGame {
         };
 
         document.getElementById('resetBtn').onclick = () => {
-            if (this.isRacing && !this.isGuest && confirm('Сбросить корабль?')) {
+            if (this.isRacing && !this.isGuest && confirm('Reset ship?')) {
                 this.socket.emit('leave_race');
                 localStorage.removeItem('selectedShip');
                 location.reload();
@@ -566,7 +577,7 @@ class RegattaGame {
 }
 
 // ============================================
-//  ЗАПУСК
+//  START
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
     const game = new RegattaGame();
