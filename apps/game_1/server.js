@@ -569,17 +569,32 @@ setInterval(() => {
 // ============================================
 setInterval(async () => {
     const deltaTime = 1 / 30;
+    const windData = {};
+    const currentData = {};
+    
     for (const [id, ship] of players) {
         if (ship.isEliminated || ship.shipType === 'guest') continue;
         try {
             const wind = await fetchWindData(ship.lat, ship.lng);
             const current = await fetchCurrentData(ship.lat, ship.lng);
             ship.update(wind, current, deltaTime);
+            
+            // Сохраняем данные для этого корабля
+            windData[id] = wind;
+            currentData[id] = current;
         } catch (error) {
             console.error(`Error updating ${id}:`, error);
         }
     }
-    broadcastState();
+    
+    // Отправляем state с данными ветра и течения для каждого корабля
+    const state = { 
+        players: getAllPlayersState(), 
+        timestamp: Date.now(),
+        wind: windData,
+        current: currentData
+    };
+    io.emit('state', state);
 }, 1000 / 30);
 
 // ============================================
