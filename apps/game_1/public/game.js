@@ -21,6 +21,8 @@ class RegattaGame {
         this.shipType = null;
         this.markerUpdateTimeout = null;
         this.playerName = null;
+        this.lastWind = null;
+        this.lastCurrent = null;
     }
 
     init() {
@@ -34,6 +36,9 @@ class RegattaGame {
         this.checkSelectedShip();
     }
 
+    // ============================================
+    //  MAP INITIALIZATION
+    // ============================================
     initMap() {
         this.map = L.map('map', { 
             center: [20, 0], 
@@ -147,6 +152,9 @@ class RegattaGame {
         });
     }
 
+    // ============================================
+    //  UPDATE ALL MARKERS
+    // ============================================
     updateAllMarkers() {
         if (this.markerUpdateTimeout) {
             clearTimeout(this.markerUpdateTimeout);
@@ -170,6 +178,25 @@ class RegattaGame {
         }, 100);
     }
 
+    // ============================================
+    //  UPDATE COMPASS
+    // ============================================
+    updateCompass(windDirection, currentDirection) {
+        const windArrow = document.getElementById('windArrow');
+        const currentArrow = document.getElementById('currentArrow');
+        
+        if (windArrow) {
+            windArrow.style.transform = `translate(-50%, -50%) rotate(${windDirection || 0}deg)`;
+        }
+        
+        if (currentArrow) {
+            currentArrow.style.transform = `translate(-50%, -50%) rotate(${currentDirection || 0}deg)`;
+        }
+    }
+
+    // ============================================
+    //  SOCKET.IO
+    // ============================================
     initSocket() {
         this.socket = io({ transports: ['websocket', 'polling'] });
 
@@ -221,6 +248,17 @@ class RegattaGame {
                 this.ship = data.players[this.playerId];
                 this.updateShipInfo();
             }
+            
+            // Update compass with wind and current data
+            if (data.wind && data.current && this.playerId) {
+                const wind = data.wind[this.playerId];
+                const current = data.current[this.playerId];
+                if (wind && current) {
+                    this.lastWind = wind;
+                    this.lastCurrent = current;
+                    this.updateCompass(wind.direction, current.direction);
+                }
+            }
         });
 
         this.socket.on('player_joined', (data) => {
@@ -261,6 +299,9 @@ class RegattaGame {
         });
     }
 
+    // ============================================
+    //  CHECK SELECTED SHIP
+    // ============================================
     checkSelectedShip() {
         const selectedShipData = localStorage.getItem('selectedShip');
         if (selectedShipData) {
@@ -282,6 +323,9 @@ class RegattaGame {
         }
     }
 
+    // ============================================
+    //  AUTO START SHIP
+    // ============================================
     autoStartShip() {
         if (!this.selectedShip || this.isGuest) return;
         
@@ -302,6 +346,9 @@ class RegattaGame {
         localStorage.removeItem('selectedShip');
     }
 
+    // ============================================
+    //  SHOW SHIP THUMBNAIL
+    // ============================================
     showShipThumbnail(shipType) {
         const panel = document.getElementById('ship-panel');
         const oldThumb = document.getElementById('ship-thumbnail');
@@ -347,6 +394,9 @@ class RegattaGame {
         }
     }
 
+    // ============================================
+    //  SETUP SHIP PANEL
+    // ============================================
     setupShipPanel() {
         const selectBtn = document.getElementById('btn-select-ship');
         if (selectBtn) {
@@ -356,6 +406,9 @@ class RegattaGame {
         }
     }
 
+    // ============================================
+    //  SELECT SHIP (legacy)
+    // ============================================
     selectShip(btn) {
         if (this.isGuest) {
             this.showNotification('👁 Spectators cannot select a ship', 'warning');
@@ -364,6 +417,9 @@ class RegattaGame {
         window.location.href = '/selection.html';
     }
 
+    // ============================================
+    //  CONFIRM START
+    // ============================================
     confirmStart(lat, lng) {
         if (this.startHint) { this.map.removeLayer(this.startHint); this.startHint = null; }
         if (this.startTimeout) { clearTimeout(this.startTimeout); this.startTimeout = null; }
@@ -384,6 +440,9 @@ class RegattaGame {
         this.map.getContainer().style.cursor = 'default';
     }
 
+    // ============================================
+    //  LOAD SHIPS STATE
+    // ============================================
     loadShipsState() {
         fetch('/api/ships/state')
             .then(r => r.json())
@@ -391,6 +450,9 @@ class RegattaGame {
             .catch(err => console.error('Failed to load ships state:', err));
     }
 
+    // ============================================
+    //  UPDATE PLAYERS
+    // ============================================
     updatePlayers(players) {
         if (this.ship && this.playerId) {
             if (!this.markers[this.playerId]) {
@@ -419,6 +481,9 @@ class RegattaGame {
         }
     }
 
+    // ============================================
+    //  UPDATE SINGLE PLAYER
+    // ============================================
     updatePlayer(id, player) {
         const icon = this.createShipIcon(player);
 
@@ -433,6 +498,9 @@ class RegattaGame {
         }
     }
 
+    // ============================================
+    //  CREATE POPUP
+    // ============================================
     createPopup(player) {
         const shipNames = {
             'klip_10': 'Clipper-10',
@@ -461,6 +529,9 @@ class RegattaGame {
         `;
     }
 
+    // ============================================
+    //  UPDATE SHIP INFO
+    // ============================================
     updateShipInfo() {
         if (!this.ship) return;
 
@@ -480,6 +551,9 @@ class RegattaGame {
         }
     }
 
+    // ============================================
+    //  SETUP CONTROLS
+    // ============================================
     setupControls() {
         document.addEventListener('keydown', (e) => {
             if (!this.isRacing || this.isGuest || !this.socket) return;
@@ -521,6 +595,9 @@ class RegattaGame {
         };
     }
 
+    // ============================================
+    //  SETUP CHAT
+    // ============================================
     setupChat() {
         document.getElementById('chat-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && this.socket && this.isRacing && !this.isGuest) {
@@ -537,6 +614,9 @@ class RegattaGame {
         };
     }
 
+    // ============================================
+    //  ADD CHAT MESSAGE
+    // ============================================
     addChatMessage(text, type = 'user') {
         const div = document.createElement('div');
         div.className = `chat-${type}`;
@@ -545,6 +625,9 @@ class RegattaGame {
         this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     }
 
+    // ============================================
+    //  SETUP UI
+    // ============================================
     setupUI() {
         document.getElementById('chat-toggle').onclick = () => {
             const chat = document.getElementById('chat');
@@ -562,6 +645,9 @@ class RegattaGame {
         };
     }
 
+    // ============================================
+    //  SHOW NOTIFICATION
+    // ============================================
     showNotification(message, type = 'info') {
         const div = document.createElement('div');
         div.className = `notification ${type}`;
