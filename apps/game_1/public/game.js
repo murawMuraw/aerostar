@@ -18,7 +18,8 @@ class RegattaGame {
         this.lastState = null;
         this.role = null;
         this.isGuest = false;
-        this.shipType = null; // Тип корабля для отображения
+        this.shipType = null;
+        this.markerUpdateTimeout = null;
     }
 
     init() {
@@ -29,13 +30,17 @@ class RegattaGame {
         this.setupChat();
         this.setupUI();
         this.loadShipsState();
-        
-        // Проверяем, есть ли выбранный корабль
         this.checkSelectedShip();
     }
 
     initMap() {
-        this.map = L.map('map', { center: [20, 0], zoom: 2.5, zoomControl: false });
+        this.map = L.map('map', { 
+            center: [20, 0], 
+            zoom: 2.5, 
+            zoomControl: false,
+            maxZoom: 19,
+            minZoom: 2
+        });
 
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: '&copy; Esri',
@@ -44,6 +49,11 @@ class RegattaGame {
 
         L.control.zoom({ position: 'bottomright' }).addTo(this.map);
 
+        // Обновляем маркеры при изменении зума
+        this.map.on('zoomend', () => {
+            this.updateAllMarkers();
+        });
+
         this.map.on('click', (e) => {
             if (this.isSelectingStart && this.selectedShip && !this.isGuest) {
                 this.confirmStart(e.latlng.lat, e.latlng.lng);
@@ -51,12 +61,125 @@ class RegattaGame {
         });
     }
 
+    // ============================================
+    //  РАЗМЕР КОРАБЛЯ В ЗАВИСИМОСТИ ОТ ЗУМА
+    // ============================================
+    getShipSize(zoom, isOwn) {
+        // Базовый размер для чужого корабля
+        let baseSize;
+        if (zoom >= 11) baseSize = 42;
+        else if (zoom >= 8) baseSize = 34;
+        else if (zoom >= 5) baseSize = 26;
+        else if (zoom >= 3) baseSize = 20;
+        else baseSize = 16;
+        
+        // Свой корабль на 30% больше
+        const size = isOwn ? Math.round(baseSize * 1.3) : baseSize;
+        
+        // Ограничиваем размеры
+        return Math.max(12, Math.min(60, size));
+    }
+
+    // ============================================
+    //  ЧИСТЫЙ МАРКЕР КОРАБЛЯ - БЕЗ ОКРУЖНОСТЕЙ
+    // ============================================
+    createShipIcon(player) {
+        const isOwn = player.id === this.playerId;
+        const zoom = this.map.getZoom();
+        const size = this.getShipSize(zoom, isOwn);
+        const shipType = player.shipType || 'klip_10';
+        const imgUrl = `images/${shipType}.png`;
+        
+        // Свой корабль - яркий, с тенью
+        if (isOwn) {
+            return L.divIcon({
+                className: 'ship-marker own',
+                html: `<div style="
+                    width: ${size}px;
+                    height: ${size}px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    filter: drop-shadow(0 0 20px rgba(74,158,255,0.6));
+                    transform: rotate(${player.heading || 0}deg);
+                    transition: transform 0.3s ease;
+                ">
+                    <img src="${imgUrl}" style="
+                        width: ${size}px;
+                        height: ${size}px;
+                        object-fit: contain;
+                    " onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:'${Math.round(size*0.75)}'px;color:#4a9eff;\\'>⛵</span>'">
+                </div>`,
+                iconSize: [size, size],
+                iconAnchor: [size/2, size/2]
+            });
+        }
+        
+        // Чужие корабли - немного прозрачнее
+        const opacity = player.isOnline ? 0.85 : 0.3;
+        const statusIcon = player.isEliminated ? '💀' :
+                          player.isGrounded ? '⚠️' :
+                          player.isAnchored ? '⚓' : '';
+        
+        return L.divIcon({
+            className: 'ship-marker other',
+            html: `<div style="
+                width: ${size}px;
+                height: ${size}px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                transform: rotate(${player.heading || 0}deg);
+                transition: transform 0.3s ease;
+            ">
+                <img src="${imgUrl}" style="
+                    width: ${size}px;
+                    height: ${size}px;
+                    object-fit: contain;
+                    opacity: ${opacity};
+                    filter: drop-shadow(0 0 8px rgba(0,0,0,0.3));
+                " onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:'${Math.round(size*0.6)}'px;color:#8899aa;\\'>⛵</span>'">
+                ${statusIcon ? `<span style="position:absolute;top:-${Math.round(size*0.3)}px;right:-${Math.round(size*0.3)}px;font-size:${Math.round(size*0.4)}px;text-shadow:0 0 4px rgba(0,0,0,0.8);">${statusIcon}</span>` : ''}
+            </div>`,
+            iconSize: [size, size],
+            iconAnchor: [size/2, size/2]
+        });
+    }
+
+    // ============================================
+    //  ОБНОВЛЕНИЕ ВСЕХ МАРКЕРОВ
+    // ============================================
+    updateAllMarkers() {
+        if (this.markerUpdateTimeout) {
+            clearTimeout(this.markerUpdateTimeout);
+        }
+        
+        this.markerUpdateTimeout = setTimeout(() => {
+            // Обновляем свой маркер
+            if (this.ship && this.playerId && this.markers[this.playerId]) {
+                const icon = this.createShipIcon(this.ship);
+                this.markers[this.playerId].setIcon(icon);
+            }
+            
+            // Обновляем чужие маркеры
+            if (this.lastState && this.lastState.players) {
+                for (const [id, player] of Object.entries(this.lastState.players)) {
+                    if (id !== this.playerId && this.markers[id]) {
+                        const icon = this.createShipIcon(player);
+                        this.markers[id].setIcon(icon);
+                    }
+                }
+            }
+            this.markerUpdateTimeout = null;
+        }, 100); // Задержка для предотвращения частых обновлений
+    }
+
     initSocket() {
         this.socket = io({ transports: ['websocket', 'polling'] });
 
         this.socket.on('connect', () => {
             console.log('✅ Connected');
-            // При подключении проверяем, есть ли выбранный корабль
             this.checkSelectedShip();
         });
 
@@ -85,9 +208,7 @@ class RegattaGame {
                 this.isRacing = true;
                 this.hasSelectedShip = true;
                 
-                // Показываем миниатюру корабля в панели
                 this.showShipThumbnail(this.ship.shipType);
-                
                 this.updateShipInfo();
                 this.updatePlayers(data.players);
             }
@@ -140,9 +261,6 @@ class RegattaGame {
         });
     }
 
-    // ============================================
-    //  ПРОВЕРКА ВЫБРАННОГО КОРАБЛЯ
-    // ============================================
     checkSelectedShip() {
         const selectedShipData = localStorage.getItem('selectedShip');
         if (selectedShipData) {
@@ -152,7 +270,6 @@ class RegattaGame {
                 this.selectedShipName = data.shipName;
                 this.shipType = data.shipId;
                 
-                // Если есть выбранный корабль, предлагаем стартовать
                 if (this.socket && this.socket.connected) {
                     this.autoStartShip();
                 }
@@ -162,13 +279,9 @@ class RegattaGame {
         }
     }
 
-    // ============================================
-    //  АВТОМАТИЧЕСКИЙ СТАРТ КОРАБЛЯ
-    // ============================================
     autoStartShip() {
         if (!this.selectedShip || this.isGuest) return;
         
-        // Случайная точка в океане
         const lat = 20 + (Math.random() - 0.5) * 30;
         const lng = (Math.random() - 0.5) * 60;
         
@@ -181,20 +294,14 @@ class RegattaGame {
             lng: lng
         });
         
-        // Очищаем localStorage после старта
         localStorage.removeItem('selectedShip');
     }
 
-    // ============================================
-    //  ОТОБРАЖЕНИЕ МИНИАТЮРЫ КОРАБЛЯ
-    // ============================================
     showShipThumbnail(shipType) {
         const panel = document.getElementById('ship-panel');
-        // Удаляем старую миниатюру
         const oldThumb = document.getElementById('ship-thumbnail');
         if (oldThumb) oldThumb.remove();
         
-        // Создаём новую
         const thumb = document.createElement('div');
         thumb.id = 'ship-thumbnail';
         thumb.style.cssText = `
@@ -227,7 +334,6 @@ class RegattaGame {
         
         thumb.appendChild(img);
         
-        // Вставляем после кнопки выбора
         const selectBtn = panel.querySelector('.panel-action-btn');
         if (selectBtn) {
             selectBtn.after(thumb);
@@ -237,8 +343,6 @@ class RegattaGame {
     }
 
     setupShipPanel() {
-        // В новой версии панель только для выбора корабля
-        // Кнопка выбора уже есть в HTML
         const selectBtn = document.getElementById('btn-select-ship');
         if (selectBtn) {
             selectBtn.addEventListener('click', () => {
@@ -248,7 +352,6 @@ class RegattaGame {
     }
 
     selectShip(btn) {
-        // Эта функция больше не используется, но оставлена для совместимости
         if (this.isGuest) {
             this.showNotification('👁 Гости не могут выбирать корабль', 'warning');
             return;
@@ -280,8 +383,7 @@ class RegattaGame {
         fetch('/api/ships/state')
             .then(r => r.json())
             .then(data => {
-                // Обновляем состояние в localStorage если нужно
-                // (уже не нужно, так как используем localStorage для выбора)
+                // nothing needed here anymore
             })
             .catch(err => console.error('Failed to load ships state:', err));
     }
@@ -296,7 +398,6 @@ class RegattaGame {
             } else {
                 this.markers[this.playerId].setLatLng([this.ship.lat, this.ship.lng]);
                 this.markers[this.playerId].setPopupContent(this.createPopup(this.ship));
-                // Обновляем иконку
                 const icon = this.createShipIcon(this.ship);
                 this.markers[this.playerId].setIcon(icon);
             }
@@ -313,39 +414,6 @@ class RegattaGame {
                 delete this.markers[id];
             }
         }
-    }
-
-    createShipIcon(player) {
-        const isOwn = player.id === this.playerId;
-        const size = isOwn ? 34 : 28;
-        const fontSize = isOwn ? 20 : 14;
-        
-        // Пытаемся загрузить изображение корабля
-        const shipType = player.shipType || 'klip_10';
-        const imgUrl = `images/${shipType}.png`;
-        
-        return L.divIcon({
-            className: 'ship-marker',
-            html: `<div style="
-                width: ${size}px;
-                height: ${size}px;
-                background: ${isOwn ? 'rgba(74, 158, 255, 0.15)' : 'rgba(255,255,255,0.05)'};
-                border: 2px solid ${isOwn ? '#4a9eff' : (player.isOnline ? '#fff' : '#666')};
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: ${fontSize}px;
-                box-shadow: ${isOwn ? '0 0 20px rgba(74,158,255,0.3)' : 'none'};
-                transform: rotate(${player.heading || 0}deg);
-                padding: 4px;
-            ">
-                <img src="${imgUrl}" style="width:${size-8}px;height:${size-8}px;object-fit:contain;filter:brightness(1);" 
-                     onerror="this.style.display='none';this.parentElement.textContent='⛵'">
-            </div>`,
-            iconSize: [size + 6, size + 6],
-            iconAnchor: [(size + 6) / 2, (size + 6) / 2]
-        });
     }
 
     updatePlayer(id, player) {
@@ -473,7 +541,6 @@ class RegattaGame {
     }
 
     setupUI() {
-        // Чат
         document.getElementById('chat-toggle').onclick = () => {
             const chat = document.getElementById('chat');
             const messages = document.getElementById('chat-messages');
