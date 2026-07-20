@@ -125,6 +125,174 @@
         }
 
         /* ============================================
+           COMPASS - TOP LEFT CORNER (LARGER)
+        ============================================ */
+        #compass-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .compass {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, rgba(20, 40, 60, 0.95), rgba(10, 20, 30, 0.98));
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.3), inset 0 0 40px rgba(0, 0, 0, 0.2);
+            flex-shrink: 0;
+        }
+
+        .compass-label {
+            position: absolute;
+            font-size: 13px;
+            color: #8899aa;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 12px rgba(0, 0, 0, 0.9);
+            z-index: 3;
+        }
+
+        .compass-label.north {
+            top: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ff6b6b;
+            font-size: 15px;
+        }
+
+        .compass-label.south {
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .compass-label.east {
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .compass-label.west {
+            left: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .compass-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #4a9eff;
+            text-shadow: 0 0 30px rgba(74, 158, 255, 0.3);
+            z-index: 5;
+        }
+
+        .compass-title {
+            text-align: center;
+            font-size: 10px;
+            color: #667788;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+
+        /* ============================================
+           COMPASS ARROWS
+        ============================================ */
+        .arrow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: center center;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .arrow-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 3px;
+            border-radius: 2px;
+        }
+
+        .wind-arrow .arrow-line {
+            background: linear-gradient(to top, rgba(255, 215, 0, 0.3), #ffd700);
+            height: 52px;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+        }
+
+        .current-arrow .arrow-line {
+            background: linear-gradient(to top, rgba(0, 200, 255, 0.3), #00c8ff);
+            height: 40px;
+            box-shadow: 0 0 20px rgba(0, 200, 255, 0.2);
+        }
+
+        .arrow-head {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 14px solid #ffd700;
+            margin-top: -52px;
+            filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.3));
+        }
+
+        .wind-arrow .arrow-head {
+            border-bottom-color: #ffd700;
+            border-bottom-width: 14px;
+            margin-top: -52px;
+        }
+
+        .current-arrow .arrow-head {
+            border-bottom-color: #00c8ff;
+            border-bottom-width: 10px;
+            margin-top: -40px;
+            filter: drop-shadow(0 0 8px rgba(0, 200, 255, 0.3));
+        }
+
+        .arrow-label {
+            position: absolute;
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            text-shadow: 0 0 8px rgba(0, 0, 0, 0.9);
+            white-space: nowrap;
+        }
+
+        .wind-arrow .arrow-label {
+            color: #ffd700;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .current-arrow .arrow-label {
+            color: #00c8ff;
+            bottom: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* ============================================
            CONTROLS PANEL
         ============================================ */
         #controls-panel {
@@ -215,153 +383,6 @@
             background: linear-gradient(90deg, #ffd966, #f6b26b);
             border-radius: 4px;
             transition: width 0.3s;
-        }
-
-        /* ============================================
-           COMPASS
-        ============================================ */
-        .compass-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 15px;
-            border-left: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .compass {
-            position: relative;
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: radial-gradient(circle at center, rgba(20, 40, 60, 0.9), rgba(10, 20, 30, 0.95));
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.3), inset 0 0 30px rgba(0, 0, 0, 0.2);
-            flex-shrink: 0;
-        }
-
-        .compass-label {
-            position: absolute;
-            font-size: 9px;
-            color: #8899aa;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
-        }
-
-        .compass-label.north {
-            top: 4px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #ff6b6b;
-        }
-
-        .compass-label.south {
-            bottom: 4px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        .compass-label.east {
-            right: 4px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        .compass-label.west {
-            left: 4px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        .compass-center {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 14px;
-            color: #4a9eff;
-            text-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
-            z-index: 5;
-        }
-
-        .arrow {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform-origin: center center;
-            z-index: 2;
-            pointer-events: none;
-        }
-
-        .arrow-line {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 2px;
-            height: 30px;
-            border-radius: 2px;
-        }
-
-        .wind-arrow .arrow-line {
-            background: linear-gradient(to top, rgba(255, 215, 0, 0.3), #ffd700);
-            height: 28px;
-            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
-        }
-
-        .current-arrow .arrow-line {
-            background: linear-gradient(to top, rgba(0, 200, 255, 0.3), #00c8ff);
-            height: 22px;
-            box-shadow: 0 0 10px rgba(0, 200, 255, 0.2);
-        }
-
-        .arrow-head {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 0;
-            height: 0;
-            border-left: 5px solid transparent;
-            border-right: 5px solid transparent;
-            border-bottom: 8px solid #ffd700;
-            margin-top: -28px;
-        }
-
-        .wind-arrow .arrow-head {
-            border-bottom-color: #ffd700;
-            filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.3));
-        }
-
-        .current-arrow .arrow-head {
-            border-bottom-color: #00c8ff;
-            border-bottom-width: 6px;
-            margin-top: -22px;
-            filter: drop-shadow(0 0 6px rgba(0, 200, 255, 0.3));
-        }
-
-        .arrow-label {
-            position: absolute;
-            font-size: 7px;
-            font-weight: 700;
-            letter-spacing: 0.3px;
-            text-transform: uppercase;
-            text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
-            white-space: nowrap;
-        }
-
-        .wind-arrow .arrow-label {
-            color: #ffd700;
-            bottom: -16px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        .current-arrow .arrow-label {
-            color: #00c8ff;
-            bottom: -14px;
-            left: 50%;
-            transform: translateX(-50%);
         }
 
         /* ============================================
@@ -506,28 +527,6 @@
             margin: 12px 14px !important;
         }
 
-        .popup-ship-name {
-            font-size: 16px;
-            font-weight: 700;
-            color: #ffd966;
-            margin-bottom: 4px;
-        }
-
-        .popup-status {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-
-        .popup-status.online { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
-        .popup-status.offline { background: rgba(255, 152, 0, 0.2); color: #ff9800; }
-        .popup-status.grounded { background: rgba(255, 0, 0, 0.2); color: #ff6b6b; }
-        .popup-status.anchored { background: rgba(255, 217, 61, 0.2); color: #ffd93d; }
-        .popup-status.eliminated { background: rgba(255, 0, 0, 0.3); color: #ff1744; }
-
         /* ============================================
            RESPONSIVE
         ============================================ */
@@ -535,6 +534,51 @@
             #ship-panel { left: 8px; padding: 8px 6px; gap: 6px; }
             .panel-action-btn { width: 44px; padding: 8px 4px; }
             .panel-action-btn .icon { font-size: 18px; }
+            
+            #compass-container {
+                top: 10px;
+                left: 10px;
+                padding: 10px;
+                border-radius: 14px;
+            }
+            
+            .compass {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .compass-label {
+                font-size: 10px;
+            }
+            .compass-label.north {
+                font-size: 12px;
+            }
+            
+            .wind-arrow .arrow-line {
+                height: 36px;
+            }
+            .current-arrow .arrow-line {
+                height: 28px;
+            }
+            .wind-arrow .arrow-head {
+                margin-top: -36px;
+                border-bottom-width: 10px;
+            }
+            .current-arrow .arrow-head {
+                margin-top: -28px;
+                border-bottom-width: 8px;
+            }
+            .arrow-label {
+                font-size: 7px;
+            }
+            .compass-center {
+                font-size: 18px;
+            }
+            .compass-title {
+                font-size: 8px;
+                margin-top: 6px;
+            }
+
             #controls-panel {
                 min-width: unset;
                 width: 98%;
@@ -545,37 +589,6 @@
             #controls-panel .ship-info-display { font-size: 11px; gap: 8px; }
             #chat { width: 220px; height: 220px; right: 10px; bottom: 80px; }
             #btn-home { left: 8px; bottom: 80px; padding: 8px 14px; font-size: 12px; }
-            
-            .compass {
-                width: 60px;
-                height: 60px;
-            }
-            .compass-label {
-                font-size: 7px;
-            }
-            .wind-arrow .arrow-line {
-                height: 20px;
-            }
-            .current-arrow .arrow-line {
-                height: 16px;
-            }
-            .wind-arrow .arrow-head {
-                margin-top: -20px;
-                border-bottom-width: 6px;
-            }
-            .current-arrow .arrow-head {
-                margin-top: -16px;
-                border-bottom-width: 5px;
-            }
-            .arrow-label {
-                font-size: 6px;
-            }
-            .compass-center {
-                font-size: 11px;
-            }
-            .compass-container {
-                padding: 0 8px;
-            }
         }
 
         @media (max-width: 480px) {
@@ -584,36 +597,54 @@
             .panel-action-btn .icon { font-size: 14px; }
             .panel-action-btn .label { font-size: 6px; }
             
+            #compass-container {
+                top: 8px;
+                left: 8px;
+                padding: 8px;
+                border-radius: 12px;
+            }
+            
             .compass {
-                width: 50px;
-                height: 50px;
+                width: 80px;
+                height: 80px;
             }
+            
             .compass-label {
-                font-size: 6px;
+                font-size: 8px;
             }
+            .compass-label.north {
+                font-size: 10px;
+            }
+            
             .wind-arrow .arrow-line {
-                height: 16px;
+                height: 28px;
             }
             .current-arrow .arrow-line {
-                height: 12px;
+                height: 20px;
             }
             .wind-arrow .arrow-head {
-                margin-top: -16px;
-                border-bottom-width: 5px;
+                margin-top: -28px;
+                border-bottom-width: 8px;
+                border-left-width: 6px;
+                border-right-width: 6px;
             }
             .current-arrow .arrow-head {
-                margin-top: -12px;
-                border-bottom-width: 4px;
+                margin-top: -20px;
+                border-bottom-width: 6px;
+                border-left-width: 5px;
+                border-right-width: 5px;
             }
             .arrow-label {
                 display: none;
             }
             .compass-center {
-                font-size: 9px;
+                font-size: 14px;
             }
-            .compass-container {
-                padding: 0 4px;
+            .compass-title {
+                font-size: 7px;
+                margin-top: 4px;
             }
+            
             #controls-panel .ctrl-btn {
                 width: 30px;
                 height: 30px;
@@ -650,12 +681,39 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- 3. HOME BUTTON                            -->
+    <!-- 3. COMPASS - TOP LEFT CORNER              -->
+    <!-- ========================================== -->
+    <div id="compass-container">
+        <div class="compass" id="compass">
+            <div class="compass-label north">N</div>
+            <div class="compass-label east">E</div>
+            <div class="compass-label south">S</div>
+            <div class="compass-label west">W</div>
+            
+            <div class="arrow wind-arrow" id="windArrow">
+                <div class="arrow-line"></div>
+                <div class="arrow-head"></div>
+                <div class="arrow-label">Wind</div>
+            </div>
+            
+            <div class="arrow current-arrow" id="currentArrow">
+                <div class="arrow-line"></div>
+                <div class="arrow-head"></div>
+                <div class="arrow-label">Current</div>
+            </div>
+            
+            <div class="compass-center">⛵</div>
+        </div>
+        <div class="compass-title">Wind &amp; Current</div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 4. HOME BUTTON                            -->
     <!-- ========================================== -->
     <a id="btn-home" href="https://aerost.art/">HOME</a>
 
     <!-- ========================================== -->
-    <!-- 4. CONTROLS PANEL WITH COMPASS            -->
+    <!-- 5. CONTROLS PANEL                         -->
     <!-- ========================================== -->
     <div id="controls-panel">
         <div class="ctrl-group">
@@ -680,34 +738,10 @@
                 <span class="value" id="sail-display-mini">50%</span>
             </span>
         </div>
-        
-        <!-- COMPASS -->
-        <div class="compass-container">
-            <div class="compass" id="compass">
-                <div class="compass-label north">N</div>
-                <div class="compass-label east">E</div>
-                <div class="compass-label south">S</div>
-                <div class="compass-label west">W</div>
-                
-                <div class="arrow wind-arrow" id="windArrow">
-                    <div class="arrow-line"></div>
-                    <div class="arrow-head"></div>
-                    <div class="arrow-label">Wind</div>
-                </div>
-                
-                <div class="arrow current-arrow" id="currentArrow">
-                    <div class="arrow-line"></div>
-                    <div class="arrow-head"></div>
-                    <div class="arrow-label">Current</div>
-                </div>
-                
-                <div class="compass-center">⛵</div>
-            </div>
-        </div>
     </div>
 
     <!-- ========================================== -->
-    <!-- 5. CHAT                                   -->
+    <!-- 6. CHAT                                   -->
     <!-- ========================================== -->
     <div id="chat">
         <div id="chat-header">
@@ -725,12 +759,12 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- 6. NOTIFICATIONS                          -->
+    <!-- 7. NOTIFICATIONS                          -->
     <!-- ========================================== -->
     <div id="notifications"></div>
 
     <!-- ========================================== -->
-    <!-- 7. SCRIPTS                                -->
+    <!-- 8. SCRIPTS                                -->
     <!-- ========================================== -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
