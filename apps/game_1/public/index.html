@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Regatta — Парусная регата</title>
+    <title>Regatta — Sailing Regatta</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css" />
     <style>
         /* ============================================
-           ОСНОВНЫЕ СТИЛИ
+           MAIN STYLES
         ============================================ */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -29,7 +29,7 @@
         }
 
         /* ============================================
-           ПАНЕЛЬ КОРАБЛЕЙ (слева) - УПРОЩЕННАЯ
+           SHIP PANEL (left)
         ============================================ */
         #ship-panel {
             position: fixed;
@@ -53,7 +53,6 @@
         #ship-panel::-webkit-scrollbar { width: 3px; }
         #ship-panel::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
 
-        /* Кнопка выбора корабля */
         .panel-action-btn {
             width: 60px;
             padding: 12px 8px;
@@ -89,8 +88,15 @@
             text-transform: uppercase;
         }
 
+        #guest-message {
+            text-align: center;
+            padding: 8px;
+            color: #8899aa;
+            font-size: 11px;
+        }
+
         /* ============================================
-           КНОПКА HOME
+           HOME BUTTON
         ============================================ */
         #btn-home {
             position: fixed;
@@ -119,7 +125,7 @@
         }
 
         /* ============================================
-           ПАНЕЛЬ УПРАВЛЕНИЯ
+           CONTROLS PANEL
         ============================================ */
         #controls-panel {
             position: fixed;
@@ -212,7 +218,154 @@
         }
 
         /* ============================================
-           ЧАТ
+           COMPASS
+        ============================================ */
+        .compass-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 15px;
+            border-left: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .compass {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, rgba(20, 40, 60, 0.9), rgba(10, 20, 30, 0.95));
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.3), inset 0 0 30px rgba(0, 0, 0, 0.2);
+            flex-shrink: 0;
+        }
+
+        .compass-label {
+            position: absolute;
+            font-size: 9px;
+            color: #8899aa;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+        }
+
+        .compass-label.north {
+            top: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ff6b6b;
+        }
+
+        .compass-label.south {
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .compass-label.east {
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .compass-label.west {
+            left: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .compass-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+            color: #4a9eff;
+            text-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
+            z-index: 5;
+        }
+
+        .arrow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: center center;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .arrow-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 30px;
+            border-radius: 2px;
+        }
+
+        .wind-arrow .arrow-line {
+            background: linear-gradient(to top, rgba(255, 215, 0, 0.3), #ffd700);
+            height: 28px;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+        }
+
+        .current-arrow .arrow-line {
+            background: linear-gradient(to top, rgba(0, 200, 255, 0.3), #00c8ff);
+            height: 22px;
+            box-shadow: 0 0 10px rgba(0, 200, 255, 0.2);
+        }
+
+        .arrow-head {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 8px solid #ffd700;
+            margin-top: -28px;
+        }
+
+        .wind-arrow .arrow-head {
+            border-bottom-color: #ffd700;
+            filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.3));
+        }
+
+        .current-arrow .arrow-head {
+            border-bottom-color: #00c8ff;
+            border-bottom-width: 6px;
+            margin-top: -22px;
+            filter: drop-shadow(0 0 6px rgba(0, 200, 255, 0.3));
+        }
+
+        .arrow-label {
+            position: absolute;
+            font-size: 7px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
+            white-space: nowrap;
+        }
+
+        .wind-arrow .arrow-label {
+            color: #ffd700;
+            bottom: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .current-arrow .arrow-label {
+            color: #00c8ff;
+            bottom: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* ============================================
+           CHAT
         ============================================ */
         #chat {
             position: fixed;
@@ -292,7 +445,7 @@
         #chat-send:hover { background: rgba(74, 158, 255, 0.3); }
 
         /* ============================================
-           УВЕДОМЛЕНИЯ
+           NOTIFICATIONS
         ============================================ */
         #notifications {
             position: fixed;
@@ -331,7 +484,7 @@
         }
 
         /* ============================================
-           КАСТОМНЫЙ POPUP ДЛЯ КОРАБЛЕЙ
+           POPUP
         ============================================ */
         .leaflet-popup-content-wrapper {
             background: rgba(0, 0, 0, 0.9) !important;
@@ -376,7 +529,7 @@
         .popup-status.eliminated { background: rgba(255, 0, 0, 0.3); color: #ff1744; }
 
         /* ============================================
-           АДАПТИВ
+           RESPONSIVE
         ============================================ */
         @media (max-width: 768px) {
             #ship-panel { left: 8px; padding: 8px 6px; gap: 6px; }
@@ -392,49 +545,130 @@
             #controls-panel .ship-info-display { font-size: 11px; gap: 8px; }
             #chat { width: 220px; height: 220px; right: 10px; bottom: 80px; }
             #btn-home { left: 8px; bottom: 80px; padding: 8px 14px; font-size: 12px; }
+            
+            .compass {
+                width: 60px;
+                height: 60px;
+            }
+            .compass-label {
+                font-size: 7px;
+            }
+            .wind-arrow .arrow-line {
+                height: 20px;
+            }
+            .current-arrow .arrow-line {
+                height: 16px;
+            }
+            .wind-arrow .arrow-head {
+                margin-top: -20px;
+                border-bottom-width: 6px;
+            }
+            .current-arrow .arrow-head {
+                margin-top: -16px;
+                border-bottom-width: 5px;
+            }
+            .arrow-label {
+                font-size: 6px;
+            }
+            .compass-center {
+                font-size: 11px;
+            }
+            .compass-container {
+                padding: 0 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #ship-panel { left: 4px; padding: 6px 4px; gap: 4px; }
+            .panel-action-btn { width: 36px; padding: 6px 4px; }
+            .panel-action-btn .icon { font-size: 14px; }
+            .panel-action-btn .label { font-size: 6px; }
+            
+            .compass {
+                width: 50px;
+                height: 50px;
+            }
+            .compass-label {
+                font-size: 6px;
+            }
+            .wind-arrow .arrow-line {
+                height: 16px;
+            }
+            .current-arrow .arrow-line {
+                height: 12px;
+            }
+            .wind-arrow .arrow-head {
+                margin-top: -16px;
+                border-bottom-width: 5px;
+            }
+            .current-arrow .arrow-head {
+                margin-top: -12px;
+                border-bottom-width: 4px;
+            }
+            .arrow-label {
+                display: none;
+            }
+            .compass-center {
+                font-size: 9px;
+            }
+            .compass-container {
+                padding: 0 4px;
+            }
+            #controls-panel .ctrl-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 12px;
+            }
+            #controls-panel .ship-info-display {
+                font-size: 9px;
+                gap: 4px;
+            }
+            .sail-bar-mini {
+                width: 30px;
+            }
         }
     </style>
 </head>
 <body>
 
     <!-- ========================================== -->
-    <!-- 1. КАРТА                                   -->
+    <!-- 1. MAP                                    -->
     <!-- ========================================== -->
     <div id="map"></div>
 
     <!-- ========================================== -->
-    <!-- 2. ПАНЕЛЬ (слева) - ТОЛЬКО КНОПКА ВЫБОРА  -->
+    <!-- 2. SHIP PANEL (left)                      -->
     <!-- ========================================== -->
     <div id="ship-panel">
-        <a href="/selection.html" class="panel-action-btn" id="btn-select-ship" title="Выбрать корабль">
-    <span class="icon">⛵</span>
-    <span class="label">SELECT/START</span>
-</a>
-        <div id="guest-message" style="display:none; text-align:center; padding:8px; color:#8899aa; font-size:11px;">
-            👁 Наблюдатель
+        <a href="/selection.html" class="panel-action-btn" id="btn-select-ship" title="Select Ship">
+            <span class="icon">⛵</span>
+            <span class="label">SELECT</span>
+        </a>
+        <div id="guest-message" style="display:none;">
+            👁 Spectator
         </div>
     </div>
 
     <!-- ========================================== -->
-    <!-- 3. КНОПКА HOME                             -->
+    <!-- 3. HOME BUTTON                            -->
     <!-- ========================================== -->
     <a id="btn-home" href="https://aerost.art/">HOME</a>
 
     <!-- ========================================== -->
-    <!-- 4. ПАНЕЛЬ УПРАВЛЕНИЯ                      -->
+    <!-- 4. CONTROLS PANEL WITH COMPASS            -->
     <!-- ========================================== -->
     <div id="controls-panel">
         <div class="ctrl-group">
-            <button class="ctrl-btn" id="btn-left" title="Влево (←)">◄</button>
-            <button class="ctrl-btn" id="btn-right" title="Вправо (→)">►</button>
+            <button class="ctrl-btn" id="btn-left" title="Turn Left (←)">◄</button>
+            <button class="ctrl-btn" id="btn-right" title="Turn Right (→)">►</button>
         </div>
         <div class="ctrl-group">
-            <button class="ctrl-btn" id="btn-raise" title="Поднять паруса (↑)">▲</button>
-            <button class="ctrl-btn" id="btn-lower" title="Опустить паруса (↓)">▼</button>
+            <button class="ctrl-btn" id="btn-raise" title="Raise Sails (↑)">▲</button>
+            <button class="ctrl-btn" id="btn-lower" title="Lower Sails (↓)">▼</button>
         </div>
         <div class="ctrl-group" style="border-right: none;">
-            <button class="ctrl-btn anchor-btn" id="btn-anchor" title="Якорь (Space)">⚓</button>
-            <button class="ctrl-btn" id="resetBtn" title="Сбросить" style="color:#ff6b6b;">⟳</button>
+            <button class="ctrl-btn anchor-btn" id="btn-anchor" title="Anchor (Space)">⚓</button>
+            <button class="ctrl-btn" id="resetBtn" title="Reset" style="color:#ff6b6b;">⟳</button>
         </div>
         <div class="ship-info-display">
             <span>⛵ <span class="value" id="ship-name-display">—</span></span>
@@ -446,33 +680,57 @@
                 <span class="value" id="sail-display-mini">50%</span>
             </span>
         </div>
+        
+        <!-- COMPASS -->
+        <div class="compass-container">
+            <div class="compass" id="compass">
+                <div class="compass-label north">N</div>
+                <div class="compass-label east">E</div>
+                <div class="compass-label south">S</div>
+                <div class="compass-label west">W</div>
+                
+                <div class="arrow wind-arrow" id="windArrow">
+                    <div class="arrow-line"></div>
+                    <div class="arrow-head"></div>
+                    <div class="arrow-label">Wind</div>
+                </div>
+                
+                <div class="arrow current-arrow" id="currentArrow">
+                    <div class="arrow-line"></div>
+                    <div class="arrow-head"></div>
+                    <div class="arrow-label">Current</div>
+                </div>
+                
+                <div class="compass-center">⛵</div>
+            </div>
+        </div>
     </div>
 
     <!-- ========================================== -->
-    <!-- 5. ЧАТ                                     -->
+    <!-- 5. CHAT                                   -->
     <!-- ========================================== -->
     <div id="chat">
         <div id="chat-header">
-            <span>💬 Чат</span>
+            <span>💬 Chat</span>
             <button id="chat-toggle">−</button>
         </div>
         <div id="chat-messages">
-            <div class="chat-system">👋 Добро пожаловать в Regatta!</div>
-            <div class="chat-system">Нажмите "ВЫБОР" чтобы выбрать корабль</div>
+            <div class="chat-system">👋 Welcome to Regatta!</div>
+            <div class="chat-system">Click "SELECT" to choose your ship</div>
         </div>
         <div id="chat-input-area">
-            <input type="text" id="chat-input" placeholder="Сообщение..." disabled />
+            <input type="text" id="chat-input" placeholder="Message..." disabled />
             <button id="chat-send" disabled>➤</button>
         </div>
     </div>
 
     <!-- ========================================== -->
-    <!-- 6. УВЕДОМЛЕНИЯ                             -->
+    <!-- 6. NOTIFICATIONS                          -->
     <!-- ========================================== -->
     <div id="notifications"></div>
 
     <!-- ========================================== -->
-    <!-- 7. ПОДКЛЮЧЕНИЕ СКРИПТОВ                    -->
+    <!-- 7. SCRIPTS                                -->
     <!-- ========================================== -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
