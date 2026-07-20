@@ -23,7 +23,7 @@ const io = socketIo(server, {
 const PORT = process.env.PORT || 3002;
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY;
 const MAX_PLAYERS = 7;
-const INACTIVITY_TIMEOUT = 48 * 60 * 60 * 1000;
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 минут для теста
 const GROUNDED_TIMEOUT = 5 * 60 * 1000;
 
 // ============================================
@@ -50,27 +50,31 @@ const CACHE_TTL = 600000;
 const players = new Map();
 
 // ============================================
-//  СОСТОЯНИЕ КОРАБЛЕЙ (7 штук)
+//  СОСТОЯНИЕ КОРАБЛЕЙ (7 штук) - ИНИЦИАЛИЗАЦИЯ
 // ============================================
-const shipStates = {
-    'klip_10': { taken: false, playerId: null },
-    'klip_20': { taken: false, playerId: null },
-    'klip_30': { taken: false, playerId: null },
-    'columb': { taken: false, playerId: null },
-    'pirat': { taken: false, playerId: null },
-    'ap': { taken: false, playerId: null },
-    '19c_m': { taken: false, playerId: null }
-};
+let shipStates = {};
+
+function initShipStates() {
+    shipStates = {
+        'klip_10': { taken: false, playerId: null },
+        'klip_20': { taken: false, playerId: null },
+        'klip_30': { taken: false, playerId: null },
+        'columb': { taken: false, playerId: null },
+        'pirat': { taken: false, playerId: null },
+        'ap': { taken: false, playerId: null },
+        '19c_m': { taken: false, playerId: null }
+    };
+}
+
+initShipStates();
 
 // ============================================
 //  АВТОРИЗАЦИЯ
 // ============================================
 
-// Простая БД в памяти (для демонстрации)
-const users = new Map(); // username -> { id, username, email, passwordHash }
-const sessions = new Map(); // sessionId -> userId
+const users = new Map();
+const sessions = new Map();
 
-// Хэширование (в реальном проекте используйте bcrypt)
 function hashPassword(password) {
     let hash = 0;
     for (let i = 0; i < password.length; i++) {
@@ -81,7 +85,6 @@ function hashPassword(password) {
     return `hash_${hash}_${password.length}`;
 }
 
-// Регистрация
 app.post('/api/register', (req, res) => {
     const { username, email, password } = req.body;
     
@@ -114,7 +117,6 @@ app.post('/api/register', (req, res) => {
     res.json({ success: true, message: 'Регистрация успешна' });
 });
 
-// Вход
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     
@@ -127,7 +129,6 @@ app.post('/api/login', (req, res) => {
         return res.status(401).json({ success: false, message: 'Неверное имя или пароль' });
     }
     
-    // Создаём сессию
     const sessionId = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
     sessions.set(sessionId, user.id);
     
@@ -139,7 +140,6 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// Проверка сессии
 app.get('/api/session', (req, res) => {
     const sessionId = req.headers['x-session-id'];
     if (!sessionId || !sessions.has(sessionId)) {
@@ -158,7 +158,6 @@ app.get('/api/session', (req, res) => {
     res.json({ user: foundUser });
 });
 
-// Выход
 app.post('/api/logout', (req, res) => {
     const sessionId = req.headers['x-session-id'];
     if (sessionId) {
@@ -169,7 +168,7 @@ app.post('/api/logout', (req, res) => {
 });
 
 // ============================================
-//  ВЫБОР КОРАБЛЯ (для зарегистрированных)
+//  ВЫБОР КОРАБЛЯ
 // ============================================
 app.post('/api/select_ship', (req, res) => {
     const { shipId } = req.body;
@@ -183,13 +182,21 @@ app.post('/api/select_ship', (req, res) => {
     
     // Проверяем, свободен ли корабль
     if (shipStates[shipId] && shipStates[shipId].taken) {
-        // Проверяем, не принадлежит ли он этому пользователю
+        // Если занят этим же пользователем - ок
         if (shipStates[shipId].playerId !== userId) {
             return res.status(400).json({ success: false, message: 'Этот корабль уже занят' });
         }
     }
     
-    // Сохраняем выбор
+    // Освобождаем все корабли этого пользователя
+    for (const [id, state] of Object.entries(shipStates)) {
+        if (state.playerId === userId) {
+            state.taken = false;
+            state.playerId = null;
+        }
+    }
+    
+    // Занимаем выбранный
     shipStates[shipId].taken = true;
     shipStates[shipId].playerId = userId;
     
@@ -198,7 +205,75 @@ app.post('/api/select_ship', (req, res) => {
 });
 
 // ============================================
-//  МОДЕЛЬ ТЕЧЕНИЙ (упрощённая)
+//  API
+// ============================================
+app.get('/api/players', (req, res) => {
+    const playerList = [];
+    for (const [id, ship] of players) {
+        playerList.push({
+            id: id,
+            name: ship.name,
+            isOnline: ship.isOnline,
+            isEliminated: ship.isEliminated || false,
+            isGrounded: ship.isGrounded,
+            shipType: ship.shipType,
+            lat: ship.lat,
+            lng: ship.lng
+        });
+    }
+    res.json({
+        players: playerList,
+        maxPlayers: MAX_PLAYERS,
+        current: playerList.filter(p => !p.isEliminated).length
+    });
+});
+
+app.get('/api/ships/state', (req, res) => {
+    // Очищаем занятые корабли, если игрок отключился
+    for (const [id, state] of Object.entries(shipStates)) {
+        if (state.playerId) {
+            let isActive = false;
+            for (const [pid, ship] of players) {
+                if (pid === state.playerId && ship.isOnline) {
+                    isActive = true;
+                    break;
+                }
+            }
+            if (!isActive) {
+                state.taken = false;
+                state.playerId = null;
+            }
+        }
+    }
+    res.json(shipStates);
+});
+
+app.get('/api/wind', async (req, res) => {
+    const { lat, lng } = req.query;
+    if (!lat || !lng) return res.status(400).json({ error: 'Missing lat/lng' });
+    const data = await fetchWindData(parseFloat(lat), parseFloat(lng));
+    res.json(data);
+});
+
+app.get('/api/current', async (req, res) => {
+    const { lat, lng } = req.query;
+    if (!lat || !lng) return res.status(400).json({ error: 'Missing lat/lng' });
+    const data = await fetchCurrentData(parseFloat(lat), parseFloat(lng));
+    res.json(data);
+});
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/selection.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'selection.html'));
+});
+
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
+// ============================================
+//  МОДЕЛЬ ТЕЧЕНИЙ
 // ============================================
 class OceanCurrentModel {
     getCurrent(lat, lng) {
@@ -262,71 +337,6 @@ async function fetchCurrentData(lat, lng) {
 }
 
 // ============================================
-//  API
-// ============================================
-app.get('/api/players', (req, res) => {
-    const playerList = [];
-    for (const [id, ship] of players) {
-        playerList.push({
-            id: id,
-            name: ship.name,
-            isOnline: ship.isOnline,
-            isEliminated: ship.isEliminated || false,
-            isGrounded: ship.isGrounded,
-            shipType: ship.shipType,
-            lat: ship.lat,
-            lng: ship.lng
-        });
-    }
-    res.json({
-        players: playerList,
-        maxPlayers: MAX_PLAYERS,
-        current: playerList.filter(p => !p.isEliminated).length
-    });
-});
-
-app.get('/api/ships/state', (req, res) => {
-    res.json(shipStates);
-});
-
-app.get('/api/wind', async (req, res) => {
-    const { lat, lng } = req.query;
-    if (!lat || !lng) return res.status(400).json({ error: 'Missing lat/lng' });
-    const data = await fetchWindData(parseFloat(lat), parseFloat(lng));
-    res.json(data);
-});
-
-app.get('/api/current', async (req, res) => {
-    const { lat, lng } = req.query;
-    if (!lat || !lng) return res.status(400).json({ error: 'Missing lat/lng' });
-    const data = await fetchCurrentData(parseFloat(lat), parseFloat(lng));
-    res.json(data);
-});
-
-app.get('/api/currents/grid', (req, res) => {
-    const { latMin, latMax, lngMin, lngMax, step } = req.query;
-    const grid = [];
-    const stepVal = parseFloat(step || 10);
-    for (let lat = parseFloat(latMin || -60); lat <= parseFloat(latMax || 60); lat += stepVal) {
-        for (let lng = parseFloat(lngMin || -180); lng <= parseFloat(lngMax || 180); lng += stepVal) {
-            const current = oceanCurrents.getCurrent(lat, lng);
-            grid.push({ lat, lng, speed: current.speed, direction: current.direction, u: current.u, v: current.v });
-        }
-    }
-    res.json(grid);
-});
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/selection.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'selection.html'));
-});
-
-app.get('/favicon.ico', (req, res) => res.status(204).end());
-
-// ============================================
 //  КЛАСС КОРАБЛЯ
 // ============================================
 class Ship {
@@ -336,7 +346,7 @@ class Ship {
         this.shipType = shipType;
         this.lat = lat;
         this.lng = lng;
-        this.heading = 0;
+        this.heading = Math.floor(Math.random() * 360);
         this.sailPosition = 0.5;
         this.targetSailPosition = 0.5;
         this.isAnchored = false;
@@ -596,10 +606,15 @@ io.on('connection', (socket) => {
     socket.on('join_with_ship', (data) => {
         const { shipId, shipName, lat, lng } = data;
 
+        console.log(`📥 Join with ship: ${shipId}, ${shipName} at ${lat}, ${lng}`);
+
         // Проверяем, свободен ли корабль
         if (shipStates[shipId] && shipStates[shipId].taken) {
-            socket.emit('join_error', { message: 'Этот корабль уже занят' });
-            return;
+            // Проверяем, не принадлежит ли он этому сокету
+            if (shipStates[shipId].playerId !== socket.id) {
+                socket.emit('join_error', { message: 'Этот корабль уже занят' });
+                return;
+            }
         }
 
         // Проверяем лимит игроков
@@ -611,8 +626,23 @@ io.on('connection', (socket) => {
 
         // Проверяем, что точка в океане
         if (isOnLand(lat, lng)) {
-            socket.emit('join_error', { message: 'Нельзя стартовать на суше!' });
-            return;
+            // Если на суше, ставим в случайную точку океана
+            const newLat = 20 + (Math.random() - 0.5) * 30;
+            const newLng = (Math.random() - 0.5) * 60;
+            console.log(`📍 Land detected, moving to ${newLat}, ${newLng}`);
+            return socket.emit('join_with_ship', { ...data, lat: newLat, lng: newLng });
+        }
+
+        // Если у этого сокета уже есть корабль - удаляем старый
+        if (players.has(socket.id)) {
+            const oldShip = players.get(socket.id);
+            for (const [id, state] of Object.entries(shipStates)) {
+                if (state.playerId === socket.id) {
+                    state.taken = false;
+                    state.playerId = null;
+                }
+            }
+            players.delete(socket.id);
         }
 
         // Создаём игрока
