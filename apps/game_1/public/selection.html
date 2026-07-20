@@ -709,6 +709,7 @@
                 const card = document.createElement('div');
                 card.className = `ship-card${isTaken && !isOwned ? ' taken' : ''}${!isAuth ? ' disabled' : ''}`;
                 card.dataset.shipId = ship.id;
+                card.dataset.name = ship.name; 
 
                 let statusText = '✅';
                 let statusClass = 'free';
