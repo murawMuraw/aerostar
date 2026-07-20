@@ -49,7 +49,6 @@ class RegattaGame {
 
         L.control.zoom({ position: 'bottomright' }).addTo(this.map);
 
-        // Обновляем маркеры при изменении зума
         this.map.on('zoomend', () => {
             this.updateAllMarkers();
         });
@@ -63,6 +62,7 @@ class RegattaGame {
 
     // ============================================
     //  РАЗМЕР КОРАБЛЯ В ЗАВИСИМОСТИ ОТ ЗУМА
+    //  УВЕЛИЧЕН В 2 РАЗА
     // ============================================
     getShipSize(zoom, isOwn) {
         // Базовый размер для чужого корабля
@@ -73,15 +73,18 @@ class RegattaGame {
         else if (zoom >= 3) baseSize = 20;
         else baseSize = 16;
         
+        // УВЕЛИЧИВАЕМ В 2 РАЗА
+        baseSize = baseSize * 2;
+        
         // Свой корабль на 30% больше
         const size = isOwn ? Math.round(baseSize * 1.3) : baseSize;
         
         // Ограничиваем размеры
-        return Math.max(12, Math.min(60, size));
+        return Math.max(24, Math.min(120, size));
     }
 
     // ============================================
-    //  ЧИСТЫЙ МАРКЕР КОРАБЛЯ - БЕЗ ОКРУЖНОСТЕЙ
+    //  ЧИСТЫЙ МАРКЕР КОРАБЛЯ
     // ============================================
     createShipIcon(player) {
         const isOwn = player.id === this.playerId;
@@ -90,7 +93,6 @@ class RegattaGame {
         const shipType = player.shipType || 'klip_10';
         const imgUrl = `images/${shipType}.png`;
         
-        // Свой корабль - яркий, с тенью
         if (isOwn) {
             return L.divIcon({
                 className: 'ship-marker own',
@@ -115,7 +117,6 @@ class RegattaGame {
             });
         }
         
-        // Чужие корабли - немного прозрачнее
         const opacity = player.isOnline ? 0.85 : 0.3;
         const statusIcon = player.isEliminated ? '💀' :
                           player.isGrounded ? '⚠️' :
@@ -147,22 +148,17 @@ class RegattaGame {
         });
     }
 
-    // ============================================
-    //  ОБНОВЛЕНИЕ ВСЕХ МАРКЕРОВ
-    // ============================================
     updateAllMarkers() {
         if (this.markerUpdateTimeout) {
             clearTimeout(this.markerUpdateTimeout);
         }
         
         this.markerUpdateTimeout = setTimeout(() => {
-            // Обновляем свой маркер
             if (this.ship && this.playerId && this.markers[this.playerId]) {
                 const icon = this.createShipIcon(this.ship);
                 this.markers[this.playerId].setIcon(icon);
             }
             
-            // Обновляем чужие маркеры
             if (this.lastState && this.lastState.players) {
                 for (const [id, player] of Object.entries(this.lastState.players)) {
                     if (id !== this.playerId && this.markers[id]) {
@@ -172,7 +168,7 @@ class RegattaGame {
                 }
             }
             this.markerUpdateTimeout = null;
-        }, 100); // Задержка для предотвращения частых обновлений
+        }, 100);
     }
 
     initSocket() {
@@ -382,9 +378,7 @@ class RegattaGame {
     loadShipsState() {
         fetch('/api/ships/state')
             .then(r => r.json())
-            .then(data => {
-                // nothing needed here anymore
-            })
+            .then(data => {})
             .catch(err => console.error('Failed to load ships state:', err));
     }
 
