@@ -135,7 +135,7 @@ function renderBalloon(data) {
 
     const balloonIcon = L.icon({
         iconUrl: '/images/balloon.png',
-        iconSize: [64, 64],
+        iconSize: [48, 48],
         iconAnchor: [16, 32],
         popupAnchor: [0, -32],
         className: 'double-size-balloon'
