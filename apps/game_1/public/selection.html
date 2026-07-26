@@ -815,28 +815,37 @@ btnStart.addEventListener('click', async () => {
         const data = await response.json();
 
         if (data.success) {
-            // Ждем подтверждения от сервера
             console.log('✅ Server confirmed:', data);
             
             // Сохраняем выбор с подтвержденными данными
-            localStorage.setItem('selectedShip', JSON.stringify({
+            const saveData = {
                 shipId: data.data.shipId || selectedShip,
                 shipName: data.data.shipName || shipName,
                 confirmed: true,
                 timestamp: Date.now()
-            }));
+            };
+            
+            localStorage.setItem('selectedShip', JSON.stringify(saveData));
+            console.log('💾 Saved to localStorage:', saveData);
             
             successDiv.style.display = 'block';
             errorDiv.style.display = 'none';
             
-            // Даем время на сохранение
+            // Даем время на сохранение и проверяем
             await new Promise(resolve => setTimeout(resolve, 500));
             
-            // Проверяем, что данные сохранились
+            // Проверяем, что данные сохранились и подтверждены
             const saved = localStorage.getItem('selectedShip');
             if (saved) {
-                console.log('💾 Saved to localStorage:', saved);
-                window.location.href = '/';
+                const parsed = JSON.parse(saved);
+                if (parsed.confirmed) {
+                    console.log('✅ Confirmed, redirecting...');
+                    window.location.href = '/';
+                } else {
+                    showError('Selection not confirmed');
+                    btnStart.disabled = false;
+                    btnStart.textContent = '🚀 Start Sailing';
+                }
             } else {
                 showError('Failed to save selection');
                 btnStart.disabled = false;
@@ -854,6 +863,7 @@ btnStart.addEventListener('click', async () => {
         btnStart.textContent = '🚀 Start Sailing';
     }
 });
+
         // ============================================
         //  HELPERS
         // ============================================
