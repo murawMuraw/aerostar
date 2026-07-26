@@ -49,7 +49,7 @@ const CACHE_TTL = 600000;
 // ============================================
 const players = new Map();
 const pendingSelections = new Map();
-const finishPoints = new Map(); // playerId -> { lat, lng }
+const finishPoints = new Map();
 
 // ============================================
 //  SHIP STATES (7 ships)
@@ -432,12 +432,10 @@ class Ship {
         }
         this.groundTime = null;
 
-        // Sail adjustment (10% per click)
         const sailDiff = this.targetSailPosition - this.sailPosition;
         this.sailPosition += sailDiff * deltaTime * 0.5;
         this.sailPosition = Math.max(0, Math.min(1, this.sailPosition));
 
-        // Wind effect
         const windSpeed = wind.speed || 5;
         const windDirection = wind.direction || 0;
         const angleToWind = this.heading - windDirection;
@@ -457,7 +455,6 @@ class Ship {
             lngDelta += lngPerSecond * Math.sin(this.heading * Math.PI / 180);
         }
 
-        // Current effect
         if (current && current.speed > 0.05) {
             const currentSpeedMs = current.speed * 0.514;
             const latPerSecond = currentSpeedMs / 111320;
@@ -470,7 +467,6 @@ class Ship {
         const newLat = this.lat + latDelta * deltaTime;
         const newLng = this.lng + lngDelta * deltaTime;
 
-        // Check for land (grounding)
         if (isOnLand(newLat, newLng)) {
             if (!this.isGrounded) {
                 this.isGrounded = true;
@@ -485,10 +481,9 @@ class Ship {
         this.lng = newLng;
         this.distanceTraveled += Math.sqrt(latDelta*latDelta + lngDelta*lngDelta) * 111320;
 
-        // Check if reached finish point
         if (this.finishPoint) {
             const distance = this.getDistanceTo(this.finishPoint.lat, this.finishPoint.lng);
-            if (distance < 0.5) { // 500 meters
+            if (distance < 0.5) {
                 this.finish();
             }
         }
@@ -497,7 +492,7 @@ class Ship {
     }
 
     getDistanceTo(lat, lng) {
-        const R = 6371; // Earth's radius in km
+        const R = 6371;
         const dLat = (lat - this.lat) * Math.PI / 180;
         const dLng = (lng - this.lng) * Math.PI / 180;
         const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -546,7 +541,6 @@ class Ship {
         if (this.isFinished) return { success: false, message: 'Finished' };
         if (this.isAnchored) return { success: false, message: 'Anchored' };
         if (this.isGrounded) return { success: false, message: 'Grounded' };
-        // Round to nearest 10%
         const roundedPos = Math.round(pos * 10) / 10;
         this.targetSailPosition = Math.max(0, Math.min(1, roundedPos));
         return { success: true, sailPosition: this.targetSailPosition };
@@ -607,14 +601,13 @@ class Ship {
 //  HELPER FUNCTIONS
 // ============================================
 function isOnLand(lat, lng) {
-    // Simple land detection (approximate)
     const landMasses = [
-        { latMin: 36, latMax: 70, lngMin: -10, lngMax: 40 }, // Europe
-        { latMin: -35, latMax: 37, lngMin: -20, lngMax: 50 }, // Africa
-        { latMin: 25, latMax: 70, lngMin: -130, lngMax: -60 }, // North America
-        { latMin: -55, latMax: 12, lngMin: -80, lngMax: -35 }, // South America
-        { latMin: 10, latMax: 75, lngMin: 40, lngMax: 150 }, // Asia
-        { latMin: -40, latMax: -10, lngMin: 113, lngMax: 155 }, // Australia
+        { latMin: 36, latMax: 70, lngMin: -10, lngMax: 40 },
+        { latMin: -35, latMax: 37, lngMin: -20, lngMax: 50 },
+        { latMin: 25, latMax: 70, lngMin: -130, lngMax: -60 },
+        { latMin: -55, latMax: 12, lngMin: -80, lngMax: -35 },
+        { latMin: 10, latMax: 75, lngMin: 40, lngMax: 150 },
+        { latMin: -40, latMax: -10, lngMin: 113, lngMax: 155 },
     ];
     for (const region of landMasses) {
         if (lat >= region.latMin && lat <= region.latMax &&
@@ -649,11 +642,9 @@ setInterval(() => {
             continue; 
         }
         if (!ship.isOnline && (now - ship.lastSeen) > INACTIVITY_TIMEOUT) {
-            // Ship continues sailing with last settings
             console.log(`⏳ ${ship.name} is sailing without captain`);
         }
     }
-    // Don't remove ships, they continue sailing
 }, 30000);
 
 // ============================================
@@ -694,6 +685,71 @@ io.on('connection', (socket) => {
     console.log('🔗 New connection:', socket.id);
 
     // ==========================================
+    //  RECONNECT SHIP
+    // ==========================================
+    socket.on('reconnect_ship', (data) => {
+        const { shipId, shipName } = data;
+        console.log(`🔄 Reconnect request: ${shipId}, ${shipName}`);
+        
+        let existingShip = null;
+        let existingPlayerId = null;
+        
+        for (const [id, ship] of players) {
+            if (ship.shipType === shipId && ship.name === shipName) {
+                existingShip = ship;
+                existingPlayerId = id;
+                break;
+            }
+        }
+        
+        if (!existingShip) {
+            socket.emit('join_error', { message: 'Ship not found' });
+            return;
+        }
+        
+        if (existingPlayerId !== socket.id && players.has(socket.id)) {
+            socket.emit('join_error', { message: 'Ship already connected' });
+            return;
+        }
+        
+        existingShip.isOnline = true;
+        existingShip.lastSeen = Date.now();
+        
+        if (existingShip.isAnchored) {
+            existingShip.isAnchored = false;
+        }
+        
+        if (existingShip.isGrounded) {
+            const newLat = existingShip.lat + 0.001;
+            const newLng = existingShip.lng + 0.001;
+            if (!isOnLand(newLat, newLng)) {
+                existingShip.isGrounded = false;
+                existingShip.lat = newLat;
+                existingShip.lng = newLng;
+                console.log(`🔄 ${existingShip.name} freed from ground`);
+            }
+        }
+        
+        shipStates[shipId].taken = true;
+        shipStates[shipId].playerId = socket.id;
+        
+        socket.emit('joined', {
+            role: 'player',
+            ship: existingShip.getState(),
+            players: getAllPlayersState()
+        });
+        
+        io.emit('player_joined', { 
+            playerId: socket.id, 
+            name: existingShip.name, 
+            shipId: shipId 
+        });
+        
+        broadcastState();
+        console.log(`🔄 ${existingShip.name} reconnected at ${existingShip.lat}, ${existingShip.lng}`);
+    });
+
+    // ==========================================
     //  JOIN AS GUEST
     // ==========================================
     socket.on('join_as_guest', (data) => {
@@ -728,13 +784,11 @@ io.on('connection', (socket) => {
             }
         }
 
-        // Check if on land
         if (isOnLand(lat, lng)) {
             socket.emit('join_error', { message: 'Cannot start on land! Choose a point in the ocean' });
             return;
         }
 
-        // If socket already has a ship - remove old one
         if (players.has(socket.id)) {
             const oldShip = players.get(socket.id);
             for (const [id, state] of Object.entries(shipStates)) {
@@ -796,7 +850,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Sail - 1 click = 10%
     socket.on('sail', (data) => {
         const ship = players.get(socket.id);
         if (ship && ship.isOnline && !ship.isEliminated && ship.shipType !== 'guest') {
