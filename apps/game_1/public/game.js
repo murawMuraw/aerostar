@@ -23,6 +23,13 @@ class RegattaGame {
         this.playerName = null;
         this.lastWind = null;
         this.lastCurrent = null;
+        
+        // Race condition fixes
+        this.isStarting = false;
+        this.startAttempts = 0;
+        this.maxStartAttempts = 3;
+        this.startTimer = null;
+        this.confirmationTimer = null;
     }
 
     init() {
@@ -77,13 +84,8 @@ class RegattaGame {
         else if (zoom >= 3) baseSize = 20;
         else baseSize = 16;
         
-        // Double the size
         baseSize = baseSize * 2;
-        
-        // Own ship is 30% larger
         const size = isOwn ? Math.round(baseSize * 1.3) : baseSize;
-        
-        // Clamp sizes
         return Math.max(24, Math.min(120, size));
     }
 
@@ -195,7 +197,157 @@ class RegattaGame {
     }
 
     // ============================================
-    //  SOCKET.IO
+    //  CHECK SELECTED SHIP - FIXED
+    // ============================================
+    checkSelectedShip() {
+        const selectedShipData = localStorage.getItem('selectedShip');
+        if (selectedShipData) {
+            try {
+                const data = JSON.parse(selectedShipData);
+                
+                // Check if data is confirmed
+                if (!data.confirmed) {
+                    console.log('⚠️ Selection not confirmed, waiting...');
+                    this.waitForConfirmation();
+                    return;
+                }
+                
+                // Check if data is too old (older than 30 seconds)
+                if (data.timestamp && (Date.now() - data.timestamp) > 30000) {
+                    console.log('⏰ Selection data too old, clearing...');
+                    localStorage.removeItem('selectedShip');
+                    return;
+                }
+                
+                this.selectedShip = data.shipId;
+                this.selectedShipName = data.shipName;
+                this.shipType = data.shipId;
+                this.playerName = data.shipName;
+                
+                console.log('📦 Loaded confirmed ship:', this.selectedShip, this.selectedShipName);
+                
+                if (this.socket && this.socket.connected) {
+                    this.autoStartShip();
+                }
+            } catch (e) {
+                console.error('Error parsing selected ship:', e);
+                localStorage.removeItem('selectedShip');
+            }
+        }
+    }
+
+    // ============================================
+    //  WAIT FOR CONFIRMATION - FIXED
+    // ============================================
+    waitForConfirmation() {
+        let attempts = 0;
+        const maxAttempts = 20; // 10 seconds
+        
+        if (this.confirmationTimer) {
+            clearInterval(this.confirmationTimer);
+        }
+        
+        this.confirmationTimer = setInterval(() => {
+            attempts++;
+            const data = localStorage.getItem('selectedShip');
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    if (parsed.confirmed) {
+                        clearInterval(this.confirmationTimer);
+                        this.confirmationTimer = null;
+                        console.log('✅ Confirmation received, proceeding...');
+                        this.checkSelectedShip();
+                        return;
+                    }
+                } catch (e) {}
+            }
+            
+            if (attempts >= maxAttempts) {
+                clearInterval(this.confirmationTimer);
+                this.confirmationTimer = null;
+                console.log('⚠️ Confirmation timeout, clearing...');
+                localStorage.removeItem('selectedShip');
+                this.showNotification('❌ Ship selection timeout, please try again', 'danger');
+                this.isStarting = false;
+                this.startAttempts = 0;
+            }
+        }, 500);
+    }
+
+    // ============================================
+    //  AUTO START SHIP - FIXED
+    // ============================================
+    autoStartShip() {
+        // Check if ship is selected
+        if (!this.selectedShip || this.isGuest) {
+            console.log('❌ No ship selected or is guest');
+            return;
+        }
+        
+        // Check if already racing
+        if (this.isRacing) {
+            console.log('⚠️ Ship already racing');
+            return;
+        }
+        
+        // Check if start is already in progress
+        if (this.isStarting) {
+            console.log('⚠️ Start already in progress');
+            return;
+        }
+        
+        // Check max attempts
+        if (this.startAttempts >= this.maxStartAttempts) {
+            console.log('❌ Max start attempts reached');
+            this.showNotification('❌ Failed to start ship, please refresh', 'danger');
+            localStorage.removeItem('selectedShip');
+            return;
+        }
+        
+        this.isStarting = true;
+        this.startAttempts++;
+        
+        const lat = 20 + (Math.random() - 0.5) * 30;
+        const lng = (Math.random() - 0.5) * 60;
+        
+        console.log(`🚀 Auto starting ship (attempt ${this.startAttempts}):`, this.selectedShip, this.selectedShipName);
+        this.showNotification(`⛵ Launching ${this.selectedShipName}...`, 'info');
+        
+        // Send start request
+        this.socket.emit('join_with_ship', {
+            shipId: this.selectedShip,
+            shipName: this.selectedShipName,
+            lat: lat,
+            lng: lng
+        });
+        
+        // Clear any existing timer
+        if (this.startTimer) {
+            clearTimeout(this.startTimer);
+        }
+        
+        // Timeout in case server doesn't respond
+        this.startTimer = setTimeout(() => {
+            if (this.isStarting && !this.isRacing) {
+                console.log('⏰ Start timeout, retrying...');
+                this.isStarting = false;
+                this.showNotification('⏰ Start timeout, retrying...', 'warning');
+                
+                if (this.startAttempts < this.maxStartAttempts) {
+                    this.autoStartShip();
+                } else {
+                    this.showNotification('❌ Failed to start, please refresh', 'danger');
+                    localStorage.removeItem('selectedShip');
+                    this.isStarting = false;
+                    this.startAttempts = 0;
+                }
+            }
+        }, 10000); // 10 seconds timeout
+    }
+
+    // ============================================
+    //  SOCKET.IO - FIXED
     // ============================================
     initSocket() {
         this.socket = io({ transports: ['websocket', 'polling'] });
@@ -214,6 +366,20 @@ class RegattaGame {
             this.isGuest = (this.role === 'guest');
             this.shipType = this.ship.shipType;
             this.playerName = this.ship.name;
+            
+            // Reset start flags
+            this.isStarting = false;
+            this.startAttempts = 0;
+            
+            if (this.startTimer) {
+                clearTimeout(this.startTimer);
+                this.startTimer = null;
+            }
+            
+            if (this.confirmationTimer) {
+                clearInterval(this.confirmationTimer);
+                this.confirmationTimer = null;
+            }
             
             if (this.isGuest) {
                 document.getElementById('guest-message').style.display = 'block';
@@ -234,6 +400,10 @@ class RegattaGame {
                 
                 this.isRacing = true;
                 this.hasSelectedShip = true;
+                
+                // Remove from localStorage ONLY after successful start
+                localStorage.removeItem('selectedShip');
+                console.log('🗑️ Removed selectedShip from localStorage');
                 
                 this.showShipThumbnail(this.ship.shipType);
                 this.updateShipInfo();
@@ -291,120 +461,29 @@ class RegattaGame {
         });
 
         this.socket.on('join_error', (data) => {
+            console.log('❌ Join error:', data);
             this.showNotification(`❌ ${data.message}`, 'danger');
+            
+            // Reset flags
+            this.isStarting = false;
+            this.startAttempts = 0;
             this.hasSelectedShip = false;
             this.isSelectingStart = false;
             this.map.getContainer().style.cursor = 'default';
+            
+            if (this.startTimer) {
+                clearTimeout(this.startTimer);
+                this.startTimer = null;
+            }
+            
+            // Don't remove selection if error is "ship taken" - let user try another
+            if (data.message && data.message.includes('already taken')) {
+                localStorage.removeItem('selectedShip');
+                this.showNotification('🔄 Ship was taken, please select another', 'warning');
+            }
+            
             this.loadShipsState();
         });
-    }
-
-    // ============================================
-    //  CHECK SELECTED SHIP
-    // ============================================
-    checkSelectedShip() {
-    const selectedShipData = localStorage.getItem('selectedShip');
-    if (selectedShipData) {
-        try {
-            const data = JSON.parse(selectedShipData);
-            
-            // Проверяем, что данные подтверждены
-            if (!data.confirmed) {
-                console.log('⚠️ Selection not confirmed, waiting...');
-                // Ждем подтверждения
-                this.waitForConfirmation();
-                return;
-            }
-            
-            this.selectedShip = data.shipId;
-            this.selectedShipName = data.shipName;
-            this.shipType = data.shipId;
-            this.playerName = data.shipName;
-            
-            console.log('📦 Loaded confirmed ship:', this.selectedShip, this.selectedShipName);
-            
-            if (this.socket && this.socket.connected) {
-                this.autoStartShip();
-            }
-        } catch (e) {
-            console.error('Error parsing selected ship:', e);
-            localStorage.removeItem('selectedShip');
-        }
-    }
-}
-    
-waitForConfirmation() {
-    // Проверяем каждые 500 мс, не появилось ли подтверждение
-    let attempts = 0;
-    const maxAttempts = 20; // 10 секунд
-    
-    const checkInterval = setInterval(() => {
-        attempts++;
-        const data = localStorage.getItem('selectedShip');
-        if (data) {
-            try {
-                const parsed = JSON.parse(data);
-                if (parsed.confirmed) {
-                    clearInterval(checkInterval);
-                    this.checkSelectedShip();
-                    return;
-                }
-            } catch (e) {}
-        }
-        
-        if (attempts >= maxAttempts) {
-            clearInterval(checkInterval);
-            console.log('⚠️ Confirmation timeout, reloading...');
-            localStorage.removeItem('selectedShip');
-            window.location.reload();
-        }
-    }, 500);
-}
-
-    // ============================================
-    //  AUTO START SHIP
-    // ============================================
- autoStartShip() {
-    if (!this.selectedShip || this.isGuest) return;
-    
-    // Проверяем, не запущен ли уже корабль
-    if (this.isRacing) {
-        console.log('⚠️ Ship already racing');
-        return;
-    }
-    
-    const lat = 20 + (Math.random() - 0.5) * 30;
-    const lng = (Math.random() - 0.5) * 60;
-    
-    console.log('🚀 Auto starting ship:', this.selectedShip, this.selectedShipName);
-    
-    this.showNotification(`⛵ Launching ${this.selectedShipName}...`, 'info');
-    
-    // Отправляем запрос на запуск
-    this.socket.emit('join_with_ship', {
-        shipId: this.selectedShip,
-        shipName: this.selectedShipName,
-        lat: lat,
-        lng: lng
-    });
-    
-    // Не удаляем сразу, ждем подтверждения от сервера
-    // localStorage.removeItem('selectedShip');
-}
-
-// В обработчике joined:
-this.socket.on('joined', (data) => {
-    console.log('📥 Joined event:', data);
-    
-    this.playerId = data.ship.id;
-    this.ship = data.ship;
-    this.role = data.role;
-    this.isGuest = (this.role === 'guest');
-    this.shipType = this.ship.shipType;
-    this.playerName = this.ship.name;
-    
-    // Подтверждение получено - удаляем из localStorage
-    localStorage.removeItem('selectedShip');
     }
 
     // ============================================
@@ -651,6 +730,13 @@ this.socket.on('joined', (data) => {
             if (this.isRacing && !this.isGuest && confirm('Reset ship?')) {
                 this.socket.emit('leave_race');
                 localStorage.removeItem('selectedShip');
+                this.isStarting = false;
+                this.startAttempts = 0;
+                this.isRacing = false;
+                if (this.startTimer) {
+                    clearTimeout(this.startTimer);
+                    this.startTimer = null;
+                }
                 location.reload();
             }
         };
