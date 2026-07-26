@@ -781,52 +781,79 @@
         // ============================================
         //  START SAILING
         // ============================================
-        btnStart.addEventListener('click', async () => {
-            if (!selectedShip || !isAuth) {
-                showError('Please select a ship');
-                return;
-            }
 
-            const card = document.querySelector(`.ship-card[data-ship-id="${selectedShip}"]`);
-            const shipName = card ? card.dataset.name : selectedShip;
-            
-            console.log('📝 Selected ship:', selectedShip, shipName);
+btnStart.addEventListener('click', async () => {
+    if (!selectedShip || !isAuth) {
+        showError('Please select a ship');
+        return;
+    }
 
-            const sessionId = localStorage.getItem('sessionId');
+    const card = document.querySelector(`.ship-card[data-ship-id="${selectedShip}"]`);
+    const shipName = card ? card.dataset.name : selectedShip;
+    
+    console.log('📝 Selected ship:', selectedShip, shipName);
 
-            try {
-                const response = await fetch('/api/select_ship', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'x-session-id': sessionId
-                    },
-                    body: JSON.stringify({ shipId: selectedShip })
-                });
+    const sessionId = localStorage.getItem('sessionId');
 
-                const data = await response.json();
+    // Блокируем кнопку
+    btnStart.disabled = true;
+    btnStart.textContent = '⏳ Sending...';
 
-                if (data.success) {
-                    localStorage.setItem('selectedShip', JSON.stringify({
-                        shipId: selectedShip,
-                        shipName: shipName
-                    }));
-                    
-                    console.log('💾 Saved to localStorage:', { shipId: selectedShip, shipName: shipName });
-                    
-                    successDiv.style.display = 'block';
-                    errorDiv.style.display = 'none';
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1000);
-                } else {
-                    showError(data.message || 'Failed to select ship');
-                }
-            } catch (error) {
-                showError('Connection error');
-            }
+    try {
+        const response = await fetch('/api/select_ship', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-session-id': sessionId
+            },
+            body: JSON.stringify({ 
+                shipId: selectedShip,
+                shipName: shipName
+            })
         });
 
+        const data = await response.json();
+
+        if (data.success) {
+            // Ждем подтверждения от сервера
+            console.log('✅ Server confirmed:', data);
+            
+            // Сохраняем выбор с подтвержденными данными
+            localStorage.setItem('selectedShip', JSON.stringify({
+                shipId: data.data.shipId || selectedShip,
+                shipName: data.data.shipName || shipName,
+                confirmed: true,
+                timestamp: Date.now()
+            }));
+            
+            successDiv.style.display = 'block';
+            errorDiv.style.display = 'none';
+            
+            // Даем время на сохранение
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Проверяем, что данные сохранились
+            const saved = localStorage.getItem('selectedShip');
+            if (saved) {
+                console.log('💾 Saved to localStorage:', saved);
+                window.location.href = '/';
+            } else {
+                showError('Failed to save selection');
+                btnStart.disabled = false;
+                btnStart.textContent = '🚀 Start Sailing';
+            }
+        } else {
+            showError(data.message || 'Failed to select ship');
+            btnStart.disabled = false;
+            btnStart.textContent = '🚀 Start Sailing';
+        }
+    } catch (error) {
+        console.error('❌ Error:', error);
+        showError('Connection error');
+        btnStart.disabled = false;
+        btnStart.textContent = '🚀 Start Sailing';
+    }
+});
         // ============================================
         //  HELPERS
         // ============================================
