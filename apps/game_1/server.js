@@ -252,6 +252,25 @@ app.get('/api/selected_ship', (req, res) => {
     
     res.json({ success: false });
 });
+// Clear ship selection
+app.post('/api/clear_ship_selection', (req, res) => {
+    const sessionId = req.headers['x-session-id'];
+    if (!sessionId || !sessions.has(sessionId)) {
+        return res.status(401).json({ success: false });
+    }
+    
+    const userId = sessions.get(sessionId);
+    
+    for (const [id, state] of Object.entries(shipStates)) {
+        if (state.playerId === userId) {
+            state.taken = false;
+            state.playerId = null;
+        }
+    }
+    
+    console.log(`🧹 Cleared ship selection for user ${userId}`);
+    res.json({ success: true });
+});
 
 // ============================================
 //  OCEAN CURRENT MODEL
