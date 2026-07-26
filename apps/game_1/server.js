@@ -23,7 +23,7 @@ const io = socketIo(server, {
 const PORT = process.env.PORT || 3002;
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY;
 const MAX_PLAYERS = 7;
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes for testing
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
 const GROUNDED_TIMEOUT = 5 * 60 * 1000;
 
 // ============================================
@@ -48,6 +48,7 @@ const CACHE_TTL = 600000;
 //  STORAGE
 // ============================================
 const players = new Map();
+const pendingSelections = new Map(); // sessionId -> { shipId, shipName, timestamp }
 
 // ============================================
 //  SHIP STATES (7 ships)
@@ -72,8 +73,8 @@ initShipStates();
 //  AUTHENTICATION
 // ============================================
 
-const users = new Map(); // username -> { id, username, email, passwordHash }
-const sessions = new Map(); // sessionId -> userId
+const users = new Map();
+const sessions = new Map();
 
 function hashPassword(password) {
     let hash = 0;
@@ -85,7 +86,6 @@ function hashPassword(password) {
     return `hash_${hash}_${password.length}`;
 }
 
-// Register
 app.post('/api/register', (req, res) => {
     const { username, email, password } = req.body;
     
@@ -118,7 +118,6 @@ app.post('/api/register', (req, res) => {
     res.json({ success: true, message: 'Registration successful' });
 });
 
-// Login
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     
@@ -142,7 +141,6 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// Check session
 app.get('/api/session', (req, res) => {
     const sessionId = req.headers['x-session-id'];
     if (!sessionId || !sessions.has(sessionId)) {
@@ -161,7 +159,6 @@ app.get('/api/session', (req, res) => {
     res.json({ user: foundUser });
 });
 
-// Logout
 app.post('/api/logout', (req, res) => {
     const sessionId = req.headers['x-session-id'];
     if (sessionId) {
@@ -172,27 +169,44 @@ app.post('/api/logout', (req, res) => {
 });
 
 // ============================================
-//  SELECT SHIP
+//  SELECT SHIP - WITH CONFIRMATION
 // ============================================
 app.post('/api/select_ship', (req, res) => {
     const { shipId } = req.body;
     const sessionId = req.headers['x-session-id'];
     
     if (!sessionId || !sessions.has(sessionId)) {
-        return res.status(401).json({ success: false, message: 'Authentication required' });
+        return res.status(401).json({ 
+            success: false, 
+            message: 'Authentication required',
+            error: 'AUTH_REQUIRED'
+        });
     }
     
     const userId = sessions.get(sessionId);
     
-    // Check if ship is free
-    if (shipStates[shipId] && shipStates[shipId].taken) {
-        // If taken by same user - ok
+    // Проверяем, существует ли корабль
+    if (!shipStates[shipId]) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Invalid ship ID',
+            error: 'INVALID_SHIP'
+        });
+    }
+    
+    // Проверяем, свободен ли корабль
+    if (shipStates[shipId].taken) {
+        // Если занят этим же пользователем - ок
         if (shipStates[shipId].playerId !== userId) {
-            return res.status(400).json({ success: false, message: 'This ship is already taken' });
+            return res.status(400).json({ 
+                success: false, 
+                message: 'This ship is already taken',
+                error: 'SHIP_TAKEN'
+            });
         }
     }
     
-    // Free all ships of this user
+    // Освобождаем все корабли этого пользователя
     for (const [id, state] of Object.entries(shipStates)) {
         if (state.playerId === userId) {
             state.taken = false;
@@ -200,13 +214,90 @@ app.post('/api/select_ship', (req, res) => {
         }
     }
     
-    // Take selected ship
+    // Занимаем выбранный корабль
     shipStates[shipId].taken = true;
     shipStates[shipId].playerId = userId;
     
-    console.log(`⛵ User ${userId} selected ship: ${shipId}`);
-    res.json({ success: true, message: 'Ship selected' });
+    // Сохраняем выбор в pending
+    const shipName = req.body.shipName || shipId;
+    pendingSelections.set(sessionId, {
+        shipId: shipId,
+        shipName: shipName,
+        userId: userId,
+        timestamp: Date.now()
+    });
+    
+    console.log(`⛵ User ${userId} selected ship: ${shipId} (${shipName})`);
+    
+    // Отправляем подтверждение с полными данными
+    res.json({ 
+        success: true, 
+        message: 'Ship selected successfully',
+        data: {
+            shipId: shipId,
+            shipName: shipName,
+            userId: userId,
+            timestamp: Date.now()
+        }
+    });
 });
+
+// Получить выбранный корабль для сессии
+app.get('/api/selected_ship', (req, res) => {
+    const sessionId = req.headers['x-session-id'];
+    
+    if (!sessionId || !sessions.has(sessionId)) {
+        return res.status(401).json({ 
+            success: false, 
+            message: 'Authentication required'
+        });
+    }
+    
+    const userId = sessions.get(sessionId);
+    
+    // Проверяем в shipStates
+    for (const [shipId, state] of Object.entries(shipStates)) {
+        if (state.playerId === userId && state.taken) {
+            return res.json({
+                success: true,
+                data: {
+                    shipId: shipId,
+                    shipName: shipId, // Можно добавить маппинг имен
+                    userId: userId
+                }
+            });
+        }
+    }
+    
+    // Проверяем в pending
+    if (pendingSelections.has(sessionId)) {
+        const pending = pendingSelections.get(sessionId);
+        return res.json({
+            success: true,
+            data: {
+                shipId: pending.shipId,
+                shipName: pending.shipName,
+                userId: pending.userId
+            }
+        });
+    }
+    
+    res.json({
+        success: false,
+        message: 'No ship selected'
+    });
+});
+
+// Очищаем старые pending selections (каждые 30 секунд)
+setInterval(() => {
+    const now = Date.now();
+    for (const [sessionId, data] of pendingSelections) {
+        if (now - data.timestamp > 30000) { // 30 секунд
+            pendingSelections.delete(sessionId);
+            console.log(`🧹 Cleared pending selection for session: ${sessionId}`);
+        }
+    }
+}, 30000);
 
 // ============================================
 //  OCEAN CURRENT MODEL
@@ -378,12 +469,10 @@ class Ship {
         }
         this.groundTime = null;
 
-        // Sails
         const sailDiff = this.targetSailPosition - this.sailPosition;
         this.sailPosition += sailDiff * deltaTime * 0.5;
         this.sailPosition = Math.max(0, Math.min(1, this.sailPosition));
 
-        // Wind
         const windSpeed = wind.speed || 5;
         const windDirection = wind.direction || 0;
         const angleToWind = this.heading - windDirection;
@@ -403,7 +492,6 @@ class Ship {
             lngDelta += lngPerSecond * Math.sin(this.heading * Math.PI / 180);
         }
 
-        // Current
         if (current && current.speed > 0.05) {
             const currentSpeedMs = current.speed * 0.514;
             const latPerSecond = currentSpeedMs / 111320;
@@ -579,7 +667,6 @@ setInterval(async () => {
             const current = await fetchCurrentData(ship.lat, ship.lng);
             ship.update(wind, current, deltaTime);
             
-            // Сохраняем данные для этого корабля
             windData[id] = wind;
             currentData[id] = current;
         } catch (error) {
@@ -587,7 +674,6 @@ setInterval(async () => {
         }
     }
     
-    // Отправляем state с данными ветра и течения для каждого корабля
     const state = { 
         players: getAllPlayersState(), 
         timestamp: Date.now(),
@@ -603,9 +689,6 @@ setInterval(async () => {
 io.on('connection', (socket) => {
     console.log('🔗 New connection:', socket.id);
 
-    // ==========================================
-    //  JOIN AS GUEST
-    // ==========================================
     socket.on('join_as_guest', (data) => {
         const { lat, lng } = data;
         
@@ -623,15 +706,11 @@ io.on('connection', (socket) => {
         broadcastState();
     });
 
-    // ==========================================
-    //  JOIN WITH SHIP
-    // ==========================================
     socket.on('join_with_ship', (data) => {
         const { shipId, shipName, lat, lng } = data;
 
         console.log(`📥 Join with ship: ${shipId}, ${shipName} at ${lat}, ${lng}`);
 
-        // Check if ship is free
         if (shipStates[shipId] && shipStates[shipId].taken) {
             if (shipStates[shipId].playerId !== socket.id) {
                 socket.emit('join_error', { message: 'This ship is already taken' });
@@ -639,23 +718,19 @@ io.on('connection', (socket) => {
             }
         }
 
-        // Check player limit
         const activePlayers = Array.from(players.values()).filter(p => p.isOnline && !p.isEliminated && p.shipType !== 'guest');
         if (activePlayers.length >= MAX_PLAYERS) {
             socket.emit('join_error', { message: `Maximum ${MAX_PLAYERS} players` });
             return;
         }
 
-        // Check if point is in ocean
         if (isOnLand(lat, lng)) {
-            // If on land, place in random ocean point
             const newLat = 20 + (Math.random() - 0.5) * 30;
             const newLng = (Math.random() - 0.5) * 60;
             console.log(`📍 Land detected, moving to ${newLat}, ${newLng}`);
             return socket.emit('join_with_ship', { ...data, lat: newLat, lng: newLng });
         }
 
-        // If this socket already has a ship - remove old one
         if (players.has(socket.id)) {
             const oldShip = players.get(socket.id);
             for (const [id, state] of Object.entries(shipStates)) {
@@ -667,7 +742,6 @@ io.on('connection', (socket) => {
             players.delete(socket.id);
         }
 
-        // Create player
         const player = new Ship(socket.id, shipName || shipId, lat, lng, shipId);
         players.set(socket.id, player);
 
@@ -689,9 +763,6 @@ io.on('connection', (socket) => {
         console.log(`⛵ ${player.name} joined at ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
     });
 
-    // ==========================================
-    //  CONTROLS
-    // ==========================================
     socket.on('turn', (data) => {
         const ship = players.get(socket.id);
         if (ship && ship.isOnline && !ship.isEliminated && ship.shipType !== 'guest') {
@@ -722,18 +793,12 @@ io.on('connection', (socket) => {
         }
     });
 
-    // ==========================================
-    //  CHAT
-    // ==========================================
     socket.on('chat', (data) => {
         const ship = players.get(socket.id);
         const name = ship ? ship.name : 'Unknown';
         io.emit('chat', { playerId: socket.id, name: name, message: data.message });
     });
 
-    // ==========================================
-    //  DISCONNECT
-    // ==========================================
     socket.on('disconnect', () => {
         const ship = players.get(socket.id);
         if (ship) {
@@ -759,8 +824,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`  - GET  /api/session`);
     console.log(`  - POST /api/logout`);
     console.log(`  - POST /api/select_ship`);
+    console.log(`  - GET  /api/selected_ship`);
     console.log(`  - GET  /api/ships/state`);
-    console.log(`  - GET  /api/players`);
-    console.log(`  - GET  /api/wind?lat=&lng=`);
-    console.log(`  - GET  /api/current?lat=&lng=\n`);
+    console.log(`  - GET  /api/players\n`);
 });
