@@ -12,8 +12,10 @@ class RegattaGame {
         this.hasSelectedShip = false;
         this.isRacing = false;
         this.isSelectingStart = false;
+        this.isSelectingFinish = false;
         this.chatMessages = document.getElementById('chat-messages');
         this.startHint = null;
+        this.finishHint = null;
         this.startTimeout = null;
         this.lastState = null;
         this.role = null;
@@ -23,6 +25,8 @@ class RegattaGame {
         this.playerName = null;
         this.lastWind = null;
         this.lastCurrent = null;
+        this.finishMarker = null;
+        this.startMarker = null;
         
         // Race condition fixes
         this.isStarting = false;
@@ -67,8 +71,13 @@ class RegattaGame {
         });
 
         this.map.on('click', (e) => {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            
             if (this.isSelectingStart && this.selectedShip && !this.isGuest) {
-                this.confirmStart(e.latlng.lat, e.latlng.lng);
+                this.confirmStart(lat, lng);
+            } else if (this.isSelectingFinish && this.ship && !this.isGuest) {
+                this.confirmFinish(lat, lng);
             }
         });
     }
@@ -125,6 +134,7 @@ class RegattaGame {
         
         const opacity = player.isOnline ? 0.85 : 0.3;
         const statusIcon = player.isEliminated ? '💀' :
+                          player.isFinished ? '🏁' :
                           player.isGrounded ? '⚠️' :
                           player.isAnchored ? '⚓' : '';
         
@@ -197,7 +207,7 @@ class RegattaGame {
     }
 
     // ============================================
-    //  CHECK SELECTED SHIP - FIXED
+    //  CHECK SELECTED SHIP
     // ============================================
     checkSelectedShip() {
         const selectedShipData = localStorage.getItem('selectedShip');
@@ -205,14 +215,12 @@ class RegattaGame {
             try {
                 const data = JSON.parse(selectedShipData);
                 
-                // Check if data is confirmed
                 if (!data.confirmed) {
                     console.log('⚠️ Selection not confirmed, waiting...');
                     this.waitForConfirmation();
                     return;
                 }
                 
-                // Check if data is too old (older than 30 seconds)
                 if (data.timestamp && (Date.now() - data.timestamp) > 30000) {
                     console.log('⏰ Selection data too old, clearing...');
                     localStorage.removeItem('selectedShip');
@@ -237,11 +245,11 @@ class RegattaGame {
     }
 
     // ============================================
-    //  WAIT FOR CONFIRMATION - FIXED
+    //  WAIT FOR CONFIRMATION
     // ============================================
     waitForConfirmation() {
         let attempts = 0;
-        const maxAttempts = 20; // 10 seconds
+        const maxAttempts = 20;
         
         if (this.confirmationTimer) {
             clearInterval(this.confirmationTimer);
@@ -276,28 +284,24 @@ class RegattaGame {
     }
 
     // ============================================
-    //  AUTO START SHIP - FIXED
+    //  AUTO START SHIP
     // ============================================
     autoStartShip() {
-        // Check if ship is selected
         if (!this.selectedShip || this.isGuest) {
             console.log('❌ No ship selected or is guest');
             return;
         }
         
-        // Check if already racing
         if (this.isRacing) {
             console.log('⚠️ Ship already racing');
             return;
         }
         
-        // Check if start is already in progress
         if (this.isStarting) {
             console.log('⚠️ Start already in progress');
             return;
         }
         
-        // Check max attempts
         if (this.startAttempts >= this.maxStartAttempts) {
             console.log('❌ Max start attempts reached');
             this.showNotification('❌ Failed to start ship, please refresh', 'danger');
@@ -308,46 +312,173 @@ class RegattaGame {
         this.isStarting = true;
         this.startAttempts++;
         
-        const lat = 20 + (Math.random() - 0.5) * 30;
-        const lng = (Math.random() - 0.5) * 60;
+        // Start selection mode
+        this.isSelectingStart = true;
+        this.map.getContainer().style.cursor = 'crosshair';
+        this.showNotification('📍 Click on the map to choose START point (ocean only!)', 'info');
+        this.addChatMessage('📍 Click on the map to choose START point', 'system');
         
-        console.log(`🚀 Auto starting ship (attempt ${this.startAttempts}):`, this.selectedShip, this.selectedShipName);
-        this.showNotification(`⛵ Launching ${this.selectedShipName}...`, 'info');
+        // Clear any existing start hint
+        if (this.startHint) {
+            this.map.removeLayer(this.startHint);
+            this.startHint = null;
+        }
         
-        // Send start request
+        // Show hint on map
+        this.startHint = L.popup()
+            .setLatLng([this.map.getCenter().lat, this.map.getCenter().lng])
+            .setContent('📍 <b>Click on the ocean</b> to set start point')
+            .openOn(this.map);
+        
+        // Timeout for start selection
+        this.startTimeout = setTimeout(() => {
+            if (this.isSelectingStart) {
+                this.isSelectingStart = false;
+                this.map.getContainer().style.cursor = 'default';
+                this.isStarting = false;
+                if (this.startHint) {
+                    this.map.removeLayer(this.startHint);
+                    this.startHint = null;
+                }
+                this.showNotification('⏰ Start selection timeout, please try again', 'warning');
+                localStorage.removeItem('selectedShip');
+            }
+        }, 60000); // 60 seconds to choose start
+    }
+
+    // ============================================
+    //  CONFIRM START
+    // ============================================
+    confirmStart(lat, lng) {
+        // Check if on land
+        if (this.isOnLand(lat, lng)) {
+            this.showNotification('❌ Cannot start on land! Click on the ocean', 'danger');
+            return;
+        }
+
+        if (this.startHint) {
+            this.map.removeLayer(this.startHint);
+            this.startHint = null;
+        }
+        if (this.startTimeout) {
+            clearTimeout(this.startTimeout);
+            this.startTimeout = null;
+        }
+
+        if (this.isGuest) {
+            this.showNotification('👁 Spectators cannot start a ship', 'warning');
+            return;
+        }
+
+        // Show start marker
+        if (this.startMarker) {
+            this.map.removeLayer(this.startMarker);
+        }
+        this.startMarker = L.marker([lat, lng], {
+            icon: L.divIcon({
+                className: 'start-marker',
+                html: '🚩',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            })
+        }).addTo(this.map)
+          .bindPopup('🏁 START');
+
+        this.showNotification(`✅ Start point set at ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'success');
+        this.addChatMessage(`📍 Start point set`, 'system');
+
+        // Now ask for finish point
+        this.isSelectingStart = false;
+        this.isSelectingFinish = true;
+        this.map.getContainer().style.cursor = 'crosshair';
+        this.showNotification('📍 Click on the map to choose FINISH point (ocean only!)', 'info');
+        this.addChatMessage('📍 Click on the map to choose FINISH point', 'system');
+
+        // Show finish hint
+        if (this.finishHint) {
+            this.map.removeLayer(this.finishHint);
+        }
+        this.finishHint = L.popup()
+            .setLatLng([this.map.getCenter().lat, this.map.getCenter().lng])
+            .setContent('🏁 <b>Click on the ocean</b> to set finish point')
+            .openOn(this.map);
+
+        // Send start point to server
         this.socket.emit('join_with_ship', {
             shipId: this.selectedShip,
             shipName: this.selectedShipName,
             lat: lat,
             lng: lng
         });
-        
-        // Clear any existing timer
-        if (this.startTimer) {
-            clearTimeout(this.startTimer);
-        }
-        
-        // Timeout in case server doesn't respond
-        this.startTimer = setTimeout(() => {
-            if (this.isStarting && !this.isRacing) {
-                console.log('⏰ Start timeout, retrying...');
-                this.isStarting = false;
-                this.showNotification('⏰ Start timeout, retrying...', 'warning');
-                
-                if (this.startAttempts < this.maxStartAttempts) {
-                    this.autoStartShip();
-                } else {
-                    this.showNotification('❌ Failed to start, please refresh', 'danger');
-                    localStorage.removeItem('selectedShip');
-                    this.isStarting = false;
-                    this.startAttempts = 0;
-                }
-            }
-        }, 10000); // 10 seconds timeout
+
+        this.isStarting = false;
+        this.map.getContainer().style.cursor = 'default';
     }
 
     // ============================================
-    //  SOCKET.IO - FIXED
+    //  CONFIRM FINISH
+    // ============================================
+    confirmFinish(lat, lng) {
+        if (this.isOnLand(lat, lng)) {
+            this.showNotification('❌ Finish point cannot be on land! Click on the ocean', 'danger');
+            return;
+        }
+
+        if (this.finishHint) {
+            this.map.removeLayer(this.finishHint);
+            this.finishHint = null;
+        }
+
+        // Show finish marker
+        if (this.finishMarker) {
+            this.map.removeLayer(this.finishMarker);
+        }
+        this.finishMarker = L.marker([lat, lng], {
+            icon: L.divIcon({
+                className: 'finish-marker',
+                html: '🏁',
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+            })
+        }).addTo(this.map)
+          .bindPopup('🏁 FINISH');
+
+        this.showNotification(`✅ Finish point set at ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'success');
+        this.addChatMessage(`🏁 Finish point set`, 'system');
+
+        this.isSelectingFinish = false;
+        this.map.getContainer().style.cursor = 'default';
+
+        // Send finish point to server
+        this.socket.emit('set_finish', { lat, lng });
+
+        // Remove start selection from localStorage
+        localStorage.removeItem('selectedShip');
+    }
+
+    // ============================================
+    //  CHECK IF ON LAND
+    // ============================================
+    isOnLand(lat, lng) {
+        const landMasses = [
+            { latMin: 36, latMax: 70, lngMin: -10, lngMax: 40 },
+            { latMin: -35, latMax: 37, lngMin: -20, lngMax: 50 },
+            { latMin: 25, latMax: 70, lngMin: -130, lngMax: -60 },
+            { latMin: -55, latMax: 12, lngMin: -80, lngMax: -35 },
+            { latMin: 10, latMax: 75, lngMin: 40, lngMax: 150 },
+            { latMin: -40, latMax: -10, lngMin: 113, lngMax: 155 },
+        ];
+        for (const region of landMasses) {
+            if (lat >= region.latMin && lat <= region.latMax &&
+                lng >= region.lngMin && lng <= region.lngMax) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ============================================
+    //  SOCKET.IO
     // ============================================
     initSocket() {
         this.socket = io({ transports: ['websocket', 'polling'] });
@@ -370,6 +501,8 @@ class RegattaGame {
             // Reset start flags
             this.isStarting = false;
             this.startAttempts = 0;
+            this.isSelectingStart = false;
+            this.isSelectingFinish = false;
             
             if (this.startTimer) {
                 clearTimeout(this.startTimer);
@@ -381,6 +514,15 @@ class RegattaGame {
                 this.confirmationTimer = null;
             }
             
+            if (this.startHint) {
+                this.map.removeLayer(this.startHint);
+                this.startHint = null;
+            }
+            if (this.finishHint) {
+                this.map.removeLayer(this.finishHint);
+                this.finishHint = null;
+            }
+            
             if (this.isGuest) {
                 document.getElementById('guest-message').style.display = 'block';
                 document.getElementById('controls-panel').style.display = 'none';
@@ -388,6 +530,7 @@ class RegattaGame {
                 document.getElementById('chat-send').disabled = true;
                 this.showNotification('👁 You are a spectator', 'info');
                 this.addChatMessage('👁 You are a spectator', 'system');
+                this.map.getContainer().style.cursor = 'default';
             } else {
                 document.getElementById('guest-message').style.display = 'none';
                 document.getElementById('controls-panel').style.display = 'flex';
@@ -408,6 +551,22 @@ class RegattaGame {
                 this.showShipThumbnail(this.ship.shipType);
                 this.updateShipInfo();
                 this.updatePlayers(data.players);
+                
+                // Show finish selection if not set
+                if (!this.ship.finishPoint) {
+                    this.isSelectingFinish = true;
+                    this.map.getContainer().style.cursor = 'crosshair';
+                    this.showNotification('📍 Click on the map to choose FINISH point (ocean only!)', 'info');
+                    this.addChatMessage('📍 Click on the map to choose FINISH point', 'system');
+                    
+                    if (this.finishHint) {
+                        this.map.removeLayer(this.finishHint);
+                    }
+                    this.finishHint = L.popup()
+                        .setLatLng([this.map.getCenter().lat, this.map.getCenter().lng])
+                        .setContent('🏁 <b>Click on the ocean</b> to set finish point')
+                        .openOn(this.map);
+                }
             }
         });
 
@@ -417,6 +576,12 @@ class RegattaGame {
             if (this.ship && data.players[this.playerId]) {
                 this.ship = data.players[this.playerId];
                 this.updateShipInfo();
+                
+                // Check if ship finished
+                if (this.ship.isFinished) {
+                    this.showNotification(`🏁 ${this.ship.name} finished the race!`, 'success');
+                    this.addChatMessage(`🏁 ${this.ship.name} finished the race!`, 'system');
+                }
             }
             
             // Update compass with wind and current data
@@ -450,9 +615,20 @@ class RegattaGame {
             this.addChatMessage(`⚓ ${data.name} dropped anchor`, 'system');
         });
 
+        this.socket.on('ship_finished', (data) => {
+            this.showNotification(`🏁 ${data.name} finished the race!`, 'success');
+            this.addChatMessage(`🏁 ${data.name} finished the race!`, 'system');
+        });
+
         this.socket.on('action_result', (data) => {
             if (!data.success) {
                 this.showNotification(`❌ ${data.message}`, 'warning');
+            } else {
+                if (data.action === 'turn') {
+                    this.showNotification(`🧭 Heading: ${data.heading}°`, 'info');
+                } else if (data.action === 'sail') {
+                    this.showNotification(`⛵ Sail: ${Math.round(data.sailPosition * 100)}%`, 'info');
+                }
             }
         });
 
@@ -467,16 +643,24 @@ class RegattaGame {
             // Reset flags
             this.isStarting = false;
             this.startAttempts = 0;
-            this.hasSelectedShip = false;
             this.isSelectingStart = false;
+            this.isSelectingFinish = false;
+            this.hasSelectedShip = false;
             this.map.getContainer().style.cursor = 'default';
             
             if (this.startTimer) {
                 clearTimeout(this.startTimer);
                 this.startTimer = null;
             }
+            if (this.startHint) {
+                this.map.removeLayer(this.startHint);
+                this.startHint = null;
+            }
+            if (this.finishHint) {
+                this.map.removeLayer(this.finishHint);
+                this.finishHint = null;
+            }
             
-            // Don't remove selection if error is "ship taken" - let user try another
             if (data.message && data.message.includes('already taken')) {
                 localStorage.removeItem('selectedShip');
                 this.showNotification('🔄 Ship was taken, please select another', 'warning');
@@ -544,40 +728,6 @@ class RegattaGame {
                 window.location.href = '/selection.html';
             });
         }
-    }
-
-    // ============================================
-    //  SELECT SHIP (legacy)
-    // ============================================
-    selectShip(btn) {
-        if (this.isGuest) {
-            this.showNotification('👁 Spectators cannot select a ship', 'warning');
-            return;
-        }
-        window.location.href = '/selection.html';
-    }
-
-    // ============================================
-    //  CONFIRM START
-    // ============================================
-    confirmStart(lat, lng) {
-        if (this.startHint) { this.map.removeLayer(this.startHint); this.startHint = null; }
-        if (this.startTimeout) { clearTimeout(this.startTimeout); this.startTimeout = null; }
-
-        if (this.isGuest) {
-            this.showNotification('👁 Spectators cannot start a ship', 'warning');
-            return;
-        }
-        
-        this.socket.emit('join_with_ship', {
-            shipId: this.selectedShip,
-            shipName: this.selectedShipName,
-            lat: lat,
-            lng: lng
-        });
-
-        this.isSelectingStart = false;
-        this.map.getContainer().style.cursor = 'default';
     }
 
     // ============================================
@@ -656,9 +806,10 @@ class RegattaGame {
 
         let status = '🟢 Sailing';
         if (player.isEliminated) status = '💀 Eliminated';
+        else if (player.isFinished) status = '🏁 Finished!';
         else if (player.isGrounded) status = '⚠ Grounded';
         else if (player.isAnchored) status = '⚓ Anchored';
-        else if (!player.isOnline) status = '💤 Offline';
+        else if (!player.isOnline) status = '💤 Offline (sailing)';
 
         return `
             <strong>${displayName}</strong><br>
@@ -689,6 +840,17 @@ class RegattaGame {
             anchorBtn.classList.remove('active');
             anchorBtn.textContent = '⚓ Anchor';
         }
+        
+        // Update status
+        const statusDisplay = document.getElementById('ship-status-display');
+        if (statusDisplay) {
+            if (this.ship.isFinished) statusDisplay.textContent = '🏁 Finished!';
+            else if (this.ship.isEliminated) statusDisplay.textContent = '💀 Eliminated';
+            else if (this.ship.isGrounded) statusDisplay.textContent = '⚠ Grounded';
+            else if (this.ship.isAnchored) statusDisplay.textContent = '⚓ Anchored';
+            else if (!this.ship.isOnline) statusDisplay.textContent = '💤 Offline (sailing)';
+            else statusDisplay.textContent = '🟢 Sailing';
+        }
     }
 
     // ============================================
@@ -700,8 +862,8 @@ class RegattaGame {
             if (document.activeElement?.tagName === 'INPUT') return;
 
             switch (e.key) {
-                case 'ArrowLeft': this.socket.emit('turn', { delta: -15 }); e.preventDefault(); break;
-                case 'ArrowRight': this.socket.emit('turn', { delta: 15 }); e.preventDefault(); break;
+                case 'ArrowLeft': this.socket.emit('turn', { delta: -1 }); e.preventDefault(); break;
+                case 'ArrowRight': this.socket.emit('turn', { delta: 1 }); e.preventDefault(); break;
                 case 'ArrowUp': this.socket.emit('sail', { action: 'raise' }); e.preventDefault(); break;
                 case 'ArrowDown': this.socket.emit('sail', { action: 'lower' }); e.preventDefault(); break;
                 case ' ': this.socket.emit('anchor', { action: this.ship?.isAnchored ? 'weigh' : 'drop' }); e.preventDefault(); break;
@@ -709,10 +871,10 @@ class RegattaGame {
         });
 
         document.getElementById('btn-left').onclick = () => {
-            if (!this.isGuest) this.socket.emit('turn', { delta: -15 });
+            if (!this.isGuest) this.socket.emit('turn', { delta: -1 });
         };
         document.getElementById('btn-right').onclick = () => {
-            if (!this.isGuest) this.socket.emit('turn', { delta: 15 });
+            if (!this.isGuest) this.socket.emit('turn', { delta: 1 });
         };
         document.getElementById('btn-raise').onclick = () => {
             if (!this.isGuest) this.socket.emit('sail', { action: 'raise' });
