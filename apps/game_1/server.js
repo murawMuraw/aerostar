@@ -23,8 +23,8 @@ const io = socketIo(server, {
 const PORT = process.env.PORT || 3002;
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY;
 const MAX_PLAYERS = 7;
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
-const GROUNDED_TIMEOUT = 5 * 60 * 1000;
+const INACTIVITY_TIMEOUT = 48 * 60 * 60 * 1000; // 48 hours
+const GROUNDED_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
 // ============================================
 //  MIDDLEWARE
@@ -48,7 +48,8 @@ const CACHE_TTL = 600000;
 //  STORAGE
 // ============================================
 const players = new Map();
-const pendingSelections = new Map(); // sessionId -> { shipId, shipName, timestamp }
+const pendingSelections = new Map();
+const finishPoints = new Map(); // playerId -> { lat, lng }
 
 // ============================================
 //  SHIP STATES (7 ships)
@@ -169,81 +170,10 @@ app.post('/api/logout', (req, res) => {
 });
 
 // ============================================
-//  SELECT SHIP - WITH CONFIRMATION
+//  SELECT SHIP
 // ============================================
 app.post('/api/select_ship', (req, res) => {
     const { shipId } = req.body;
-    const sessionId = req.headers['x-session-id'];
-    
-    if (!sessionId || !sessions.has(sessionId)) {
-        return res.status(401).json({ 
-            success: false, 
-            message: 'Authentication required',
-            error: 'AUTH_REQUIRED'
-        });
-    }
-    
-    const userId = sessions.get(sessionId);
-    
-    // Проверяем, существует ли корабль
-    if (!shipStates[shipId]) {
-        return res.status(400).json({ 
-            success: false, 
-            message: 'Invalid ship ID',
-            error: 'INVALID_SHIP'
-        });
-    }
-    
-    // Проверяем, свободен ли корабль
-    if (shipStates[shipId].taken) {
-        // Если занят этим же пользователем - ок
-        if (shipStates[shipId].playerId !== userId) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'This ship is already taken',
-                error: 'SHIP_TAKEN'
-            });
-        }
-    }
-    
-    // Освобождаем все корабли этого пользователя
-    for (const [id, state] of Object.entries(shipStates)) {
-        if (state.playerId === userId) {
-            state.taken = false;
-            state.playerId = null;
-        }
-    }
-    
-    // Занимаем выбранный корабль
-    shipStates[shipId].taken = true;
-    shipStates[shipId].playerId = userId;
-    
-    // Сохраняем выбор в pending
-    const shipName = req.body.shipName || shipId;
-    pendingSelections.set(sessionId, {
-        shipId: shipId,
-        shipName: shipName,
-        userId: userId,
-        timestamp: Date.now()
-    });
-    
-    console.log(`⛵ User ${userId} selected ship: ${shipId} (${shipName})`);
-    
-    // Отправляем подтверждение с полными данными
-    res.json({ 
-        success: true, 
-        message: 'Ship selected successfully',
-        data: {
-            shipId: shipId,
-            shipName: shipName,
-            userId: userId,
-            timestamp: Date.now()
-        }
-    });
-});
-
-// Получить выбранный корабль для сессии
-app.get('/api/selected_ship', (req, res) => {
     const sessionId = req.headers['x-session-id'];
     
     if (!sessionId || !sessions.has(sessionId)) {
@@ -255,49 +185,73 @@ app.get('/api/selected_ship', (req, res) => {
     
     const userId = sessions.get(sessionId);
     
-    // Проверяем в shipStates
-    for (const [shipId, state] of Object.entries(shipStates)) {
-        if (state.playerId === userId && state.taken) {
-            return res.json({
-                success: true,
-                data: {
-                    shipId: shipId,
-                    shipName: shipId, // Можно добавить маппинг имен
-                    userId: userId
-                }
+    if (!shipStates[shipId]) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Invalid ship ID'
+        });
+    }
+    
+    if (shipStates[shipId].taken) {
+        if (shipStates[shipId].playerId !== userId) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'This ship is already taken'
             });
         }
     }
     
-    // Проверяем в pending
-    if (pendingSelections.has(sessionId)) {
-        const pending = pendingSelections.get(sessionId);
-        return res.json({
-            success: true,
-            data: {
-                shipId: pending.shipId,
-                shipName: pending.shipName,
-                userId: pending.userId
-            }
-        });
+    // Free all ships of this user
+    for (const [id, state] of Object.entries(shipStates)) {
+        if (state.playerId === userId) {
+            state.taken = false;
+            state.playerId = null;
+        }
     }
     
-    res.json({
-        success: false,
-        message: 'No ship selected'
+    shipStates[shipId].taken = true;
+    shipStates[shipId].playerId = userId;
+    
+    const shipName = req.body.shipName || shipId;
+    pendingSelections.set(sessionId, {
+        shipId: shipId,
+        shipName: shipName,
+        userId: userId,
+        timestamp: Date.now()
+    });
+    
+    console.log(`⛵ User ${userId} selected ship: ${shipId} (${shipName})`);
+    
+    res.json({ 
+        success: true, 
+        message: 'Ship selected successfully',
+        data: {
+            shipId: shipId,
+            shipName: shipName,
+            userId: userId
+        }
     });
 });
 
-// Очищаем старые pending selections (каждые 30 секунд)
-setInterval(() => {
-    const now = Date.now();
-    for (const [sessionId, data] of pendingSelections) {
-        if (now - data.timestamp > 30000) { // 30 секунд
-            pendingSelections.delete(sessionId);
-            console.log(`🧹 Cleared pending selection for session: ${sessionId}`);
+app.get('/api/selected_ship', (req, res) => {
+    const sessionId = req.headers['x-session-id'];
+    if (!sessionId || !sessions.has(sessionId)) {
+        return res.status(401).json({ success: false });
+    }
+    
+    const userId = sessions.get(sessionId);
+    
+    for (const [shipId, state] of Object.entries(shipStates)) {
+        if (state.playerId === userId && state.taken) {
+            return res.json({
+                success: true,
+                data: { shipId, userId }
+            });
         }
     }
-}, 30000);
+    
+    res.json({ success: false });
+});
 
 // ============================================
 //  OCEAN CURRENT MODEL
@@ -375,9 +329,12 @@ app.get('/api/players', (req, res) => {
             isOnline: ship.isOnline,
             isEliminated: ship.isEliminated || false,
             isGrounded: ship.isGrounded,
+            isFinished: ship.isFinished || false,
             shipType: ship.shipType,
             lat: ship.lat,
-            lng: ship.lng
+            lng: ship.lng,
+            heading: ship.heading,
+            speed: ship.speed
         });
     }
     res.json({
@@ -388,7 +345,6 @@ app.get('/api/players', (req, res) => {
 });
 
 app.get('/api/ships/state', (req, res) => {
-    // Clean up ships if player disconnected
     for (const [id, state] of Object.entries(shipStates)) {
         if (state.playerId) {
             let isActive = false;
@@ -441,23 +397,30 @@ class Ship {
         this.shipType = shipType;
         this.lat = lat;
         this.lng = lng;
-        this.heading = Math.floor(Math.random() * 360);
+        this.heading = 0;
         this.sailPosition = 0.5;
         this.targetSailPosition = 0.5;
         this.isAnchored = false;
         this.isGrounded = false;
         this.isEliminated = false;
+        this.isFinished = false;
         this.speed = 0;
         this.isOnline = true;
         this.lastSeen = Date.now();
         this.distanceTraveled = 0;
         this.groundTime = null;
         this.color = `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
+        this.finishPoint = null;
+        this.startPoint = { lat, lng };
     }
 
     update(wind, current, deltaTime) {
-        if (this.isEliminated) return;
-        if (this.isAnchored) { this.speed = 0; return; }
+        if (this.isEliminated || this.isFinished) return;
+        
+        if (this.isAnchored) { 
+            this.speed = 0; 
+            return; 
+        }
 
         if (this.isGrounded) {
             this.speed = 0;
@@ -469,19 +432,21 @@ class Ship {
         }
         this.groundTime = null;
 
+        // Sail adjustment (10% per click)
         const sailDiff = this.targetSailPosition - this.sailPosition;
         this.sailPosition += sailDiff * deltaTime * 0.5;
         this.sailPosition = Math.max(0, Math.min(1, this.sailPosition));
 
+        // Wind effect
         const windSpeed = wind.speed || 5;
         const windDirection = wind.direction || 0;
         const angleToWind = this.heading - windDirection;
         const windEffect = Math.cos(angleToWind * Math.PI / 180);
         const sailEfficiency = Math.max(0.1, (windEffect + 1) / 2);
-        const maxSpeed = this.sailPosition * 10 * sailEfficiency;
+        const maxSpeed = this.sailPosition * 12 * sailEfficiency;
         
         this.speed += (maxSpeed - this.speed) * deltaTime * 0.3;
-        this.speed = Math.max(0, Math.min(10, this.speed));
+        this.speed = Math.max(0, Math.min(12, this.speed));
 
         let latDelta = 0, lngDelta = 0;
         
@@ -492,6 +457,7 @@ class Ship {
             lngDelta += lngPerSecond * Math.sin(this.heading * Math.PI / 180);
         }
 
+        // Current effect
         if (current && current.speed > 0.05) {
             const currentSpeedMs = current.speed * 0.514;
             const latPerSecond = currentSpeedMs / 111320;
@@ -504,20 +470,49 @@ class Ship {
         const newLat = this.lat + latDelta * deltaTime;
         const newLng = this.lng + lngDelta * deltaTime;
 
-        if (!isOnLand(newLat, newLng)) {
-            this.lat = newLat;
-            this.lng = newLng;
-            this.distanceTraveled += Math.sqrt(latDelta*latDelta + lngDelta*lngDelta) * 111320;
-        } else {
+        // Check for land (grounding)
+        if (isOnLand(newLat, newLng)) {
             if (!this.isGrounded) {
                 this.isGrounded = true;
                 this.groundTime = Date.now();
                 this.speed = 0;
                 io.emit('ship_grounded', { playerId: this.id, name: this.name, lat: this.lat, lng: this.lng });
             }
+            return;
+        }
+
+        this.lat = newLat;
+        this.lng = newLng;
+        this.distanceTraveled += Math.sqrt(latDelta*latDelta + lngDelta*lngDelta) * 111320;
+
+        // Check if reached finish point
+        if (this.finishPoint) {
+            const distance = this.getDistanceTo(this.finishPoint.lat, this.finishPoint.lng);
+            if (distance < 0.5) { // 500 meters
+                this.finish();
+            }
         }
 
         this.lastSeen = Date.now();
+    }
+
+    getDistanceTo(lat, lng) {
+        const R = 6371; // Earth's radius in km
+        const dLat = (lat - this.lat) * Math.PI / 180;
+        const dLng = (lng - this.lng) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(this.lat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+
+    finish() {
+        if (this.isFinished) return;
+        this.isFinished = true;
+        this.speed = 0;
+        io.emit('ship_finished', { playerId: this.id, name: this.name });
+        console.log(`🏁 ${this.name} finished the race!`);
     }
 
     eliminate(reason) {
@@ -538,26 +533,31 @@ class Ship {
 
     turn(delta) {
         if (this.isEliminated) return { success: false, message: 'Eliminated' };
+        if (this.isFinished) return { success: false, message: 'Finished' };
         if (this.isAnchored) return { success: false, message: 'Anchored' };
         if (this.isGrounded) return { success: false, message: 'Grounded' };
         this.heading = (this.heading + delta) % 360;
         if (this.heading < 0) this.heading += 360;
-        return { success: true };
+        return { success: true, heading: this.heading };
     }
 
     setSail(pos) {
         if (this.isEliminated) return { success: false, message: 'Eliminated' };
+        if (this.isFinished) return { success: false, message: 'Finished' };
         if (this.isAnchored) return { success: false, message: 'Anchored' };
         if (this.isGrounded) return { success: false, message: 'Grounded' };
-        this.targetSailPosition = Math.max(0, Math.min(1, pos));
-        return { success: true };
+        // Round to nearest 10%
+        const roundedPos = Math.round(pos * 10) / 10;
+        this.targetSailPosition = Math.max(0, Math.min(1, roundedPos));
+        return { success: true, sailPosition: this.targetSailPosition };
     }
 
-    raiseSail() { return this.setSail(1); }
-    lowerSail() { return this.setSail(0); }
+    raiseSail() { return this.setSail(Math.min(1, this.targetSailPosition + 0.1)); }
+    lowerSail() { return this.setSail(Math.max(0, this.targetSailPosition - 0.1)); }
 
     dropAnchor() {
         if (this.isEliminated) return { success: false, message: 'Eliminated' };
+        if (this.isFinished) return { success: false, message: 'Finished' };
         if (this.isGrounded) return { success: false, message: 'Grounded' };
         this.isAnchored = true;
         this.speed = 0;
@@ -567,8 +567,17 @@ class Ship {
 
     weighAnchor() {
         if (this.isEliminated) return { success: false, message: 'Eliminated' };
+        if (this.isFinished) return { success: false, message: 'Finished' };
         if (this.isGrounded) return { success: false, message: 'Grounded' };
         this.isAnchored = false;
+        return { success: true };
+    }
+
+    setFinishPoint(lat, lng) {
+        if (isOnLand(lat, lng)) {
+            return { success: false, message: 'Finish point cannot be on land' };
+        }
+        this.finishPoint = { lat, lng };
         return { success: true };
     }
 
@@ -585,9 +594,11 @@ class Ship {
             isAnchored: this.isAnchored,
             isGrounded: this.isGrounded,
             isEliminated: this.isEliminated,
+            isFinished: this.isFinished,
             isOnline: this.isOnline,
             distanceTraveled: this.distanceTraveled,
-            color: this.color
+            color: this.color,
+            finishPoint: this.finishPoint
         };
     }
 }
@@ -596,13 +607,14 @@ class Ship {
 //  HELPER FUNCTIONS
 // ============================================
 function isOnLand(lat, lng) {
+    // Simple land detection (approximate)
     const landMasses = [
-        { latMin: 36, latMax: 70, lngMin: -10, lngMax: 40 },
-        { latMin: -35, latMax: 37, lngMin: -20, lngMax: 50 },
-        { latMin: 25, latMax: 70, lngMin: -130, lngMax: -60 },
-        { latMin: -55, latMax: 12, lngMin: -80, lngMax: -35 },
-        { latMin: 10, latMax: 75, lngMin: 40, lngMax: 150 },
-        { latMin: -40, latMax: -10, lngMin: 113, lngMax: 155 },
+        { latMin: 36, latMax: 70, lngMin: -10, lngMax: 40 }, // Europe
+        { latMin: -35, latMax: 37, lngMin: -20, lngMax: 50 }, // Africa
+        { latMin: 25, latMax: 70, lngMin: -130, lngMax: -60 }, // North America
+        { latMin: -55, latMax: 12, lngMin: -80, lngMax: -35 }, // South America
+        { latMin: 10, latMax: 75, lngMin: 40, lngMax: 150 }, // Asia
+        { latMin: -40, latMax: -10, lngMin: 113, lngMax: 155 }, // Australia
     ];
     for (const region of landMasses) {
         if (lat >= region.latMin && lat <= region.latMax &&
@@ -632,24 +644,16 @@ setInterval(() => {
     const now = Date.now();
     const toRemove = [];
     for (const [id, ship] of players) {
-        if (ship.isEliminated) { toRemove.push(id); continue; }
+        if (ship.isEliminated || ship.isFinished) { 
+            toRemove.push(id); 
+            continue; 
+        }
         if (!ship.isOnline && (now - ship.lastSeen) > INACTIVITY_TIMEOUT) {
-            ship.eliminate('Inactive');
-            toRemove.push(id);
+            // Ship continues sailing with last settings
+            console.log(`⏳ ${ship.name} is sailing without captain`);
         }
     }
-    for (const id of toRemove) {
-        const ship = players.get(id);
-        if (ship) {
-            for (const [shipId, state] of Object.entries(shipStates)) {
-                if (state.playerId === id) { state.taken = false; state.playerId = null; break; }
-            }
-            players.delete(id);
-            console.log(`🧹 Removed: ${ship.name}`);
-            io.emit('player_removed', { playerId: id, name: ship.name });
-        }
-    }
-    if (toRemove.length > 0) broadcastState();
+    // Don't remove ships, they continue sailing
 }, 30000);
 
 // ============================================
@@ -661,7 +665,7 @@ setInterval(async () => {
     const currentData = {};
     
     for (const [id, ship] of players) {
-        if (ship.isEliminated || ship.shipType === 'guest') continue;
+        if (ship.isEliminated || ship.isFinished) continue;
         try {
             const wind = await fetchWindData(ship.lat, ship.lng);
             const current = await fetchCurrentData(ship.lat, ship.lng);
@@ -689,6 +693,9 @@ setInterval(async () => {
 io.on('connection', (socket) => {
     console.log('🔗 New connection:', socket.id);
 
+    // ==========================================
+    //  JOIN AS GUEST
+    // ==========================================
     socket.on('join_as_guest', (data) => {
         const { lat, lng } = data;
         
@@ -706,6 +713,9 @@ io.on('connection', (socket) => {
         broadcastState();
     });
 
+    // ==========================================
+    //  JOIN WITH SHIP
+    // ==========================================
     socket.on('join_with_ship', (data) => {
         const { shipId, shipName, lat, lng } = data;
 
@@ -718,19 +728,13 @@ io.on('connection', (socket) => {
             }
         }
 
-        const activePlayers = Array.from(players.values()).filter(p => p.isOnline && !p.isEliminated && p.shipType !== 'guest');
-        if (activePlayers.length >= MAX_PLAYERS) {
-            socket.emit('join_error', { message: `Maximum ${MAX_PLAYERS} players` });
+        // Check if on land
+        if (isOnLand(lat, lng)) {
+            socket.emit('join_error', { message: 'Cannot start on land! Choose a point in the ocean' });
             return;
         }
 
-        if (isOnLand(lat, lng)) {
-            const newLat = 20 + (Math.random() - 0.5) * 30;
-            const newLng = (Math.random() - 0.5) * 60;
-            console.log(`📍 Land detected, moving to ${newLat}, ${newLng}`);
-            return socket.emit('join_with_ship', { ...data, lat: newLat, lng: newLng });
-        }
-
+        // If socket already has a ship - remove old one
         if (players.has(socket.id)) {
             const oldShip = players.get(socket.id);
             for (const [id, state] of Object.entries(shipStates)) {
@@ -763,15 +767,36 @@ io.on('connection', (socket) => {
         console.log(`⛵ ${player.name} joined at ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
     });
 
+    // ==========================================
+    //  SET FINISH POINT
+    // ==========================================
+    socket.on('set_finish', (data) => {
+        const ship = players.get(socket.id);
+        if (ship && ship.isOnline && !ship.isEliminated && ship.shipType !== 'guest') {
+            const { lat, lng } = data;
+            const result = ship.setFinishPoint(lat, lng);
+            socket.emit('action_result', { action: 'finish', success: result.success, ...result });
+            if (result.success) {
+                broadcastState();
+                console.log(`🏁 ${ship.name} set finish point at ${lat}, ${lng}`);
+            }
+        }
+    });
+
+    // ==========================================
+    //  CONTROLS - 1 click = 1 degree
+    // ==========================================
     socket.on('turn', (data) => {
         const ship = players.get(socket.id);
         if (ship && ship.isOnline && !ship.isEliminated && ship.shipType !== 'guest') {
-            const result = ship.turn(data.delta || 0);
+            const delta = data.delta || 0;
+            const result = ship.turn(delta);
             socket.emit('action_result', { action: 'turn', success: result.success, ...result });
             if (result.success) broadcastState();
         }
     });
 
+    // Sail - 1 click = 10%
     socket.on('sail', (data) => {
         const ship = players.get(socket.id);
         if (ship && ship.isOnline && !ship.isEliminated && ship.shipType !== 'guest') {
@@ -793,18 +818,24 @@ io.on('connection', (socket) => {
         }
     });
 
+    // ==========================================
+    //  CHAT
+    // ==========================================
     socket.on('chat', (data) => {
         const ship = players.get(socket.id);
         const name = ship ? ship.name : 'Unknown';
         io.emit('chat', { playerId: socket.id, name: name, message: data.message });
     });
 
+    // ==========================================
+    //  DISCONNECT - ship continues sailing
+    // ==========================================
     socket.on('disconnect', () => {
         const ship = players.get(socket.id);
         if (ship) {
             ship.isOnline = false;
             ship.lastSeen = Date.now();
-            console.log(`💤 ${ship.name} went offline`);
+            console.log(`💤 ${ship.name} went offline, ship continues sailing`);
             io.emit('player_left', { playerId: socket.id, name: ship.name, isOffline: true });
             broadcastState();
         }
@@ -817,7 +848,8 @@ io.on('connection', (socket) => {
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Regatta server running at http://0.0.0.0:${PORT}`);
     console.log(`👥 Max players: ${MAX_PLAYERS}`);
-    console.log(`🌊 Wind + currents enabled\n`);
+    console.log(`🌊 Wind + currents enabled`);
+    console.log(`⚓ 1 click = 1° turn, 1 click = 10% sail\n`);
     console.log(`📋 API endpoints:`);
     console.log(`  - POST /api/register`);
     console.log(`  - POST /api/login`);
