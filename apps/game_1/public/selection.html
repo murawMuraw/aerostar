@@ -64,9 +64,6 @@
             font-size: 14px;
         }
 
-        /* ============================================
-           TABS
-        ============================================ */
         .tabs {
             display: flex;
             gap: 0;
@@ -106,9 +103,6 @@
             display: block;
         }
 
-        /* ============================================
-           FORMS
-        ============================================ */
         .auth-form {
             display: flex;
             flex-direction: column;
@@ -211,9 +205,6 @@
             right: 0;
         }
 
-        /* ============================================
-           SHIPS - NO LABELS
-        ============================================ */
         .ship-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -300,9 +291,6 @@
             color: #ffd966;
         }
 
-        /* ============================================
-           BUTTONS
-        ============================================ */
         .btn-start {
             width: 100%;
             padding: 14px;
@@ -405,6 +393,62 @@
         .player-info .logout-btn:hover {
             background: rgba(255, 107, 107, 0.1);
         }
+
+        .existing-ship-msg {
+            background: rgba(74, 158, 255, 0.15);
+            border: 1px solid rgba(74, 158, 255, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .existing-ship-msg .ship-name {
+            color: #ffd966;
+            font-weight: bold;
+            font-size: 18px;
+            margin: 8px 0;
+        }
+
+        .existing-ship-msg .btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .existing-ship-msg .btn-go {
+            padding: 10px 30px;
+            background: linear-gradient(135deg, #4a9eff, #6c5ce7);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .existing-ship-msg .btn-go:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 25px rgba(74, 158, 255, 0.4);
+        }
+
+        .existing-ship-msg .btn-choose {
+            padding: 10px 30px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #8899aa;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .existing-ship-msg .btn-choose:hover {
+            background: rgba(255,255,255,0.05);
+        }
     </style>
 </head>
 <body>
@@ -412,21 +456,16 @@
         <h1>⛵ Select Your Ship</h1>
         <p class="subtitle">Sign in and choose your ship to join the regatta</p>
 
-        <!-- User Info -->
         <div class="player-info" id="playerInfo" style="display:none;">
             <span>👤 <span class="name" id="playerName">—</span></span>
             <button class="logout-btn" id="logoutBtn">🚪 Logout</button>
         </div>
 
-        <!-- ============================================ -->
-        <!-- AUTH TABS                                      -->
-        <!-- ============================================ -->
         <div class="tabs" id="authTabs">
             <button class="tab-btn active" data-tab="login">🔑 Login</button>
             <button class="tab-btn" data-tab="register">📝 Register</button>
         </div>
 
-        <!-- Login -->
         <div class="tab-content active" id="tab-login">
             <form class="auth-form" id="loginForm">
                 <label>
@@ -442,7 +481,6 @@
             </form>
         </div>
 
-        <!-- Register -->
         <div class="tab-content" id="tab-register">
             <form class="auth-form" id="registerForm">
                 <label>
@@ -470,10 +508,8 @@
 
         <div class="auth-divider">— or continue as guest —</div>
 
-        <!-- ============================================ -->
-        <!-- SHIPS                                          -->
-        <!-- ============================================ -->
         <div id="shipsSection">
+            <div id="existingShipMessage" style="display:none;"></div>
             <div class="ship-grid" id="shipGrid">
                 <div class="loading-ships">⏳ Loading ships...</div>
             </div>
@@ -487,10 +523,6 @@
     </div>
 
     <script>
-        // ============================================
-        //  SELECTION.JS - FULL LOGIC
-        // ============================================
-
         const shipGrid = document.getElementById('shipGrid');
         const btnStart = document.getElementById('btnStart');
         const btnBack = document.getElementById('btnBack');
@@ -499,6 +531,7 @@
         const playerInfo = document.getElementById('playerInfo');
         const playerName = document.getElementById('playerName');
         const logoutBtn = document.getElementById('logoutBtn');
+        const existingShipMsg = document.getElementById('existingShipMessage');
 
         const tabBtns = document.querySelectorAll('.tab-btn');
         const tabContents = {
@@ -515,10 +548,8 @@
         let shipData = {};
         let currentUser = null;
         let isAuth = false;
+        let hasExistingShip = false;
 
-        // ============================================
-        //  TAB MANAGEMENT
-        // ============================================
         tabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 tabBtns.forEach(b => b.classList.remove('active'));
@@ -532,9 +563,6 @@
             });
         });
 
-        // ============================================
-        //  REGISTER
-        // ============================================
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             registerError.style.display = 'none';
@@ -583,9 +611,6 @@
             }
         });
 
-        // ============================================
-        //  LOGIN
-        // ============================================
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             loginError.style.display = 'none';
@@ -616,6 +641,7 @@
                     document.getElementById('loginPassword').value = '';
                     loginError.style.display = 'none';
                     showAuthState(true);
+                    await checkExistingShip();
                     await loadShips();
                 } else {
                     loginError.textContent = data.message || 'Invalid username or password';
@@ -627,9 +653,6 @@
             }
         }
 
-        // ============================================
-        //  LOGOUT
-        // ============================================
         logoutBtn.addEventListener('click', async () => {
             const sessionId = localStorage.getItem('sessionId');
             try {
@@ -643,14 +666,13 @@
             currentUser = null;
             isAuth = false;
             selectedShip = null;
+            hasExistingShip = false;
             showAuthState(false);
             btnStart.disabled = true;
+            existingShipMsg.style.display = 'none';
             await loadShips();
         });
 
-        // ============================================
-        //  AUTH STATE
-        // ============================================
         function showAuthState(auth) {
             if (auth && currentUser) {
                 playerInfo.style.display = 'flex';
@@ -671,10 +693,77 @@
             }
         }
 
-        // ============================================
-        //  LOAD SHIPS
-        // ============================================
+        async function checkExistingShip() {
+            const sessionId = localStorage.getItem('sessionId');
+            if (!sessionId) {
+                hasExistingShip = false;
+                existingShipMsg.style.display = 'none';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/selected_ship', {
+                    headers: { 'x-session-id': sessionId }
+                });
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    hasExistingShip = true;
+                    const shipId = data.data.shipId;
+                    const shipName = data.data.shipName || shipId;
+                    
+                    existingShipMsg.style.display = 'block';
+                    existingShipMsg.className = 'existing-ship-msg';
+                    existingShipMsg.innerHTML = `
+                        <div style="font-size: 18px;">🔄 You already have a ship!</div>
+                        <div class="ship-name">${shipName}</div>
+                        <div style="color: #8899aa; font-size: 13px; margin-bottom: 8px;">Click "Go to Game" to continue sailing</div>
+                        <div class="btn-group">
+                            <button class="btn-go" onclick="goToGame()">🚀 Go to Game</button>
+                            <button class="btn-choose" onclick="clearAndContinue()">Choose Different Ship</button>
+                        </div>
+                    `;
+                    
+                    // Hide ship grid
+                    shipGrid.style.display = 'none';
+                    btnStart.style.display = 'none';
+                    return;
+                }
+            } catch (error) {
+                console.error('Failed to check existing ship:', error);
+            }
+            
+            hasExistingShip = false;
+            existingShipMsg.style.display = 'none';
+            shipGrid.style.display = 'grid';
+            btnStart.style.display = 'block';
+        }
+
+        function goToGame() {
+            window.location.href = '/';
+        }
+
+        function clearAndContinue() {
+            hasExistingShip = false;
+            existingShipMsg.style.display = 'none';
+            shipGrid.style.display = 'grid';
+            btnStart.style.display = 'block';
+            
+            // Clear the user's ship selection on server
+            const sessionId = localStorage.getItem('sessionId');
+            if (sessionId) {
+                fetch('/api/clear_ship_selection', {
+                    method: 'POST',
+                    headers: { 'x-session-id': sessionId }
+                }).catch(console.error);
+            }
+            
+            loadShips();
+        }
+
         async function loadShips() {
+            if (hasExistingShip) return;
+            
             try {
                 const response = await fetch('/api/ships/state');
                 shipData = await response.json();
@@ -737,9 +826,6 @@
             });
         }
 
-        // ============================================
-        //  SELECT SHIP
-        // ============================================
         function selectShip(shipId) {
             if (!isAuth) {
                 showError('Please sign in first');
@@ -758,9 +844,6 @@
             }
         }
 
-        // ============================================
-        //  CHECK USER SHIP
-        // ============================================
         function checkUserShip() {
             for (const [id, state] of Object.entries(shipData)) {
                 if (state.playerId === currentUser.id) {
@@ -778,95 +861,84 @@
             btnStart.disabled = true;
         }
 
-        // ============================================
-        //  START SAILING
-        // ============================================
+        btnStart.addEventListener('click', async () => {
+            if (!selectedShip || !isAuth) {
+                showError('Please select a ship');
+                return;
+            }
 
-btnStart.addEventListener('click', async () => {
-    if (!selectedShip || !isAuth) {
-        showError('Please select a ship');
-        return;
-    }
-
-    const card = document.querySelector(`.ship-card[data-ship-id="${selectedShip}"]`);
-    const shipName = card ? card.dataset.name : selectedShip;
-    
-    console.log('📝 Selected ship:', selectedShip, shipName);
-
-    const sessionId = localStorage.getItem('sessionId');
-
-    // Блокируем кнопку
-    btnStart.disabled = true;
-    btnStart.textContent = '⏳ Sending...';
-
-    try {
-        const response = await fetch('/api/select_ship', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'x-session-id': sessionId
-            },
-            body: JSON.stringify({ 
-                shipId: selectedShip,
-                shipName: shipName
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            console.log('✅ Server confirmed:', data);
+            const card = document.querySelector(`.ship-card[data-ship-id="${selectedShip}"]`);
+            const shipName = card ? card.dataset.name : selectedShip;
             
-            // Сохраняем выбор с подтвержденными данными
-            const saveData = {
-                shipId: data.data.shipId || selectedShip,
-                shipName: data.data.shipName || shipName,
-                confirmed: true,
-                timestamp: Date.now()
-            };
-            
-            localStorage.setItem('selectedShip', JSON.stringify(saveData));
-            console.log('💾 Saved to localStorage:', saveData);
-            
-            successDiv.style.display = 'block';
-            errorDiv.style.display = 'none';
-            
-            // Даем время на сохранение и проверяем
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Проверяем, что данные сохранились и подтверждены
-            const saved = localStorage.getItem('selectedShip');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                if (parsed.confirmed) {
-                    console.log('✅ Confirmed, redirecting...');
-                    window.location.href = '/';
+            console.log('📝 Selected ship:', selectedShip, shipName);
+
+            const sessionId = localStorage.getItem('sessionId');
+
+            btnStart.disabled = true;
+            btnStart.textContent = '⏳ Sending...';
+
+            try {
+                const response = await fetch('/api/select_ship', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'x-session-id': sessionId
+                    },
+                    body: JSON.stringify({ 
+                        shipId: selectedShip,
+                        shipName: shipName
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('✅ Server confirmed:', data);
+                    
+                    const saveData = {
+                        shipId: data.data.shipId || selectedShip,
+                        shipName: data.data.shipName || shipName,
+                        confirmed: true,
+                        timestamp: Date.now()
+                    };
+                    
+                    localStorage.setItem('selectedShip', JSON.stringify(saveData));
+                    console.log('💾 Saved to localStorage:', saveData);
+                    
+                    successDiv.style.display = 'block';
+                    errorDiv.style.display = 'none';
+                    
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    const saved = localStorage.getItem('selectedShip');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        if (parsed.confirmed) {
+                            console.log('✅ Confirmed, redirecting...');
+                            window.location.href = '/';
+                        } else {
+                            showError('Selection not confirmed');
+                            btnStart.disabled = false;
+                            btnStart.textContent = '🚀 Start Sailing';
+                        }
+                    } else {
+                        showError('Failed to save selection');
+                        btnStart.disabled = false;
+                        btnStart.textContent = '🚀 Start Sailing';
+                    }
                 } else {
-                    showError('Selection not confirmed');
+                    showError(data.message || 'Failed to select ship');
                     btnStart.disabled = false;
                     btnStart.textContent = '🚀 Start Sailing';
                 }
-            } else {
-                showError('Failed to save selection');
+            } catch (error) {
+                console.error('❌ Error:', error);
+                showError('Connection error');
                 btnStart.disabled = false;
                 btnStart.textContent = '🚀 Start Sailing';
             }
-        } else {
-            showError(data.message || 'Failed to select ship');
-            btnStart.disabled = false;
-            btnStart.textContent = '🚀 Start Sailing';
-        }
-    } catch (error) {
-        console.error('❌ Error:', error);
-        showError('Connection error');
-        btnStart.disabled = false;
-        btnStart.textContent = '🚀 Start Sailing';
-    }
-});
+        });
 
-        // ============================================
-        //  HELPERS
-        // ============================================
         function showError(msg) {
             errorDiv.textContent = msg;
             errorDiv.style.display = 'block';
@@ -877,9 +949,6 @@ btnStart.addEventListener('click', async () => {
             window.location.href = '/';
         });
 
-        // ============================================
-        //  CHECK SESSION ON LOAD
-        // ============================================
         async function checkSession() {
             const sessionId = localStorage.getItem('sessionId');
             if (!sessionId) {
@@ -897,6 +966,7 @@ btnStart.addEventListener('click', async () => {
                     currentUser = data.user;
                     isAuth = true;
                     showAuthState(true);
+                    await checkExistingShip();
                     await loadShips();
                 } else {
                     localStorage.removeItem('sessionId');
@@ -910,14 +980,9 @@ btnStart.addEventListener('click', async () => {
             }
         }
 
-        // ============================================
-        //  START
-        // ============================================
         checkSession();
-
-        // Refresh ships every 10 seconds
         setInterval(() => {
-            if (isAuth) loadShips();
+            if (isAuth && !hasExistingShip) loadShips();
         }, 10000);
     </script>
 </body>
