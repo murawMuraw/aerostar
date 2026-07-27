@@ -28,6 +28,8 @@ class RegattaGame {
         this.finishMarker = null;
         this.startMarker = null;
         this.isReconnecting = false;
+        this.restoreAttempts = 0;
+        this.maxRestoreAttempts = 5;
         
         this.isStarting = false;
         this.startAttempts = 0;
@@ -44,8 +46,15 @@ class RegattaGame {
         this.setupChat();
         this.setupUI();
         this.loadShipsState();
-        this.checkExistingShip();
-        this.checkSelectedShip();
+        
+        // Проверяем сессию сразу после инициализации
+        const sessionId = localStorage.getItem('sessionId');
+        if (sessionId) {
+            console.log('🔑 Session found on init:', sessionId.substring(0, 20) + '...');
+            this.checkExistingShip();
+        } else {
+            this.checkSelectedShip();
+        }
     }
 
     initMap() {
@@ -192,21 +201,44 @@ class RegattaGame {
         }
     }
 
+    // ============================================
+    //  CHECK EXISTING SHIP - ВОССТАНОВЛЕНИЕ
+    // ============================================
     checkExistingShip() {
         const sessionId = localStorage.getItem('sessionId');
-        if (!sessionId) return;
+        if (!sessionId) {
+            console.log('❌ No session ID found');
+            this.checkSelectedShip();
+            return;
+        }
+        
+        console.log('🔍 Checking existing ship for session...');
+        
+        // Показываем уведомление о попытке восстановления
+        this.showNotification('🔄 Checking for existing ship...', 'info');
         
         fetch('/api/selected_ship', {
             headers: { 'x-session-id': sessionId }
         })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) {
+                throw new Error(`HTTP ${r.status}`);
+            }
+            return r.json();
+        })
         .then(data => {
+            console.log('📡 Existing ship response:', data);
+            
             if (data.success && data.data) {
                 console.log('🔄 Found existing ship for user:', data.data);
                 this.selectedShip = data.data.shipId;
                 this.shipType = data.data.shipId;
+                this.isReconnecting = true;
+                this.restoreAttempts = 0;
                 
                 const shipName = data.data.shipName || data.data.shipId;
+                
+                // Сохраняем в localStorage
                 localStorage.setItem('selectedShip', JSON.stringify({
                     shipId: data.data.shipId,
                     shipName: shipName,
@@ -218,14 +250,54 @@ class RegattaGame {
                 this.showNotification(`🔄 Restoring your ship: ${shipName}`, 'info');
                 this.addChatMessage(`🔄 Restoring your ship: ${shipName}`, 'system');
                 
+                // Если сокет подключен - отправляем запрос на восстановление
                 if (this.socket && this.socket.connected) {
-                    this.autoStartShip();
+                    console.log('📤 Sending reconnect_ship...');
+                    this.socket.emit('reconnect_ship', {
+                        shipId: this.selectedShip,
+                        shipName: shipName
+                    });
+                } else {
+                    console.log('⏳ Socket not connected, waiting for connection...');
+                    // Ждем подключения
+                    this.waitForSocketConnection();
                 }
+            } else {
+                console.log('ℹ️ No existing ship found, checking selected ship...');
+                this.checkSelectedShip();
             }
         })
-        .catch(err => console.error('Failed to check existing ship:', err));
+        .catch(err => {
+            console.error('❌ Failed to check existing ship:', err);
+            this.showNotification('⚠️ Could not check existing ship, trying selection...', 'warning');
+            this.checkSelectedShip();
+        });
     }
 
+    waitForSocketConnection() {
+        let attempts = 0;
+        const maxAttempts = 20;
+        
+        const checkInterval = setInterval(() => {
+            attempts++;
+            if (this.socket && this.socket.connected) {
+                clearInterval(checkInterval);
+                console.log('✅ Socket connected, sending reconnect...');
+                this.socket.emit('reconnect_ship', {
+                    shipId: this.selectedShip,
+                    shipName: this.selectedShipName || this.selectedShip
+                });
+            } else if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                console.log('❌ Socket connection timeout');
+                this.showNotification('❌ Connection timeout, please refresh', 'danger');
+            }
+        }, 500);
+    }
+
+    // ============================================
+    //  CHECK SELECTED SHIP
+    // ============================================
     checkSelectedShip() {
         const selectedShipData = localStorage.getItem('selectedShip');
         if (selectedShipData) {
@@ -254,6 +326,8 @@ class RegattaGame {
                 
                 if (this.socket && this.socket.connected) {
                     this.autoStartShip();
+                } else {
+                    this.waitForSocketConnection();
                 }
             } catch (e) {
                 console.error('Error parsing selected ship:', e);
@@ -298,6 +372,9 @@ class RegattaGame {
         }, 500);
     }
 
+    // ============================================
+    //  AUTO START SHIP
+    // ============================================
     autoStartShip() {
         if (!this.selectedShip || this.isGuest) {
             console.log('❌ No ship selected or is guest');
@@ -324,15 +401,17 @@ class RegattaGame {
         this.isStarting = true;
         this.startAttempts++;
         
+        // Если это восстановление существующего корабля
         if (this.isReconnecting) {
             console.log('🔄 Reconnecting to existing ship:', this.selectedShip);
             this.socket.emit('reconnect_ship', {
                 shipId: this.selectedShip,
-                shipName: this.selectedShipName
+                shipName: this.selectedShipName || this.selectedShip
             });
             return;
         }
         
+        // Новый корабль - запрос старта и финиша
         this.isSelectingStart = true;
         this.map.getContainer().style.cursor = 'crosshair';
         this.showNotification('📍 Click on the map to choose START point (ocean only!)', 'info');
@@ -480,15 +559,65 @@ class RegattaGame {
         return false;
     }
 
+    // ============================================
+    //  SOCKET.IO - ПОЛНОСТЬЮ ОБНОВЛЕН
+    // ============================================
     initSocket() {
-        this.socket = io({ transports: ['websocket', 'polling'] });
-
-        this.socket.on('connect', () => {
-            console.log('✅ Connected');
-            this.checkExistingShip();
-            this.checkSelectedShip();
+        this.socket = io({ 
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000
         });
 
+        // ==========================================
+        //  CONNECT - ОСНОВНОЙ ОБРАБОТЧИК
+        // ==========================================
+        this.socket.on('connect', () => {
+            console.log('✅ Connected to server');
+            
+            // Проверяем сессию при подключении
+            const sessionId = localStorage.getItem('sessionId');
+            if (sessionId) {
+                console.log('🔑 Session found on connect');
+                // Проверяем существующий корабль
+                this.checkExistingShip();
+            } else {
+                console.log('👤 No session, checking selected ship...');
+                this.checkSelectedShip();
+            }
+        });
+
+        // ==========================================
+        //  RECONNECT - ПРИ ПЕРЕПОДКЛЮЧЕНИИ
+        // ==========================================
+        this.socket.on('reconnect', () => {
+            console.log('🔄 Reconnected to server');
+            this.showNotification('🔄 Reconnected to server', 'info');
+            
+            // Если был корабль - пытаемся восстановить
+            if (this.ship) {
+                console.log('🔄 Restoring ship after reconnect:', this.ship.name);
+                this.socket.emit('reconnect_ship', {
+                    shipId: this.ship.shipType,
+                    shipName: this.ship.name
+                });
+            } else {
+                this.checkExistingShip();
+            }
+        });
+
+        // ==========================================
+        //  RECONNECT ERROR
+        // ==========================================
+        this.socket.on('reconnect_error', (error) => {
+            console.error('❌ Reconnect error:', error);
+            this.showNotification('⚠️ Connection issue, retrying...', 'warning');
+        });
+
+        // ==========================================
+        //  JOINED - УСПЕШНОЕ ПОДКЛЮЧЕНИЕ
+        // ==========================================
         this.socket.on('joined', (data) => {
             console.log('📥 Joined event:', data);
             
@@ -499,11 +628,13 @@ class RegattaGame {
             this.shipType = this.ship.shipType;
             this.playerName = this.ship.name;
             
+            // Reset start flags
             this.isStarting = false;
             this.startAttempts = 0;
             this.isSelectingStart = false;
             this.isSelectingFinish = false;
             this.isReconnecting = false;
+            this.restoreAttempts = 0;
             
             if (this.startTimer) {
                 clearTimeout(this.startTimer);
@@ -540,6 +671,7 @@ class RegattaGame {
                 
                 const shipName = this.ship.name || this.selectedShipName || 'Ship';
                 
+                // Проверяем, был ли это восстановленный корабль
                 if (this.ship.finishPoint) {
                     this.showNotification(`🔄 ${shipName} restored!`, 'success');
                     this.addChatMessage(`🔄 ${shipName} restored!`, 'system');
@@ -555,6 +687,7 @@ class RegattaGame {
                 this.isRacing = true;
                 this.hasSelectedShip = true;
                 
+                // Удаляем из localStorage после успешного запуска
                 localStorage.removeItem('selectedShip');
                 console.log('🗑️ Removed selectedShip from localStorage');
                 
@@ -562,6 +695,7 @@ class RegattaGame {
                 this.updateShipInfo();
                 this.updatePlayers(data.players);
                 
+                // Если нет финиша и это не восстановление - запрашиваем
                 if (!this.ship.finishPoint && !this.isReconnecting) {
                     this.isSelectingFinish = true;
                     this.map.getContainer().style.cursor = 'crosshair';
@@ -581,6 +715,9 @@ class RegattaGame {
             }
         });
 
+        // ==========================================
+        //  STATE - ОБНОВЛЕНИЕ СОСТОЯНИЯ
+        // ==========================================
         this.socket.on('state', (data) => {
             this.lastState = data;
             this.updatePlayers(data.players);
@@ -605,6 +742,9 @@ class RegattaGame {
             }
         });
 
+        // ==========================================
+        //  PLAYER EVENTS
+        // ==========================================
         this.socket.on('player_joined', (data) => {
             this.addChatMessage(`🚢 ${data.name} joined the race`, 'system');
         });
@@ -629,6 +769,9 @@ class RegattaGame {
             this.addChatMessage(`🏁 ${data.name} finished the race!`, 'system');
         });
 
+        // ==========================================
+        //  ACTION RESULT
+        // ==========================================
         this.socket.on('action_result', (data) => {
             if (!data.success) {
                 this.showNotification(`❌ ${data.message}`, 'warning');
@@ -641,10 +784,16 @@ class RegattaGame {
             }
         });
 
+        // ==========================================
+        //  CHAT
+        // ==========================================
         this.socket.on('chat', (data) => {
             this.addChatMessage(`⛵ ${data.name}: ${data.message}`, 'user');
         });
 
+        // ==========================================
+        //  JOIN ERROR - ОБРАБОТКА ОШИБОК
+        // ==========================================
         this.socket.on('join_error', (data) => {
             console.log('❌ Join error:', data);
             this.showNotification(`❌ ${data.message}`, 'danger');
@@ -654,6 +803,7 @@ class RegattaGame {
             this.isSelectingStart = false;
             this.isSelectingFinish = false;
             this.hasSelectedShip = false;
+            this.isReconnecting = false;
             this.map.getContainer().style.cursor = 'default';
             
             if (this.startTimer) {
@@ -669,15 +819,36 @@ class RegattaGame {
                 this.finishHint = null;
             }
             
-            if (data.message && data.message.includes('already taken')) {
+            // Если корабль не найден - предлагаем выбрать новый
+            if (data.message && data.message.includes('not found')) {
+                localStorage.removeItem('selectedShip');
+                this.showNotification('🔄 Ship not found, please select a new one', 'warning');
+                setTimeout(() => {
+                    window.location.href = '/selection.html';
+                }, 2000);
+            } else if (data.message && data.message.includes('already taken')) {
                 localStorage.removeItem('selectedShip');
                 this.showNotification('🔄 Ship was taken, please select another', 'warning');
+                setTimeout(() => {
+                    window.location.href = '/selection.html';
+                }, 2000);
             }
             
             this.loadShipsState();
         });
+
+        // ==========================================
+        //  DISCONNECT
+        // ==========================================
+        this.socket.on('disconnect', () => {
+            console.log('🔌 Disconnected from server');
+            this.showNotification('⚠️ Disconnected, trying to reconnect...', 'warning');
+        });
     }
 
+    // ============================================
+    //  SHOW SHIP THUMBNAIL
+    // ============================================
     showShipThumbnail(shipType) {
         const panel = document.getElementById('ship-panel');
         const oldThumb = document.getElementById('ship-thumbnail');
@@ -840,6 +1011,7 @@ class RegattaGame {
     }
 
     setupControls() {
+        // Клавиатура
         document.addEventListener('keydown', (e) => {
             if (!this.isRacing || this.isGuest || !this.socket) return;
             if (document.activeElement?.tagName === 'INPUT') return;
@@ -853,6 +1025,7 @@ class RegattaGame {
             }
         });
 
+        // Кнопки управления
         document.getElementById('btn-left').onclick = () => {
             if (!this.isGuest) this.socket.emit('turn', { delta: -1 });
         };
@@ -871,10 +1044,12 @@ class RegattaGame {
             }
         };
 
+        // Кнопка сброса
         document.getElementById('resetBtn').onclick = () => {
             if (this.isRacing && !this.isGuest && confirm('Reset ship?')) {
                 this.socket.emit('leave_race');
                 localStorage.removeItem('selectedShip');
+                localStorage.removeItem('sessionId');
                 this.isStarting = false;
                 this.startAttempts = 0;
                 this.isRacing = false;
@@ -885,6 +1060,27 @@ class RegattaGame {
                 location.reload();
             }
         };
+
+        // Кнопка восстановления
+        const restoreBtn = document.getElementById('restoreBtn');
+        if (restoreBtn) {
+            restoreBtn.onclick = () => {
+                if (this.isGuest) {
+                    this.showNotification('👁 Spectators cannot restore a ship', 'warning');
+                    return;
+                }
+                
+                const sessionId = localStorage.getItem('sessionId');
+                if (!sessionId) {
+                    this.showNotification('❌ No session found, please login', 'danger');
+                    window.location.href = '/selection.html';
+                    return;
+                }
+                
+                this.showNotification('🔄 Attempting to restore ship...', 'info');
+                this.checkExistingShip();
+            };
+        }
     }
 
     setupChat() {
@@ -942,6 +1138,9 @@ class RegattaGame {
     }
 }
 
+// ============================================
+//  START
+// ============================================
 document.addEventListener('DOMContentLoaded', () => {
     const game = new RegattaGame();
     game.init();
