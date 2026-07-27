@@ -30,6 +30,7 @@ class RegattaGame {
         this.isReconnecting = false;
         this.restoreAttempts = 0;
         this.maxRestoreAttempts = 5;
+        this.isWaitingForJoin = false; // Флаг ожидания ответа от сервера
         
         this.isStarting = false;
         this.startAttempts = 0;
@@ -47,7 +48,6 @@ class RegattaGame {
         this.setupUI();
         this.loadShipsState();
         
-        // Проверяем сессию сразу после инициализации
         const sessionId = localStorage.getItem('sessionId');
         if (sessionId) {
             console.log('🔑 Session found on init:', sessionId.substring(0, 20) + '...');
@@ -81,9 +81,9 @@ class RegattaGame {
             const lat = e.latlng.lat;
             const lng = e.latlng.lng;
             
-            if (this.isSelectingStart && this.selectedShip && !this.isGuest) {
+            if (this.isSelectingStart && this.selectedShip && !this.isGuest && !this.isWaitingForJoin) {
                 this.confirmStart(lat, lng);
-            } else if (this.isSelectingFinish && this.ship && !this.isGuest) {
+            } else if (this.isSelectingFinish && this.ship && !this.isGuest && !this.isWaitingForJoin) {
                 this.confirmFinish(lat, lng);
             }
         });
@@ -201,9 +201,6 @@ class RegattaGame {
         }
     }
 
-    // ============================================
-    //  CHECK EXISTING SHIP - ВОССТАНОВЛЕНИЕ
-    // ============================================
     checkExistingShip() {
         const sessionId = localStorage.getItem('sessionId');
         if (!sessionId) {
@@ -214,7 +211,6 @@ class RegattaGame {
         
         console.log('🔍 Checking existing ship for session...');
         
-        // Показываем уведомление о попытке восстановления
         this.showNotification('🔄 Checking for existing ship...', 'info');
         
         fetch('/api/selected_ship', {
@@ -238,7 +234,6 @@ class RegattaGame {
                 
                 const shipName = data.data.shipName || data.data.shipId;
                 
-                // Сохраняем в localStorage
                 localStorage.setItem('selectedShip', JSON.stringify({
                     shipId: data.data.shipId,
                     shipName: shipName,
@@ -250,7 +245,6 @@ class RegattaGame {
                 this.showNotification(`🔄 Restoring your ship: ${shipName}`, 'info');
                 this.addChatMessage(`🔄 Restoring your ship: ${shipName}`, 'system');
                 
-                // Если сокет подключен - отправляем запрос на восстановление
                 if (this.socket && this.socket.connected) {
                     console.log('📤 Sending reconnect_ship...');
                     this.socket.emit('reconnect_ship', {
@@ -258,18 +252,16 @@ class RegattaGame {
                         shipName: shipName
                     });
                 } else {
-                    console.log('⏳ Socket not connected, waiting for connection...');
-                    // Ждем подключения
+                    console.log('⏳ Socket not connected, waiting...');
                     this.waitForSocketConnection();
                 }
             } else {
-                console.log('ℹ️ No existing ship found, checking selected ship...');
+                console.log('ℹ️ No existing ship found');
                 this.checkSelectedShip();
             }
         })
         .catch(err => {
             console.error('❌ Failed to check existing ship:', err);
-            this.showNotification('⚠️ Could not check existing ship, trying selection...', 'warning');
             this.checkSelectedShip();
         });
     }
@@ -295,9 +287,6 @@ class RegattaGame {
         }, 500);
     }
 
-    // ============================================
-    //  CHECK SELECTED SHIP
-    // ============================================
     checkSelectedShip() {
         const selectedShipData = localStorage.getItem('selectedShip');
         if (selectedShipData) {
@@ -373,7 +362,7 @@ class RegattaGame {
     }
 
     // ============================================
-    //  AUTO START SHIP
+    //  AUTO START SHIP - ИСПРАВЛЕННАЯ
     // ============================================
     autoStartShip() {
         if (!this.selectedShip || this.isGuest) {
@@ -411,8 +400,10 @@ class RegattaGame {
             return;
         }
         
-        // Новый корабль - запрос старта и финиша
+        // НОВЫЙ КОРАБЛЬ - запрос старта
+        console.log('🆕 New ship, asking for start point');
         this.isSelectingStart = true;
+        this.isWaitingForJoin = false;
         this.map.getContainer().style.cursor = 'crosshair';
         this.showNotification('📍 Click on the map to choose START point (ocean only!)', 'info');
         this.addChatMessage('📍 Click on the map to choose START point', 'system');
@@ -427,6 +418,10 @@ class RegattaGame {
             .setContent('📍 <b>Click on the ocean</b> to set start point')
             .openOn(this.map);
         
+        // Таймаут на выбор старта
+        if (this.startTimeout) {
+            clearTimeout(this.startTimeout);
+        }
         this.startTimeout = setTimeout(() => {
             if (this.isSelectingStart) {
                 this.isSelectingStart = false;
@@ -438,16 +433,23 @@ class RegattaGame {
                 }
                 this.showNotification('⏰ Start selection timeout, please try again', 'warning');
                 localStorage.removeItem('selectedShip');
+                // Возвращаемся к выбору корабля
+                window.location.href = '/selection.html';
             }
         }, 60000);
     }
 
+    // ============================================
+    //  CONFIRM START - ИСПРАВЛЕННАЯ
+    // ============================================
     confirmStart(lat, lng) {
+        // Проверяем, не на суше ли
         if (this.isOnLand(lat, lng)) {
             this.showNotification('❌ Cannot start on land! Click on the ocean', 'danger');
             return;
         }
 
+        // Убираем подсказку
         if (this.startHint) {
             this.map.removeLayer(this.startHint);
             this.startHint = null;
@@ -462,6 +464,7 @@ class RegattaGame {
             return;
         }
 
+        // Показываем маркер старта
         if (this.startMarker) {
             this.map.removeLayer(this.startMarker);
         }
@@ -478,8 +481,10 @@ class RegattaGame {
         this.showNotification(`✅ Start point set at ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'success');
         this.addChatMessage(`📍 Start point set`, 'system');
 
+        // Переходим к выбору финиша
         this.isSelectingStart = false;
         this.isSelectingFinish = true;
+        this.isWaitingForJoin = true; // Ждем ответ от сервера
         this.map.getContainer().style.cursor = 'crosshair';
         this.showNotification('📍 Click on the map to choose FINISH point (ocean only!)', 'info');
         this.addChatMessage('📍 Click on the map to choose FINISH point', 'system');
@@ -492,6 +497,14 @@ class RegattaGame {
             .setContent('🏁 <b>Click on the ocean</b> to set finish point')
             .openOn(this.map);
 
+        // ОТПРАВЛЯЕМ ЗАПРОС НА СЕРВЕР
+        console.log('📤 Sending join_with_ship:', {
+            shipId: this.selectedShip,
+            shipName: this.selectedShipName,
+            lat: lat,
+            lng: lng
+        });
+        
         this.socket.emit('join_with_ship', {
             shipId: this.selectedShip,
             shipName: this.selectedShipName,
@@ -500,9 +513,12 @@ class RegattaGame {
         });
 
         this.isStarting = false;
-        this.map.getContainer().style.cursor = 'default';
+        // Не сбрасываем курсор, ждем ответа от сервера
     }
 
+    // ============================================
+    //  CONFIRM FINISH - ИСПРАВЛЕННАЯ
+    // ============================================
     confirmFinish(lat, lng) {
         if (this.isOnLand(lat, lng)) {
             this.showNotification('❌ Finish point cannot be on land! Click on the ocean', 'danger');
@@ -520,10 +536,15 @@ class RegattaGame {
         this.addChatMessage(`🏁 Finish point set`, 'system');
 
         this.isSelectingFinish = false;
+        this.isWaitingForJoin = false;
         this.map.getContainer().style.cursor = 'default';
 
+        // Отправляем финиш на сервер
         this.socket.emit('set_finish', { lat, lng });
+        
+        // Удаляем выбор из localStorage
         localStorage.removeItem('selectedShip');
+        console.log('🗑️ Removed selectedShip from localStorage');
     }
 
     showFinishMarker(lat, lng) {
@@ -560,7 +581,7 @@ class RegattaGame {
     }
 
     // ============================================
-    //  SOCKET.IO - ПОЛНОСТЬЮ ОБНОВЛЕН
+    //  SOCKET.IO
     // ============================================
     initSocket() {
         this.socket = io({ 
@@ -570,17 +591,18 @@ class RegattaGame {
             reconnectionDelay: 1000
         });
 
-        // ==========================================
-        //  CONNECT - ОСНОВНОЙ ОБРАБОТЧИК
-        // ==========================================
         this.socket.on('connect', () => {
             console.log('✅ Connected to server');
             
-            // Проверяем сессию при подключении
+            // Если мы ждем ответа от сервера (после отправки join_with_ship)
+            if (this.isWaitingForJoin) {
+                console.log('⏳ Waiting for server response...');
+                return;
+            }
+            
             const sessionId = localStorage.getItem('sessionId');
             if (sessionId) {
                 console.log('🔑 Session found on connect');
-                // Проверяем существующий корабль
                 this.checkExistingShip();
             } else {
                 console.log('👤 No session, checking selected ship...');
@@ -588,14 +610,10 @@ class RegattaGame {
             }
         });
 
-        // ==========================================
-        //  RECONNECT - ПРИ ПЕРЕПОДКЛЮЧЕНИИ
-        // ==========================================
         this.socket.on('reconnect', () => {
             console.log('🔄 Reconnected to server');
             this.showNotification('🔄 Reconnected to server', 'info');
             
-            // Если был корабль - пытаемся восстановить
             if (this.ship) {
                 console.log('🔄 Restoring ship after reconnect:', this.ship.name);
                 this.socket.emit('reconnect_ship', {
@@ -607,9 +625,6 @@ class RegattaGame {
             }
         });
 
-        // ==========================================
-        //  RECONNECT ERROR
-        // ==========================================
         this.socket.on('reconnect_error', (error) => {
             console.error('❌ Reconnect error:', error);
             this.showNotification('⚠️ Connection issue, retrying...', 'warning');
@@ -621,6 +636,9 @@ class RegattaGame {
         this.socket.on('joined', (data) => {
             console.log('📥 Joined event:', data);
             
+            // Сбрасываем флаг ожидания
+            this.isWaitingForJoin = false;
+            
             this.playerId = data.ship.id;
             this.ship = data.ship;
             this.role = data.role;
@@ -628,7 +646,6 @@ class RegattaGame {
             this.shipType = this.ship.shipType;
             this.playerName = this.ship.name;
             
-            // Reset start flags
             this.isStarting = false;
             this.startAttempts = 0;
             this.isSelectingStart = false;
@@ -671,7 +688,7 @@ class RegattaGame {
                 
                 const shipName = this.ship.name || this.selectedShipName || 'Ship';
                 
-                // Проверяем, был ли это восстановленный корабль
+                // Если у корабля уже есть финиш - значит восстановление
                 if (this.ship.finishPoint) {
                     this.showNotification(`🔄 ${shipName} restored!`, 'success');
                     this.addChatMessage(`🔄 ${shipName} restored!`, 'system');
@@ -682,21 +699,8 @@ class RegattaGame {
                 } else {
                     this.showNotification(`⛵ ${shipName} is at sea!`, 'success');
                     this.addChatMessage(`⛵ ${shipName} is at sea!`, 'system');
-                }
-                
-                this.isRacing = true;
-                this.hasSelectedShip = true;
-                
-                // Удаляем из localStorage после успешного запуска
-                localStorage.removeItem('selectedShip');
-                console.log('🗑️ Removed selectedShip from localStorage');
-                
-                this.showShipThumbnail(this.ship.shipType);
-                this.updateShipInfo();
-                this.updatePlayers(data.players);
-                
-                // Если нет финиша и это не восстановление - запрашиваем
-                if (!this.ship.finishPoint && !this.isReconnecting) {
+                    
+                    // Если нет финиша - запрашиваем
                     this.isSelectingFinish = true;
                     this.map.getContainer().style.cursor = 'crosshair';
                     this.showNotification('📍 Click on the map to choose FINISH point (ocean only!)', 'info');
@@ -709,9 +713,18 @@ class RegattaGame {
                         .setLatLng([this.map.getCenter().lat, this.map.getCenter().lng])
                         .setContent('🏁 <b>Click on the ocean</b> to set finish point')
                         .openOn(this.map);
-                } else if (this.ship.finishPoint) {
-                    this.showFinishMarker(this.ship.finishPoint.lat, this.ship.finishPoint.lng);
                 }
+                
+                this.isRacing = true;
+                this.hasSelectedShip = true;
+                
+                // Удаляем из localStorage после успешного запуска
+                localStorage.removeItem('selectedShip');
+                console.log('🗑️ Removed selectedShip from localStorage');
+                
+                this.showShipThumbnail(this.ship.shipType);
+                this.updateShipInfo();
+                this.updatePlayers(data.players);
             }
         });
 
@@ -792,12 +805,13 @@ class RegattaGame {
         });
 
         // ==========================================
-        //  JOIN ERROR - ОБРАБОТКА ОШИБОК
+        //  JOIN ERROR
         // ==========================================
         this.socket.on('join_error', (data) => {
             console.log('❌ Join error:', data);
             this.showNotification(`❌ ${data.message}`, 'danger');
             
+            this.isWaitingForJoin = false;
             this.isStarting = false;
             this.startAttempts = 0;
             this.isSelectingStart = false;
@@ -819,27 +833,14 @@ class RegattaGame {
                 this.finishHint = null;
             }
             
-            // Если корабль не найден - предлагаем выбрать новый
-            if (data.message && data.message.includes('not found')) {
-                localStorage.removeItem('selectedShip');
-                this.showNotification('🔄 Ship not found, please select a new one', 'warning');
-                setTimeout(() => {
-                    window.location.href = '/selection.html';
-                }, 2000);
-            } else if (data.message && data.message.includes('already taken')) {
-                localStorage.removeItem('selectedShip');
-                this.showNotification('🔄 Ship was taken, please select another', 'warning');
-                setTimeout(() => {
-                    window.location.href = '/selection.html';
-                }, 2000);
-            }
+            localStorage.removeItem('selectedShip');
+            this.showNotification('🔄 Please select a ship again', 'warning');
             
-            this.loadShipsState();
+            setTimeout(() => {
+                window.location.href = '/selection.html';
+            }, 1500);
         });
 
-        // ==========================================
-        //  DISCONNECT
-        // ==========================================
         this.socket.on('disconnect', () => {
             console.log('🔌 Disconnected from server');
             this.showNotification('⚠️ Disconnected, trying to reconnect...', 'warning');
@@ -1011,7 +1012,6 @@ class RegattaGame {
     }
 
     setupControls() {
-        // Клавиатура
         document.addEventListener('keydown', (e) => {
             if (!this.isRacing || this.isGuest || !this.socket) return;
             if (document.activeElement?.tagName === 'INPUT') return;
@@ -1025,7 +1025,6 @@ class RegattaGame {
             }
         });
 
-        // Кнопки управления
         document.getElementById('btn-left').onclick = () => {
             if (!this.isGuest) this.socket.emit('turn', { delta: -1 });
         };
@@ -1044,7 +1043,6 @@ class RegattaGame {
             }
         };
 
-        // Кнопка сброса
         document.getElementById('resetBtn').onclick = () => {
             if (this.isRacing && !this.isGuest && confirm('Reset ship?')) {
                 this.socket.emit('leave_race');
@@ -1061,7 +1059,6 @@ class RegattaGame {
             }
         };
 
-        // Кнопка восстановления
         const restoreBtn = document.getElementById('restoreBtn');
         if (restoreBtn) {
             restoreBtn.onclick = () => {
@@ -1138,9 +1135,6 @@ class RegattaGame {
     }
 }
 
-// ============================================
-//  START
-// ============================================
 document.addEventListener('DOMContentLoaded', () => {
     const game = new RegattaGame();
     game.init();
