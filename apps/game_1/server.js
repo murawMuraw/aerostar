@@ -47,9 +47,9 @@ const CACHE_TTL = 600000;
 // ============================================
 //  STORAGE
 // ============================================
-const players = new Map();
+const players = new Map(); // userId -> Ship
+const socketToUser = new Map(); // socketId -> userId
 const pendingSelections = new Map();
-const finishPoints = new Map();
 
 // ============================================
 //  SHIP STATES (7 ships)
@@ -58,13 +58,13 @@ let shipStates = {};
 
 function initShipStates() {
     shipStates = {
-        'klip_10': { taken: false, playerId: null },
-        'klip_20': { taken: false, playerId: null },
-        'klip_30': { taken: false, playerId: null },
-        'columb': { taken: false, playerId: null },
-        'pirat': { taken: false, playerId: null },
-        'ap': { taken: false, playerId: null },
-        '19c_m': { taken: false, playerId: null }
+        'klip_10': { taken: false, userId: null },
+        'klip_20': { taken: false, userId: null },
+        'klip_30': { taken: false, userId: null },
+        'columb': { taken: false, userId: null },
+        'pirat': { taken: false, userId: null },
+        'ap': { taken: false, userId: null },
+        '19c_m': { taken: false, userId: null }
     };
 }
 
@@ -192,25 +192,25 @@ app.post('/api/select_ship', (req, res) => {
         });
     }
     
-    if (shipStates[shipId].taken) {
-        if (shipStates[shipId].playerId !== userId) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'This ship is already taken'
-            });
-        }
+    // Проверяем, свободен ли корабль (по userId, а не по socket.id!)
+    if (shipStates[shipId].taken && shipStates[shipId].userId !== userId) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'This ship is already taken'
+        });
     }
     
-    // Free all ships of this user
+    // Освобождаем все корабли этого пользователя
     for (const [id, state] of Object.entries(shipStates)) {
-        if (state.playerId === userId) {
+        if (state.userId === userId) {
             state.taken = false;
-            state.playerId = null;
+            state.userId = null;
         }
     }
     
+    // Занимаем выбранный корабль
     shipStates[shipId].taken = true;
-    shipStates[shipId].playerId = userId;
+    shipStates[shipId].userId = userId;
     
     const shipName = req.body.shipName || shipId;
     pendingSelections.set(sessionId, {
@@ -245,9 +245,9 @@ app.get('/api/selected_ship', (req, res) => {
     const userId = sessions.get(sessionId);
     console.log(`👤 User ID: ${userId}`);
     
-    // Ищем корабль пользователя в shipStates
+    // Ищем корабль пользователя
     for (const [shipId, state] of Object.entries(shipStates)) {
-        if (state.playerId === userId && state.taken) {
+        if (state.userId === userId && state.taken) {
             console.log(`✅ Found ship: ${shipId} for user ${userId}`);
             return res.json({
                 success: true,
@@ -260,17 +260,16 @@ app.get('/api/selected_ship', (req, res) => {
     }
     
     // Проверяем в players
-    for (const [id, ship] of players) {
-        if (ship.id === userId || ship.id === sessionId) {
-            console.log(`✅ Found ship in players: ${ship.shipType} for user ${userId}`);
-            return res.json({
-                success: true,
-                data: { 
-                    shipId: ship.shipType,
-                    shipName: ship.name
-                }
-            });
-        }
+    if (players.has(userId)) {
+        const ship = players.get(userId);
+        console.log(`✅ Found ship in players: ${ship.shipType} for user ${userId}`);
+        return res.json({
+            success: true,
+            data: { 
+                shipId: ship.shipType,
+                shipName: ship.name
+            }
+        });
     }
     
     console.log(`❌ No ship found for user ${userId}`);
@@ -286,10 +285,14 @@ app.post('/api/clear_ship_selection', (req, res) => {
     const userId = sessions.get(sessionId);
     
     for (const [id, state] of Object.entries(shipStates)) {
-        if (state.playerId === userId) {
+        if (state.userId === userId) {
             state.taken = false;
-            state.playerId = null;
+            state.userId = null;
         }
+    }
+    
+    if (players.has(userId)) {
+        players.delete(userId);
     }
     
     console.log(`🧹 Cleared ship selection for user ${userId}`);
@@ -365,9 +368,9 @@ async function fetchCurrentData(lat, lng) {
 // ============================================
 app.get('/api/players', (req, res) => {
     const playerList = [];
-    for (const [id, ship] of players) {
+    for (const [userId, ship] of players) {
         playerList.push({
-            id: id,
+            userId: userId,
             name: ship.name,
             isOnline: ship.isOnline,
             isEliminated: ship.isEliminated || false,
@@ -388,21 +391,6 @@ app.get('/api/players', (req, res) => {
 });
 
 app.get('/api/ships/state', (req, res) => {
-    for (const [id, state] of Object.entries(shipStates)) {
-        if (state.playerId) {
-            let isActive = false;
-            for (const [pid, ship] of players) {
-                if (pid === state.playerId && ship.isOnline) {
-                    isActive = true;
-                    break;
-                }
-            }
-            if (!isActive) {
-                state.taken = false;
-                state.playerId = null;
-            }
-        }
-    }
     res.json(shipStates);
 });
 
@@ -434,8 +422,8 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 //  SHIP CLASS
 // ============================================
 class Ship {
-    constructor(id, name, lat, lng, shipType) {
-        this.id = id;
+    constructor(userId, name, lat, lng, shipType) {
+        this.userId = userId;
         this.name = name || shipType || 'Ship';
         this.shipType = shipType;
         this.lat = lat;
@@ -455,6 +443,7 @@ class Ship {
         this.color = `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
         this.finishPoint = null;
         this.startPoint = { lat, lng };
+        this.socketId = null;
     }
 
     update(wind, current, deltaTime) {
@@ -515,7 +504,7 @@ class Ship {
                 this.isGrounded = true;
                 this.groundTime = Date.now();
                 this.speed = 0;
-                io.emit('ship_grounded', { playerId: this.id, name: this.name, lat: this.lat, lng: this.lng });
+                io.emit('ship_grounded', { userId: this.userId, name: this.name, lat: this.lat, lng: this.lng });
             }
             return;
         }
@@ -549,7 +538,7 @@ class Ship {
         if (this.isFinished) return;
         this.isFinished = true;
         this.speed = 0;
-        io.emit('ship_finished', { playerId: this.id, name: this.name });
+        io.emit('ship_finished', { userId: this.userId, name: this.name });
         console.log(`🏁 ${this.name} finished the race!`);
     }
 
@@ -558,11 +547,11 @@ class Ship {
         this.isEliminated = true;
         this.isOnline = false;
         this.speed = 0;
-        io.emit('ship_eliminated', { playerId: this.id, name: this.name, reason: reason });
+        io.emit('ship_eliminated', { userId: this.userId, name: this.name, reason: reason });
         for (const [id, state] of Object.entries(shipStates)) {
-            if (state.playerId === this.id) {
+            if (state.userId === this.userId) {
                 state.taken = false;
-                state.playerId = null;
+                state.userId = null;
                 break;
             }
         }
@@ -598,7 +587,7 @@ class Ship {
         if (this.isGrounded) return { success: false, message: 'Grounded' };
         this.isAnchored = true;
         this.speed = 0;
-        io.emit('ship_anchored', { playerId: this.id, name: this.name });
+        io.emit('ship_anchored', { userId: this.userId, name: this.name });
         return { success: true };
     }
 
@@ -618,9 +607,15 @@ class Ship {
         return { success: true };
     }
 
+    setSocketId(socketId) {
+        this.socketId = socketId;
+        this.isOnline = true;
+        this.lastSeen = Date.now();
+    }
+
     getState() {
         return {
-            id: this.id,
+            userId: this.userId,
             name: this.name,
             shipType: this.shipType,
             lat: this.lat,
@@ -663,8 +658,8 @@ function isOnLand(lat, lng) {
 
 function getAllPlayersState() {
     const result = {};
-    for (const [id, ship] of players) {
-        result[id] = ship.getState();
+    for (const [userId, ship] of players) {
+        result[userId] = ship.getState();
     }
     return result;
 }
@@ -673,16 +668,18 @@ function broadcastState() {
     io.emit('state', { players: getAllPlayersState(), timestamp: Date.now() });
 }
 
+function getUserIdBySocket(socketId) {
+    return socketToUser.get(socketId) || null;
+}
+
 // ============================================
 //  CLEANUP INACTIVE PLAYERS
 // ============================================
 setInterval(() => {
     const now = Date.now();
-    const toRemove = [];
-    for (const [id, ship] of players) {
-        if (ship.isEliminated || ship.isFinished) { 
-            toRemove.push(id); 
-            continue; 
+    for (const [userId, ship] of players) {
+        if (ship.isEliminated || ship.isFinished) {
+            continue;
         }
         if (!ship.isOnline && (now - ship.lastSeen) > INACTIVITY_TIMEOUT) {
             console.log(`⏳ ${ship.name} is sailing without captain`);
@@ -698,17 +695,17 @@ setInterval(async () => {
     const windData = {};
     const currentData = {};
     
-    for (const [id, ship] of players) {
+    for (const [userId, ship] of players) {
         if (ship.isEliminated || ship.isFinished) continue;
         try {
             const wind = await fetchWindData(ship.lat, ship.lng);
             const current = await fetchCurrentData(ship.lat, ship.lng);
             ship.update(wind, current, deltaTime);
             
-            windData[id] = wind;
-            currentData[id] = current;
+            windData[userId] = wind;
+            currentData[userId] = current;
         } catch (error) {
-            console.error(`Error updating ${id}:`, error);
+            console.error(`Error updating ${userId}:`, error);
         }
     }
     
@@ -728,114 +725,41 @@ io.on('connection', (socket) => {
     console.log('🔗 New connection:', socket.id);
 
     // ==========================================
-    //  RECONNECT SHIP
+    //  AUTH - привязываем сокет к пользователю
     // ==========================================
-    socket.on('reconnect_ship', (data) => {
-        const { shipId, shipName } = data;
-        console.log(`🔄 Reconnect request: ${shipId}, ${shipName}, socket: ${socket.id}`);
-        
-        let existingShip = null;
-        let existingPlayerId = null;
-        
-        for (const [id, ship] of players) {
-            if (ship.shipType === shipId && ship.name === shipName) {
-                existingShip = ship;
-                existingPlayerId = id;
-                break;
-            }
-        }
-        
-        if (!existingShip && players.has(socket.id)) {
-            existingShip = players.get(socket.id);
-            existingPlayerId = socket.id;
-            console.log(`🔍 Found ship by socket ID: ${existingShip.name}`);
-        }
-        
-        if (!existingShip) {
-            console.log(`❌ Ship not found: ${shipId}, ${shipName}`);
-            socket.emit('join_error', { message: 'Ship not found, please select a new one' });
+    socket.on('auth', (data) => {
+        const { sessionId } = data;
+        if (!sessionId || !sessions.has(sessionId)) {
+            socket.emit('auth_error', { message: 'Invalid session' });
             return;
         }
         
-        if (existingPlayerId !== socket.id && players.has(socket.id)) {
-            console.log(`⚠️ Ship already connected to another socket`);
-            socket.emit('join_error', { message: 'Ship already connected' });
-            return;
+        const userId = sessions.get(sessionId);
+        socketToUser.set(socket.id, userId);
+        console.log(`🔑 Socket ${socket.id} bound to user ${userId}`);
+        
+        // Проверяем, есть ли у пользователя корабль
+        if (players.has(userId)) {
+            const ship = players.get(userId);
+            ship.setSocketId(socket.id);
+            console.log(`🔄 Ship ${ship.name} reconnected for user ${userId}`);
+            
+            socket.emit('joined', {
+                role: 'player',
+                ship: ship.getState(),
+                players: getAllPlayersState()
+            });
+            
+            io.emit('player_joined', { 
+                userId: userId, 
+                name: ship.name, 
+                shipId: ship.shipType 
+            });
+            
+            broadcastState();
+        } else {
+            socket.emit('auth_success', { userId });
         }
-        
-        if (players.has(socket.id) && players.get(socket.id) !== existingShip) {
-            const oldShip = players.get(socket.id);
-            for (const [id, state] of Object.entries(shipStates)) {
-                if (state.playerId === socket.id) {
-                    state.taken = false;
-                    state.playerId = null;
-                }
-            }
-            players.delete(socket.id);
-        }
-        
-        existingShip.id = socket.id;
-        existingShip.isOnline = true;
-        existingShip.lastSeen = Date.now();
-        
-        if (existingShip.isAnchored) {
-            const timeAnchored = Date.now() - (existingShip.lastSeen || Date.now());
-            if (timeAnchored > 300000) {
-                existingShip.isAnchored = false;
-                console.log(`⚓ ${existingShip.name} auto-weighed anchor`);
-            }
-        }
-        
-        if (existingShip.isGrounded) {
-            let freed = false;
-            const offsets = [
-                [0.001, 0], [-0.001, 0], [0, 0.001], [0, -0.001],
-                [0.002, 0], [-0.002, 0], [0, 0.002], [0, -0.002]
-            ];
-            for (const [dlat, dlng] of offsets) {
-                const newLat = existingShip.lat + dlat;
-                const newLng = existingShip.lng + dlng;
-                if (!isOnLand(newLat, newLng)) {
-                    existingShip.isGrounded = false;
-                    existingShip.lat = newLat;
-                    existingShip.lng = newLng;
-                    freed = true;
-                    console.log(`🔄 ${existingShip.name} freed from ground at ${newLat}, ${newLng}`);
-                    break;
-                }
-            }
-            if (!freed) {
-                existingShip.lat += 0.001;
-                existingShip.lng += 0.001;
-                if (!isOnLand(existingShip.lat, existingShip.lng)) {
-                    existingShip.isGrounded = false;
-                    console.log(`🔄 ${existingShip.name} force-freed from ground`);
-                }
-            }
-        }
-        
-        shipStates[shipId].taken = true;
-        shipStates[shipId].playerId = socket.id;
-        
-        players.set(socket.id, existingShip);
-        
-        const state = existingShip.getState();
-        console.log(`📤 Sending joined event for ${existingShip.name}`);
-        
-        socket.emit('joined', {
-            role: 'player',
-            ship: state,
-            players: getAllPlayersState()
-        });
-        
-        io.emit('player_joined', { 
-            playerId: socket.id, 
-            name: existingShip.name, 
-            shipId: shipId 
-        });
-        
-        broadcastState();
-        console.log(`🔄 ${existingShip.name} reconnected successfully`);
     });
 
     // ==========================================
@@ -843,10 +767,12 @@ io.on('connection', (socket) => {
     // ==========================================
     socket.on('join_as_guest', (data) => {
         const { lat, lng } = data;
+        const userId = `guest_${socket.id}`;
         
-        const guest = new Ship(socket.id, 'Guest', lat, lng, 'guest');
-        guest.isOnline = true;
-        players.set(socket.id, guest);
+        const guest = new Ship(userId, 'Guest', lat, lng, 'guest');
+        guest.setSocketId(socket.id);
+        socketToUser.set(socket.id, userId);
+        players.set(userId, guest);
         
         socket.emit('joined', {
             role: 'guest',
@@ -863,14 +789,19 @@ io.on('connection', (socket) => {
     // ==========================================
     socket.on('join_with_ship', (data) => {
         const { shipId, shipName, lat, lng } = data;
+        const userId = getUserIdBySocket(socket.id);
+        
+        console.log(`📥 Join with ship: ${shipId}, ${shipName} for user ${userId}`);
+        
+        if (!userId) {
+            socket.emit('join_error', { message: 'User not authenticated' });
+            return;
+        }
 
-        console.log(`📥 Join with ship: ${shipId}, ${shipName} at ${lat}, ${lng}`);
-
-        if (shipStates[shipId] && shipStates[shipId].taken) {
-            if (shipStates[shipId].playerId !== socket.id) {
-                socket.emit('join_error', { message: 'This ship is already taken' });
-                return;
-            }
+        // Проверяем, свободен ли корабль (по userId!)
+        if (shipStates[shipId] && shipStates[shipId].taken && shipStates[shipId].userId !== userId) {
+            socket.emit('join_error', { message: 'This ship is already taken' });
+            return;
         }
 
         if (isOnLand(lat, lng)) {
@@ -878,22 +809,38 @@ io.on('connection', (socket) => {
             return;
         }
 
-        if (players.has(socket.id)) {
-            const oldShip = players.get(socket.id);
-            for (const [id, state] of Object.entries(shipStates)) {
-                if (state.playerId === socket.id) {
-                    state.taken = false;
-                    state.playerId = null;
-                }
-            }
-            players.delete(socket.id);
+        // Если у пользователя уже есть корабль - обновляем его
+        if (players.has(userId)) {
+            const existingShip = players.get(userId);
+            existingShip.lat = lat;
+            existingShip.lng = lng;
+            existingShip.setSocketId(socket.id);
+            existingShip.isOnline = true;
+            
+            socket.emit('joined', {
+                role: 'player',
+                ship: existingShip.getState(),
+                players: getAllPlayersState()
+            });
+            
+            io.emit('player_joined', { 
+                userId: userId, 
+                name: existingShip.name, 
+                shipId: shipId 
+            });
+            
+            broadcastState();
+            console.log(`⛵ ${existingShip.name} updated position for user ${userId}`);
+            return;
         }
 
-        const player = new Ship(socket.id, shipName || shipId, lat, lng, shipId);
-        players.set(socket.id, player);
+        // Создаем новый корабль
+        const player = new Ship(userId, shipName || shipId, lat, lng, shipId);
+        player.setSocketId(socket.id);
+        players.set(userId, player);
 
         shipStates[shipId].taken = true;
-        shipStates[shipId].playerId = socket.id;
+        shipStates[shipId].userId = userId;
 
         socket.emit('joined', {
             role: 'player',
@@ -902,19 +849,96 @@ io.on('connection', (socket) => {
         });
 
         io.emit('player_joined', { 
-            playerId: socket.id, 
+            userId: userId, 
             name: player.name, 
             shipId: shipId 
         });
+        
         broadcastState();
         console.log(`⛵ ${player.name} joined at ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+    });
+
+    // ==========================================
+    //  RECONNECT SHIP - ПО userId
+    // ==========================================
+    socket.on('reconnect_ship', (data) => {
+        const { shipId, shipName } = data;
+        const userId = getUserIdBySocket(socket.id);
+        
+        console.log(`🔄 Reconnect request: ${shipId}, ${shipName} for user ${userId}`);
+        
+        if (!userId) {
+            socket.emit('join_error', { message: 'User not authenticated' });
+            return;
+        }
+
+        // Ищем корабль по userId
+        let existingShip = null;
+        if (players.has(userId)) {
+            existingShip = players.get(userId);
+        }
+        
+        if (!existingShip) {
+            // Проверяем в shipStates
+            for (const [id, state] of Object.entries(shipStates)) {
+                if (state.userId === userId && state.taken) {
+                    // Создаем корабль заново с последними известными координатами
+                    // В реальном приложении нужно хранить последние координаты в БД
+                    const newShip = new Ship(userId, shipName || shipId, 20, 0, shipId);
+                    newShip.setSocketId(socket.id);
+                    players.set(userId, newShip);
+                    existingShip = newShip;
+                    break;
+                }
+            }
+        }
+        
+        if (!existingShip) {
+            console.log(`❌ Ship not found for user ${userId}`);
+            socket.emit('join_error', { message: 'Ship not found, please select a new one' });
+            return;
+        }
+        
+        // Обновляем сокет
+        existingShip.setSocketId(socket.id);
+        existingShip.isOnline = true;
+        
+        // Если был на якоре - снимаем
+        if (existingShip.isAnchored) {
+            existingShip.isAnchored = false;
+            console.log(`⚓ ${existingShip.name} auto-weighed anchor`);
+        }
+        
+        // Обновляем состояние в shipStates
+        if (shipId && shipStates[shipId]) {
+            shipStates[shipId].taken = true;
+            shipStates[shipId].userId = userId;
+        }
+        
+        socket.emit('joined', {
+            role: 'player',
+            ship: existingShip.getState(),
+            players: getAllPlayersState()
+        });
+        
+        io.emit('player_joined', { 
+            userId: userId, 
+            name: existingShip.name, 
+            shipId: existingShip.shipType 
+        });
+        
+        broadcastState();
+        console.log(`🔄 ${existingShip.name} reconnected successfully for user ${userId}`);
     });
 
     // ==========================================
     //  SET FINISH POINT
     // ==========================================
     socket.on('set_finish', (data) => {
-        const ship = players.get(socket.id);
+        const userId = getUserIdBySocket(socket.id);
+        if (!userId) return;
+        
+        const ship = players.get(userId);
         if (ship && ship.isOnline && !ship.isEliminated && ship.shipType !== 'guest') {
             const { lat, lng } = data;
             const result = ship.setFinishPoint(lat, lng);
@@ -930,7 +954,10 @@ io.on('connection', (socket) => {
     //  CONTROLS - 1 click = 1 degree
     // ==========================================
     socket.on('turn', (data) => {
-        const ship = players.get(socket.id);
+        const userId = getUserIdBySocket(socket.id);
+        if (!userId) return;
+        
+        const ship = players.get(userId);
         if (ship && ship.isOnline && !ship.isEliminated && ship.shipType !== 'guest') {
             const delta = data.delta || 0;
             const result = ship.turn(delta);
@@ -940,7 +967,10 @@ io.on('connection', (socket) => {
     });
 
     socket.on('sail', (data) => {
-        const ship = players.get(socket.id);
+        const userId = getUserIdBySocket(socket.id);
+        if (!userId) return;
+        
+        const ship = players.get(userId);
         if (ship && ship.isOnline && !ship.isEliminated && ship.shipType !== 'guest') {
             let result;
             if (data.action === 'raise') result = ship.raiseSail();
@@ -952,7 +982,10 @@ io.on('connection', (socket) => {
     });
 
     socket.on('anchor', (data) => {
-        const ship = players.get(socket.id);
+        const userId = getUserIdBySocket(socket.id);
+        if (!userId) return;
+        
+        const ship = players.get(userId);
         if (ship && ship.isOnline && !ship.isEliminated && ship.shipType !== 'guest') {
             const result = data.action === 'drop' ? ship.dropAnchor() : ship.weighAnchor();
             socket.emit('action_result', { action: 'anchor', success: result.success, ...result });
@@ -964,23 +997,28 @@ io.on('connection', (socket) => {
     //  CHAT
     // ==========================================
     socket.on('chat', (data) => {
-        const ship = players.get(socket.id);
+        const userId = getUserIdBySocket(socket.id);
+        const ship = userId ? players.get(userId) : null;
         const name = ship ? ship.name : 'Unknown';
-        io.emit('chat', { playerId: socket.id, name: name, message: data.message });
+        io.emit('chat', { userId: userId, name: name, message: data.message });
     });
 
     // ==========================================
-    //  DISCONNECT - ship continues sailing
+    //  DISCONNECT
     // ==========================================
     socket.on('disconnect', () => {
-        const ship = players.get(socket.id);
-        if (ship) {
+        const userId = getUserIdBySocket(socket.id);
+        if (userId && players.has(userId)) {
+            const ship = players.get(userId);
             ship.isOnline = false;
             ship.lastSeen = Date.now();
             console.log(`💤 ${ship.name} went offline, ship continues sailing`);
-            io.emit('player_left', { playerId: socket.id, name: ship.name, isOffline: true });
+            io.emit('player_left', { userId: userId, name: ship.name, isOffline: true });
             broadcastState();
         }
+        
+        // Удаляем привязку сокета
+        socketToUser.delete(socket.id);
     });
 });
 
