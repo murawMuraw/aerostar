@@ -31,7 +31,7 @@ class Ship {
 
     setOwner(player) {
 
-        this.owner = player;
+        this.ownerId = null;
 
     }
 
