@@ -10,7 +10,7 @@ class Player {
 
         this.connected = false;
 
-        this.ship = null;
+        this.shipId = null;
 
         this.loginTime = Date.now();
 
@@ -34,15 +34,15 @@ class Player {
 
     }
 
-    assignShip(ship) {
+    assignShip(shipId) {
 
-        this.ship = ship;
+        this.shipId = shipId;
 
     }
 
     removeShip() {
 
-        this.ship = null;
+        this.shipId = null;
 
     }
 
