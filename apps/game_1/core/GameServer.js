@@ -7,6 +7,7 @@ const ShipManager    = require("../managers/ShipManager");
 const WindManager    = require("../managers/WindManager");
 const OceanManager   = require("../managers/OceanManager");
 const RaceManager    = require("../managers/RaceManager");
+const World = require("./World");
 
 const GameLoop       = require("./GameLoop");
 
@@ -23,7 +24,7 @@ class GameServer {
         this.wind  = new WindManager();
         this.ocean = new OceanManager();
         this.race  = new RaceManager();
-
+        this.world = new World(this);
         this.loop = new GameLoop(this);
 
     }
@@ -37,13 +38,16 @@ class GameServer {
         console.log("Game server started");
 
         this.loop.start();
+        this.world.start();
+       this.loop.start();
 
     }
 
     stop() {
 
         this.loop.stop();
-
+       this.loop.stop();
+       this.world.stop();
     }
 
     //----------------------------------------------------------
@@ -264,7 +268,7 @@ class GameServer {
 
     tick(dt) {
 
-        this.loop.update(dt);
+        this.world.update(dt);
 
     }
 
