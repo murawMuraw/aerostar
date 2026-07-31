@@ -1,21 +1,23 @@
-class RaceManager{
+class RaceManager {
 
-    constructor(){
+    constructor() {
 
-        this.startLine=[];
-
-        this.finishLine=[];
-
-        this.started=false;
+        this.started = false;
 
     }
 
-    startRace(){
+    update(dt) {
 
     }
 
-    finishRace(){
+    getState() {
+
+        return {
+            started: this.started
+        };
 
     }
 
 }
+
+module.exports = RaceManager;
