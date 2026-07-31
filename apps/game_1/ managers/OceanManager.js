@@ -1,7 +1,13 @@
-class OceanManager{
+class OceanManager {
 
-    getCurrent(){
+    constructor() {
+
+    }
+
+    update(dt) {
 
     }
 
 }
+
+module.exports = OceanManager;
