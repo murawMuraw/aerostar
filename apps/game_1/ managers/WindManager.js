@@ -1,11 +1,25 @@
-class WindManager{
+// managers/WindManager.js
 
-    async getWind(){
+class WindManager {
+
+    constructor() {
+
+        this.wind = null;
 
     }
 
-    async update(){
+    async getWind(lat, lng) {
+
+        return this.wind;
+
+    }
+
+    async update(dt) {
+
+        // Пока ничего не делаем
 
     }
 
 }
+
+module.exports = WindManager;
