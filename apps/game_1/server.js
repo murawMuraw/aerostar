@@ -22,7 +22,7 @@ const io = new Server(server, {
 // Конфигурация
 //----------------------------------------------------------
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3002;
 
 //----------------------------------------------------------
 // Статические файлы
@@ -93,7 +93,7 @@ app.get("/state", (req, res) => {
 
 game.start();
 
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
 
     console.log("--------------------------------------");
     console.log("Regatta server started");
