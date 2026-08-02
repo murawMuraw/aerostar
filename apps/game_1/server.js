@@ -35,11 +35,13 @@ app.use(express.static(
 //----------------------------------------------------------
 // Создание игрового сервера
 //----------------------------------------------------------
-
+app.use(express.json());
 const game = new GameServer(io);
 const shipsRoutes = require("./routes/ships");
+const authRoutes = require("./routes/auth");
 
 shipsRoutes(app, game);
+authRoutes(app, game);
 //----------------------------------------------------------
 // Создание кораблей
 //----------------------------------------------------------
