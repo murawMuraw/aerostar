@@ -1,149 +1,24 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Aerostar - LIVE Public Balloon</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
     <style>
-        /* Базовые стили */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            overflow: hidden;
-            height: 100vh;
-            background: #1a1a2e;
-        }
-        #map {
-            height: 100vh;
-            width: 100%;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* --- ВЕРХНЯЯ ПАНЕЛЬ АДМИНИСТРАТОРА (по центру) --- */
-        #adminBanner {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 2000;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(12px);
-            padding: 12px 24px;
-            border-radius: 60px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            max-width: 92%;
-            transition: all 0.3s ease;
-        }
-        #adminBanner input {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 40px;
-            padding: 10px 18px;
-            color: white;
-            font-size: 15px;
-            min-width: 220px;
-            width: 100%;
-            outline: none;
-            transition: 0.3s;
-            font-weight: 400;
-            letter-spacing: 0.3px;
-        }
-        #adminBanner input::placeholder {
-            color: rgba(255, 255, 255, 0.4);
-            font-weight: 300;
-        }
-        #adminBanner input:focus {
-            border-color: #00ccff;
-            background: rgba(255, 255, 255, 0.12);
-            box-shadow: 0 0 0 3px rgba(0, 204, 255, 0.2);
-        }
-        #adminBanner button {
-            background: linear-gradient(135deg, #00c6ff, #0072ff);
-            border: none;
-            border-radius: 40px;
-            padding: 10px 22px;
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: 0.25s;
-            white-space: nowrap;
-            box-shadow: 0 4px 12px rgba(0, 114, 255, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            letter-spacing: 0.5px;
-        }
-        #adminBanner button:hover {
-            transform: scale(1.03);
-            background: linear-gradient(135deg, #00d4ff, #0066ff);
-            box-shadow: 0 6px 20px rgba(0, 114, 255, 0.5);
-        }
-        #adminBanner button:active {
-            transform: scale(0.96);
-        }
-        #adminBanner .admin-lock {
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-            padding-right: 14px;
-        }
-        #adminBanner .admin-lock svg {
-            width: 16px;
-            height: 16px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 2;
-        }
-        /* Сообщение, которое видно всем (отображается под баннером) */
-        #globalMessage {
-            position: absolute;
-            top: 88px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1999;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
-            color: #fff;
-            padding: 10px 28px;
-            border-radius: 60px;
-            font-size: 17px;
-            font-weight: 500;
-            border: 1px solid rgba(255, 215, 0, 0.25);
-            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.5);
-            text-align: center;
-            max-width: 90%;
-            pointer-events: none;
-            transition: opacity 0.5s ease;
-            letter-spacing: 0.3px;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-        }
-        #globalMessage.hidden {
-            opacity: 0;
-            transform: translateX(-50%) translateY(-8px);
-        }
-        #globalMessage span {
-            display: inline-block;
-        }
-
-        /* Остальные элементы (кнопка назад, LIVE, панель информации, статус) */
+        /* Все стили как раньше */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; background: #1a1a2e; }
+        #map { height: 100vh; width: 100%; position: relative; z-index: 1; }
+        
         .back-button {
             position: absolute;
             top: 20px;
             left: 20px;
             z-index: 1000;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0,0,0,0.7);
             backdrop-filter: blur(10px);
             color: white;
             padding: 12px 20px;
@@ -154,15 +29,12 @@
             align-items: center;
             gap: 8px;
             font-size: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255,255,255,0.2);
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
-        .back-button:hover {
-            background: rgba(0, 0, 0, 0.9);
-            transform: translateX(-3px);
-        }
-
+        .back-button:hover { background: rgba(0,0,0,0.9); transform: translateX(-3px); }
+        
         .live-badge {
             position: absolute;
             top: 20px;
@@ -175,79 +47,40 @@
             font-size: 14px;
             font-weight: bold;
             animation: pulse 1.5s infinite;
-            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 20px rgba(255,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.2);
             letter-spacing: 1px;
             text-transform: uppercase;
         }
-        @keyframes pulse {
-            0%,
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-            50% {
-                opacity: 0.6;
-                transform: scale(0.95);
-            }
-        }
-
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.95); } }
+        
         .info-panel {
             position: absolute;
             bottom: 80px;
             left: 20px;
             right: 20px;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0,0,0,0.75);
             backdrop-filter: blur(10px);
             color: white;
             padding: 15px 20px;
             border-radius: 15px;
             z-index: 1000;
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
-        .info-panel h3 {
-            margin: 0 0 5px 0;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        .info-panel .subtitle {
-            margin: 0;
-            opacity: 0.7;
-            font-size: 12px;
-        }
-        .info-panel #coords {
-            margin-top: 8px;
-            font-size: 13px;
-            font-family: 'Courier New', monospace;
-            color: #00ff88;
-        }
-
-        .status-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #00ff88;
-            margin-right: 8px;
-            animation: blink 1s infinite;
-        }
-        @keyframes blink {
-            0%,
-            100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.3;
-            }
-        }
-
+        .info-panel h3 { margin: 0 0 5px 0; font-size: 16px; font-weight: 600; }
+        .info-panel .subtitle { margin: 0; opacity: 0.7; font-size: 12px; }
+        .info-panel #coords { margin-top: 8px; font-size: 13px; font-family: 'Courier New', monospace; color: #00ff88; }
+        
+        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #00ff88; margin-right: 8px; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        
         #connectionStatus {
             position: fixed;
             bottom: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0,0,0,0.8);
             backdrop-filter: blur(10px);
             color: white;
             padding: 8px 16px;
@@ -256,160 +89,46 @@
             z-index: 1000;
             font-family: 'Courier New', monospace;
             border-left: 3px solid #ffaa00;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
             transition: all 0.3s ease;
         }
-
+        
         .double-size-balloon {
             transform-origin: bottom center;
             transform: scale(2);
-            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
             transition: transform 0.3s ease;
         }
-        .double-size-balloon:hover {
-            transform: scale(2.5);
-        }
-
-        /* Адаптив */
+        .double-size-balloon:hover { transform: scale(2.5); }
+        
         @media (min-width: 768px) {
-            .info-panel {
-                left: auto;
-                right: 20px;
-                bottom: 80px;
-                min-width: 280px;
-                text-align: left;
-                padding: 20px 25px;
-            }
-            .back-button {
-                top: 25px;
-                left: 25px;
-                padding: 14px 24px;
-                font-size: 15px;
-            }
-            .live-badge {
-                top: 25px;
-                right: 25px;
-                padding: 10px 20px;
-                font-size: 15px;
-            }
-            #connectionStatus {
-                bottom: 25px;
-                left: 25px;
-                padding: 10px 20px;
-                font-size: 13px;
-            }
-            #adminBanner {
-                padding: 14px 30px;
-                gap: 20px;
-                top: 24px;
-            }
-            #adminBanner input {
-                min-width: 280px;
-                font-size: 16px;
-                padding: 12px 22px;
-            }
-            #adminBanner button {
-                padding: 12px 28px;
-                font-size: 15px;
-            }
-            #globalMessage {
-                top: 100px;
-                font-size: 20px;
-                padding: 12px 36px;
-            }
+            .info-panel { left: auto; right: 20px; bottom: 80px; min-width: 280px; text-align: left; padding: 20px 25px; }
+            .back-button { top: 25px; left: 25px; padding: 14px 24px; font-size: 15px; }
+            .live-badge { top: 25px; right: 25px; padding: 10px 20px; font-size: 15px; }
+            #connectionStatus { bottom: 25px; left: 25px; padding: 10px 20px; font-size: 13px; }
         }
         @media (max-width: 480px) {
-            .back-button {
-                padding: 8px 14px;
-                font-size: 12px;
-                top: 10px;
-                left: 10px;
-            }
-            .live-badge {
-                padding: 6px 12px;
-                font-size: 11px;
-                top: 10px;
-                right: 10px;
-            }
-            .info-panel {
-                padding: 12px 15px;
-                bottom: 70px;
-                left: 10px;
-                right: 10px;
-            }
-            .info-panel h3 {
-                font-size: 14px;
-            }
-            #connectionStatus {
-                font-size: 10px;
-                padding: 6px 12px;
-                bottom: 10px;
-                left: 10px;
-            }
-            #adminBanner {
-                top: 10px;
-                padding: 8px 14px;
-                gap: 10px;
-                flex-wrap: nowrap;
-                border-radius: 40px;
-            }
-            #adminBanner input {
-                font-size: 13px;
-                padding: 6px 12px;
-                min-width: 120px;
-            }
-            #adminBanner button {
-                font-size: 12px;
-                padding: 6px 14px;
-            }
-            #adminBanner .admin-lock {
-                font-size: 11px;
-                padding-right: 8px;
-                gap: 4px;
-            }
-            #adminBanner .admin-lock svg {
-                width: 14px;
-                height: 14px;
-            }
-            #globalMessage {
-                top: 70px;
-                font-size: 14px;
-                padding: 6px 18px;
-            }
+            .back-button { padding: 8px 14px; font-size: 12px; top: 10px; left: 10px; }
+            .live-badge { padding: 6px 12px; font-size: 11px; top: 10px; right: 10px; }
+            .info-panel { padding: 12px 15px; bottom: 70px; left: 10px; right: 10px; }
+            .info-panel h3 { font-size: 14px; }
+            #connectionStatus { font-size: 10px; padding: 6px 12px; bottom: 10px; left: 10px; }
         }
     </style>
 </head>
 <body>
-
+    
     <div id="map"></div>
-
-    <!-- ===== БАННЕР АДМИНИСТРАТОРА (по центру вверху) ===== -->
-    <div id="adminBanner">
-        <div class="admin-lock">
-            <svg viewBox="0 0 24 24">
-                <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" />
-                <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" />
-            </svg>
-            <span>Админ</span>
-        </div>
-        <input type="text" id="adminMessageInput" placeholder="Введите сообщение для всех..." maxlength="120">
-        <button id="sendMessageBtn">📢 Отправить</button>
-    </div>
-
-    <!-- ===== ГЛОБАЛЬНОЕ СООБЩЕНИЕ (отображается под баннером) ===== -->
-    <div id="globalMessage" class="hidden">
-        <span id="globalMessageText"></span>
-    </div>
-
+    
     <a href="/" class="back-button">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
         </svg>
         HOME
     </a>
-
+    
     <div class="live-badge">● LIVE</div>
-
+    
     <div class="info-panel">
         <h3>🎈 Aerostar Public Balloon</h3>
         <p class="subtitle">Live tracking • Real-time updates</p>
@@ -418,135 +137,15 @@
             Waiting for data...
         </div>
     </div>
-
+    
     <div id="connectionStatus">⏳ Connecting...</div>
-
+    
     <!-- ========== СКРИПТЫ ========== -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
-    </script>
-    <script src="/socket.io/socket.io.js">
-    </script>
-
-    <!-- ========== ОСНОВНАЯ ЛОГИКА ========== -->
-    <script>
-        // --- 1. Инициализация карты ---
-        const map = L.map('map').setView([45.0, 10.0], 5);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 18
-        }).addTo(map);
-
-        // Маркер шара (пока заглушка)
-        let balloonMarker = null;
-        let balloonLat = 45.0;
-        let balloonLng = 10.0;
-
-        // --- 2. Подключение Socket.IO ---
-        const socket = io();
-
-        // --- 3. Получение координат и обновление маркера ---
-        socket.on('location', (data) => {
-            if (data && data.lat !== undefined && data.lng !== undefined) {
-                const lat = parseFloat(data.lat);
-                const lng = parseFloat(data.lng);
-                if (!isNaN(lat) && !isNaN(lng)) {
-                    balloonLat = lat;
-                    balloonLng = lng;
-                    updateMap(lat, lng);
-                    document.getElementById('coords').innerHTML =
-                        `<span class="status-dot"></span> ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                    document.getElementById('connectionStatus').innerHTML = '✅ Connected';
-                    document.getElementById('connectionStatus').style.borderLeftColor = '#00ff88';
-                }
-            }
-        });
-
-        function updateMap(lat, lng) {
-            if (!balloonMarker) {
-                const balloonIcon = L.divIcon({
-                    className: 'double-size-balloon',
-                    html: '🎈',
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 40]
-                });
-                balloonMarker = L.marker([lat, lng], { icon: balloonIcon }).addTo(map);
-            } else {
-                balloonMarker.setLatLng([lat, lng]);
-            }
-            map.panTo([lat, lng], { animate: true, duration: 0.8 });
-        }
-
-        // --- 4. Админ-сообщения (получение и отображение) ---
-        const globalMessageDiv = document.getElementById('globalMessage');
-        const globalMessageText = document.getElementById('globalMessageText');
-
-        // Слушаем сообщения от сервера
-        socket.on('admin_message', (msg) => {
-            if (msg && msg.trim() !== '') {
-                globalMessageText.textContent = msg;
-                globalMessageDiv.classList.remove('hidden');
-                // Авто-скрытие через 15 секунд (можно убрать или настроить)
-                clearTimeout(window.messageTimeout);
-                window.messageTimeout = setTimeout(() => {
-                    globalMessageDiv.classList.add('hidden');
-                }, 15000);
-            } else {
-                globalMessageDiv.classList.add('hidden');
-            }
-        });
-
-        // --- 5. Отправка сообщения (админ) ---
-        document.getElementById('sendMessageBtn').addEventListener('click', () => {
-            const input = document.getElementById('adminMessageInput');
-            const text = input.value.trim();
-            if (text === '') {
-                alert('Введите текст сообщения');
-                return;
-            }
-            // Отправляем на сервер
-            socket.emit('admin_message', text);
-            // Показываем локально (чтобы сразу увидеть)
-            globalMessageText.textContent = text;
-            globalMessageDiv.classList.remove('hidden');
-            clearTimeout(window.messageTimeout);
-            window.messageTimeout = setTimeout(() => {
-                globalMessageDiv.classList.add('hidden');
-            }, 15000);
-            input.value = '';
-            input.focus();
-        });
-
-        // Отправка по Enter
-        document.getElementById('adminMessageInput').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('sendMessageBtn').click();
-                e.preventDefault();
-            }
-        });
-
-        // --- 6. Статус соединения ---
-        socket.on('connect', () => {
-            document.getElementById('connectionStatus').innerHTML = '✅ Connected';
-            document.getElementById('connectionStatus').style.borderLeftColor = '#00ff88';
-        });
-        socket.on('disconnect', () => {
-            document.getElementById('connectionStatus').innerHTML = '❌ Disconnected';
-            document.getElementById('connectionStatus').style.borderLeftColor = '#ff4444';
-        });
-
-        // --- 7. Заглушка: при загрузке показываем тестовое сообщение (опционально) ---
-        // Для демонстрации можно показать приветствие через 1 сек
-        setTimeout(() => {
-            // Если сервер не отправил, покажем пример (это только для визуала)
-            if (globalMessageDiv.classList.contains('hidden')) {
-                // Можно закомментировать, если не нужно
-                // globalMessageText.textContent = 'Добро пожаловать! 🎈';
-                // globalMessageDiv.classList.remove('hidden');
-                // setTimeout(() => globalMessageDiv.classList.add('hidden'), 8000);
-            }
-        }, 1000);
-
-        console.log('✅ Aerostar Admin Panel Ready');
-    </script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- ========== ТОЛЬКО НЕОБХОДИМЫЕ ФАЙЛЫ ========== -->
+    <script src="js/config.js"></script>
+    <script src="js/watch-main.js"></script>
 </body>
 </html>
