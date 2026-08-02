@@ -114,6 +114,37 @@
             .info-panel h3 { font-size: 14px; }
             #connectionStatus { font-size: 10px; padding: 6px 12px; bottom: 10px; left: 10px; }
         }
+
+        .admin-message {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+
+    max-width: 700px;
+    min-width: 300px;
+
+    background: rgba(255, 196, 0, 0.95);
+    color: #222;
+
+    padding: 12px 18px;
+    border-radius: 30px;
+
+    font-weight: 600;
+    text-align: center;
+
+    box-shadow: 0 5px 20px rgba(0,0,0,.4);
+}
+
+.admin-message button {
+    margin-left: 15px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 18px;
+    color: #333;
+}
     </style>
 </head>
 <body>
@@ -129,6 +160,12 @@
     
     <div class="live-badge">● LIVE</div>
     
+    <div id="admin-message" class="admin-message" style="display:none">
+        <span id="admin-message-text"></span>
+        <button id="admin-message-close">✕</button>
+    </div>
+    
+    
     <div class="info-panel">
         <h3>🎈 Aerostar Public Balloon</h3>
         <p class="subtitle">Live tracking • Real-time updates</p>
@@ -141,6 +178,31 @@
     <div id="connectionStatus">⏳ Connecting...</div>
     
     <!-- ========== СКРИПТЫ ========== -->
+
+    <script>
+    async function loadAdminMessage() {
+
+    const r = await fetch("/api/message");
+
+    if (!r.ok) return;
+
+    const msg = await r.json();
+
+    if (!msg.visible) return;
+
+    document.getElementById("admin-message-text").textContent = msg.text;
+    document.getElementById("admin-message").style.display = "block";
+}
+
+document
+.getElementById("admin-message-close")
+.onclick = () => {
+    document.getElementById("admin-message").style.display = "none";
+};
+
+loadAdminMessage();
+    </script>
+    
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     
