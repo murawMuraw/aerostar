@@ -160,10 +160,9 @@
     
     <div class="live-badge">● LIVE</div>
     
-    <div id="admin-message" class="admin-message" style="display:none">
-        <span id="admin-message-text"></span>
-        <button id="admin-message-close">✕</button>
-    </div>
+ <div id="admin-message" class="admin-message">
+    Château de la Muette, Montgolfier balloon flight
+</div>
     
     
     <div class="info-panel">
@@ -179,29 +178,6 @@
     
     <!-- ========== СКРИПТЫ ========== -->
 
-    <script>
-    async function loadAdminMessage() {
-
-    const r = await fetch("/api/message");
-
-    if (!r.ok) return;
-
-    const msg = await r.json();
-
-    if (!msg.visible) return;
-
-    document.getElementById("admin-message-text").textContent = msg.text;
-    document.getElementById("admin-message").style.display = "block";
-}
-
-document
-.getElementById("admin-message-close")
-.onclick = () => {
-    document.getElementById("admin-message").style.display = "none";
-};
-
-loadAdminMessage();
-    </script>
     
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="/socket.io/socket.io.js"></script>
