@@ -1,17 +1,17 @@
-// watch-main.js
+// watch-main.js - Полная версия со статистикой
 (function() {
     'use strict';
+
+    console.log('🎈 Запуск Watch App со статистикой...');
 
     // ==================== КОНФИГУРАЦИЯ ====================
     const CONFIG = {
         defaultCenter: [20, 0],
         defaultZoom: 3,
-        balloonIconSize: 32,
-        animationInterval: 2000,
         maxTrackPoints: 500
     };
 
-    // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+    // ==================== ИНИЦИАЛИЗАЦИЯ КАРТЫ ====================
     const map = L.map('map', {
         zoomControl: false,
         attributionControl: true,
@@ -19,10 +19,11 @@
         zoomAnimation: true
     }).setView(CONFIG.defaultCenter, CONFIG.defaultZoom);
 
-    // Тёмная карта
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; CartoDB'
     }).addTo(map);
+
+    console.log('🗺️ Карта инициализирована');
 
     // ==================== ПЕРЕМЕННЫЕ ====================
     let balloonMarker = null;
@@ -30,19 +31,15 @@
     let trackPoints = [];
     let isFirstUpdate = true;
     let socket = null;
-    let reconnectAttempts = 0;
-    let maxReconnectAttempts = 10;
-
+    
     // Переменные для статистики
     let startPosition = null;
     let flightStartTime = null;
     let flightTimerInterval = null;
     let totalDistance = 0;
     let lastPosition = null;
-    let isFlightActive = false;
-    let currentLat = null;
-    let currentLon = null;
     let isStatsInitialized = false;
+    let positionCount = 0;
 
     // ==================== ФУНКЦИИ СТАТИСТИКИ ====================
     function haversineDistance(lat1, lon1, lat2, lon2) {
@@ -75,15 +72,16 @@
     }
 
     function initStats(lat, lon) {
-        // ИНИЦИАЛИЗАЦИЯ СТАТИСТИКИ - вызывается только один раз
-        if (isStatsInitialized) return;
+        if (isStatsInitialized) {
+            console.log('📊 Статистика уже инициализирована');
+            return;
+        }
         
-        console.log('🎯 Инициализация статистики с координатами:', lat, lon);
+        console.log('🎯 ИНИЦИАЛИЗАЦИЯ СТАТИСТИКИ с координатами:', lat, lon);
         
         startPosition = { lat, lon };
         lastPosition = { lat, lon };
         flightStartTime = Date.now();
-        isFlightActive = true;
         isStatsInitialized = true;
         
         // Обновляем стартовые координаты
@@ -104,11 +102,13 @@
         document.getElementById('currentCoords').textContent = formatCoords(lat, lon);
         document.getElementById('distanceActual').textContent = '0 m';
         document.getElementById('distanceStraight').textContent = '0 m';
+        
+        console.log('✅ Статистика инициализирована!');
     }
 
     function updateStats(lat, lon) {
-        currentLat = lat;
-        currentLon = lon;
+        positionCount++;
+        console.log(`📊 Обновление статистики #${positionCount}:`, lat, lon);
         
         // Если статистика ещё не инициализирована - инициализируем
         if (!isStatsInitialized) {
@@ -133,8 +133,9 @@
                 lastPosition.lat, lastPosition.lon,
                 lat, lon
             );
-            if (segmentDist > 0.1) { // игнорируем микро-изменения
+            if (segmentDist > 0.5) { // игнорируем изменения меньше 0.5 метра
                 totalDistance += segmentDist;
+                console.log(`📏 Добавлено ${segmentDist.toFixed(1)} м, всего: ${totalDistance.toFixed(1)} м`);
             }
         }
         lastPosition = { lat, lon };
@@ -153,14 +154,13 @@
     }
 
     function resetStats() {
+        console.log('🔄 Сброс статистики');
         isStatsInitialized = false;
         startPosition = null;
         flightStartTime = null;
         totalDistance = 0;
         lastPosition = null;
-        isFlightActive = false;
-        currentLat = null;
-        currentLon = null;
+        positionCount = 0;
         if (flightTimerInterval) {
             clearInterval(flightTimerInterval);
             flightTimerInterval = null;
@@ -202,12 +202,12 @@
 
     // ==================== ОБНОВЛЕНИЕ ПОЗИЦИИ ====================
     function updateBalloon(lat, lon) {
-        console.log('📍 Обновление позиции:', lat, lon);
+        console.log(`📍 Новая позиция: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
         
         // Обновляем статистику
         updateStats(lat, lon);
 
-        // Обновляем координаты в панели (краткий формат)
+        // Обновляем координаты в панели
         document.getElementById('coords').innerHTML = `
             <span class="status-dot"></span>
             ${lat.toFixed(6)}° ${lat >= 0 ? 'N' : 'S'}, ${lon.toFixed(6)}° ${lon >= 0 ? 'E' : 'W'}
@@ -215,6 +215,7 @@
 
         // Создаём маркер при первом обновлении
         if (!balloonMarker) {
+            console.log('🎈 Создание маркера баллона');
             balloonMarker = L.marker([lat, lon], {
                 icon: createBalloonIcon(),
                 zIndexOffset: 1000
@@ -241,6 +242,7 @@
 
         // При первом обновлении центрируем карту
         if (isFirstUpdate) {
+            console.log('🎯 Первое обновление - центрируем карту');
             map.setView([lat, lon], 6, { animate: true });
             isFirstUpdate = false;
         }
@@ -248,71 +250,63 @@
 
     // ==================== СОЕДИНЕНИЕ ПО WEBSOCKET ====================
     function connectWebSocket() {
+        console.log('🔌 Подключение к WebSocket...');
+        
         try {
             socket = io({
                 transports: ['websocket', 'polling'],
                 reconnection: true,
-                reconnectionAttempts: maxReconnectAttempts,
+                reconnectionAttempts: 10,
                 reconnectionDelay: 1000,
                 reconnectionDelayMax: 5000,
                 timeout: 20000
             });
 
             socket.on('connect', () => {
-                console.log('✅ Socket connected');
+                console.log('✅ Socket подключен');
                 document.getElementById('connectionStatus').textContent = '● Connected';
                 document.getElementById('connectionStatus').style.borderLeftColor = '#00ff88';
-                reconnectAttempts = 0;
                 
                 // Запрашиваем данные при подключении
                 socket.emit('watch-join');
+                console.log('📤 Отправлен запрос watch-join');
             });
 
             socket.on('position', (data) => {
-                console.log('📡 Получены данные:', data);
+                console.log('📡 Получены данные с сервера:', data);
                 if (data && typeof data.lat === 'number' && typeof data.lon === 'number') {
                     // Проверяем, что координаты валидны
                     if (data.lat >= -90 && data.lat <= 90 && data.lon >= -180 && data.lon <= 180) {
                         updateBalloon(data.lat, data.lon);
+                    } else {
+                        console.warn('⚠️ Невалидные координаты:', data);
                     }
+                } else {
+                    console.warn('⚠️ Неверный формат данных:', data);
                 }
             });
 
             socket.on('connect_error', (err) => {
-                console.warn('⚠️ Socket connection error:', err);
+                console.warn('⚠️ Ошибка подключения:', err);
                 document.getElementById('connectionStatus').textContent = '⚠️ Connection error';
                 document.getElementById('connectionStatus').style.borderLeftColor = '#ff6b6b';
             });
 
-            socket.on('reconnect_attempt', (attempt) => {
-                reconnectAttempts = attempt;
-                document.getElementById('connectionStatus').textContent = `🔄 Reconnecting... (${attempt}/${maxReconnectAttempts})`;
-            });
-
             socket.on('reconnect', () => {
+                console.log('🔄 Переподключено');
                 document.getElementById('connectionStatus').textContent = '● Connected';
                 document.getElementById('connectionStatus').style.borderLeftColor = '#00ff88';
-                // Запрашиваем данные после переподключения
                 socket.emit('watch-join');
             });
 
-            socket.on('reconnect_failed', () => {
-                document.getElementById('connectionStatus').textContent = '❌ Connection lost';
-                document.getElementById('connectionStatus').style.borderLeftColor = '#ff0000';
-            });
-
             socket.on('disconnect', (reason) => {
-                console.log('🔌 Disconnected:', reason);
-                if (reason === 'io server disconnect') {
-                    document.getElementById('connectionStatus').textContent = '⛔ Server disconnected';
-                } else {
-                    document.getElementById('connectionStatus').textContent = '⏳ Reconnecting...';
-                }
+                console.log('🔌 Отключено:', reason);
+                document.getElementById('connectionStatus').textContent = '⏳ Disconnected';
                 document.getElementById('connectionStatus').style.borderLeftColor = '#ffaa00';
             });
 
         } catch (error) {
-            console.error('❌ Socket initialization error:', error);
+            console.error('❌ Ошибка инициализации Socket:', error);
             document.getElementById('connectionStatus').textContent = '❌ Connection failed';
             document.getElementById('connectionStatus').style.borderLeftColor = '#ff0000';
             setTimeout(connectWebSocket, 5000);
@@ -321,6 +315,8 @@
 
     // ==================== ИНИЦИАЛИЗАЦИЯ ====================
     function init() {
+        console.log('🚀 Инициализация Watch App...');
+        
         // Сброс статистики
         resetStats();
         
@@ -330,14 +326,16 @@
         // Обработка видимости страницы
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden && socket && socket.connected) {
+                console.log('👁️ Страница видна - запрос обновления');
                 socket.emit('watch-join');
             }
         });
 
-        console.log('🎈 Aerostar Watch Page initialized');
-        console.log('📊 Ожидание данных для инициализации статистики...');
+        console.log('✅ Watch App инициализирован');
+        console.log('📊 Ожидание данных для статистики...');
     }
 
+    // Запуск
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
