@@ -150,9 +150,10 @@
     
     
     <a href="/watch.html"         
-       style="background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%); color: white; padding: 14px 24px; text-decoration: none; border-radius: 50px; font-size: 16px; font-weight: bold; text-align: center; display: block; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer;">
-        🔴  Live Balloon
-    </a>
+   class="live-balloon-btn"
+   style="color: white; padding: 14px 24px 14px 35px; text-decoration: none; border-radius: 50px; font-size: 16px; font-weight: bold; text-align: center; display: block; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+    Live Balloon
+</a>
     <a href="/lab.html"
    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
    color: white;
@@ -380,7 +381,37 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-
+/* Мигающая кнопка Live Balloon */
+.live-balloon-btn {
+    position: relative;
+    animation: livePulse 1.5s infinite;
+    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%) !important;
+    box-shadow: 0 4px 20px rgba(255, 65, 108, 0.4) !important;
+}
+.live-balloon-btn::after {
+    content: '●';
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    font-size: 10px;
+    animation: blink 1s infinite;
+}
+@keyframes livePulse {
+    0%, 100% { 
+        transform: scale(1);
+        box-shadow: 0 4px 20px rgba(255, 65, 108, 0.4);
+    }
+    50% { 
+        transform: scale(1.02);
+        box-shadow: 0 4px 35px rgba(255, 65, 108, 0.7);
+    }
+}
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+}
 
     
 </style>
