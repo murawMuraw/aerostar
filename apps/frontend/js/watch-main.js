@@ -1,345 +1,265 @@
-// watch-main.js - Полная версия со статистикой
-(function() {
-    'use strict';
+// ========== watch-main.js - Упрощенная версия для watch.html ==========
+// Только основные функции: карта + отображение шара
 
-    console.log('🎈 Запуск Watch App со статистикой...');
+console.log('🚀 Watch App Starting (simplified)');
 
-    // ==================== КОНФИГУРАЦИЯ ====================
-    const CONFIG = {
-        defaultCenter: [20, 0],
-        defaultZoom: 3,
-        maxTrackPoints: 500
-    };
+// ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
+let map = null;
+let publicBalloonMarker = null;
+let publicPathLine = null;
+let updateInterval = null;
+let lastPublicData = null;
 
-    // ==================== ИНИЦИАЛИЗАЦИЯ КАРТЫ ====================
-    const map = L.map('map', {
-        zoomControl: false,
-        attributionControl: true,
-        fadeAnimation: true,
-        zoomAnimation: true
-    }).setView(CONFIG.defaultCenter, CONFIG.defaultZoom);
+// ========== ИНИЦИАЛИЗАЦИЯ ==========
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('📄 DOM loaded, initializing watch app...');
+    
+    // Загружаем конфигурацию
+    if (typeof loadConfig === 'function') {
+        loadConfig();
+    }
+    
+    // Инициализируем карту
+    initWatchMap();
+    
+    // Запускаем получение данных
+    startWatching();
+    
+    // Скрываем лишние элементы
+    hideUnnecessaryElements();
+});
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; CartoDB'
+// ========== КАРТА ==========
+function initWatchMap() {
+    console.log('🗺️ Initializing watch map...');
+    
+    // Проверяем, не создана ли уже карта
+    if (window._map) {
+        map = window._map;
+        console.log('📦 Using existing map instance');
+        return;
+    }
+    
+    map = L.map('map', {
+        center: [52.12, 23.72],
+        zoom: 8,
+        zoomControl: true
+    });
+    
+    // Спутниковый слой
+    const esriSatellite = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri',
+        maxZoom: 19
+    });
+    
+    // OSM слой
+    const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19
+    });
+    
+    esriSatellite.addTo(map);
+    
+    L.control.layers(
+        { "🛰️ Satellite": esriSatellite, "🗺️ OSM": osmStandard },
+        null,
+        { position: 'topleft', collapsed: false }
+    ).addTo(map);
+    
+    L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
+    
+    // Сохраняем в глобальную переменную для других функций
+    window._map = map;
+    
+    console.log('✅ Watch map initialized');
+}
+
+// ========== ПОЛУЧЕНИЕ ДАННЫХ ==========
+function startWatching() {
+    console.log('👀 Start watching public balloon');
+    
+    // Первый запрос сразу
+    fetchPublicBalloon();
+    
+    // Запускаем интервал
+    updateInterval = setInterval(fetchPublicBalloon, 2000);
+}
+
+async function fetchPublicBalloon() {
+    try {
+        const response = await fetch('/api/public-aerostar');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data && data.position) {
+            renderBalloon(data);
+            updateStatus(`🟢 LIVE ${new Date().toLocaleTimeString()}`);
+            
+            // Обновляем координаты в панели
+            updateCoords(data.position);
+        } else {
+            updateStatus('⏳ Waiting for data...');
+        }
+    } catch (error) {
+        console.error('❌ Error fetching public balloon:', error);
+        updateStatus('❌ Connection error');
+    }
+}
+
+// ========== ОТРИСОВКА ШАРА ==========
+function renderBalloon(data) {
+    if (!map) {
+        console.error('❌ Map not initialized');
+        return;
+    }
+
+    const lat = data.position.lat;
+    const lng = data.position.lng;
+    
+    if (isNaN(lat) || isNaN(lng)) {
+        console.warn('⚠️ Invalid coordinates:', { lat, lng });
+        return;
+    }
+
+    const currentPos = [lat, lng];
+    
+    // === 1. МАРКЕР ===
+    if (publicBalloonMarker) {
+        map.removeLayer(publicBalloonMarker);
+        publicBalloonMarker = null;
+    }
+
+    const balloonIcon = L.icon({
+        iconUrl: '/images/balloon.png',
+        iconSize: [64, 64],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32],
+        className: 'double-size-balloon'
+    });
+
+    publicBalloonMarker = L.marker(currentPos, {
+        icon: balloonIcon,
+        zIndexOffset: 1000
     }).addTo(map);
 
-    console.log('🗺️ Карта инициализирована');
+    publicBalloonMarker.bindPopup(`
+        <div style="text-align: center; min-width: 150px; padding: 5px;">
+            <strong>🎈 Aerostar Balloon</strong><br>
+            📍 ${lat.toFixed(6)}°, ${lng.toFixed(6)}°<br>
+            🕐 ${new Date().toLocaleTimeString()}
+        </div>
+    `);
 
-    // ==================== ПЕРЕМЕННЫЕ ====================
-    let balloonMarker = null;
-    let pathLine = null;
-    let trackPoints = [];
-    let isFirstUpdate = true;
-    let socket = null;
-    
-    // Переменные для статистики
-    let startPosition = null;
-    let flightStartTime = null;
-    let flightTimerInterval = null;
-    let totalDistance = 0;
-    let lastPosition = null;
-    let isStatsInitialized = false;
-    let positionCount = 0;
-
-    // ==================== ФУНКЦИИ СТАТИСТИКИ ====================
-    function haversineDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371000;
-        const toRad = (deg) => deg * Math.PI / 180;
-        const dLat = toRad(lat2 - lat1);
-        const dLon = toRad(lon2 - lon1);
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-                  Math.sin(dLon/2) * Math.sin(dLon/2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-
-    function formatTime(seconds) {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = Math.floor(seconds % 60);
-        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-
-    function formatDistance(meters) {
-        if (meters < 1000) return `${Math.round(meters)} m`;
-        return `${(meters / 1000).toFixed(2)} km`;
-    }
-
-    function formatCoords(lat, lon) {
-        const latDir = lat >= 0 ? 'N' : 'S';
-        const lonDir = lon >= 0 ? 'E' : 'W';
-        return `${Math.abs(lat).toFixed(4)}°${latDir} ${Math.abs(lon).toFixed(4)}°${lonDir}`;
-    }
-
-    function initStats(lat, lon) {
-        if (isStatsInitialized) {
-            console.log('📊 Статистика уже инициализирована');
-            return;
-        }
-        
-        console.log('🎯 ИНИЦИАЛИЗАЦИЯ СТАТИСТИКИ с координатами:', lat, lon);
-        
-        startPosition = { lat, lon };
-        lastPosition = { lat, lon };
-        flightStartTime = Date.now();
-        isStatsInitialized = true;
-        
-        // Обновляем стартовые координаты
-        document.getElementById('startPosition').textContent = 
-            `${lat.toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}, ${lon.toFixed(4)}° ${lon >= 0 ? 'E' : 'W'}`;
-        
-        // Запускаем таймер
-        if (flightTimerInterval) clearInterval(flightTimerInterval);
-        flightTimerInterval = setInterval(() => {
-            if (flightStartTime) {
-                const elapsed = (Date.now() - flightStartTime) / 1000;
-                document.getElementById('flightTime').textContent = formatTime(elapsed);
-            }
-        }, 1000);
-        
-        // Первое обновление
-        document.getElementById('flightTime').textContent = '00:00:00';
-        document.getElementById('currentCoords').textContent = formatCoords(lat, lon);
-        document.getElementById('distanceActual').textContent = '0 m';
-        document.getElementById('distanceStraight').textContent = '0 m';
-        
-        console.log('✅ Статистика инициализирована!');
-    }
-
-    function updateStats(lat, lon) {
-        positionCount++;
-        console.log(`📊 Обновление статистики #${positionCount}:`, lat, lon);
-        
-        // Если статистика ещё не инициализирована - инициализируем
-        if (!isStatsInitialized) {
-            initStats(lat, lon);
-            return;
-        }
-        
-        const currentTime = Date.now();
-        
-        // Обновляем время
-        if (flightStartTime) {
-            const elapsed = (currentTime - flightStartTime) / 1000;
-            document.getElementById('flightTime').textContent = formatTime(elapsed);
+    // === 2. ТРЕК ===
+    if (data.path && Array.isArray(data.path) && data.path.length > 1) {
+        if (publicPathLine) {
+            map.removeLayer(publicPathLine);
+            publicPathLine = null;
         }
 
-        // Обновляем текущие координаты
-        document.getElementById('currentCoords').textContent = formatCoords(lat, lon);
+        const pathPoints = data.path
+            .filter(p => p && !isNaN(p.lat) && !isNaN(p.lng))
+            .map(p => [p.lat, p.lng]);
 
-        // Расчёт расстояний
-        if (lastPosition) {
-            const segmentDist = haversineDistance(
-                lastPosition.lat, lastPosition.lon,
-                lat, lon
-            );
-            if (segmentDist > 0.5) { // игнорируем изменения меньше 0.5 метра
-                totalDistance += segmentDist;
-                console.log(`📏 Добавлено ${segmentDist.toFixed(1)} м, всего: ${totalDistance.toFixed(1)} м`);
-            }
-        }
-        lastPosition = { lat, lon };
-
-        // Фактическое расстояние
-        document.getElementById('distanceActual').textContent = formatDistance(totalDistance);
-
-        // Прямое расстояние от старта
-        if (startPosition) {
-            const straightDist = haversineDistance(
-                startPosition.lat, startPosition.lon,
-                lat, lon
-            );
-            document.getElementById('distanceStraight').textContent = formatDistance(straightDist);
-        }
-    }
-
-    function resetStats() {
-        console.log('🔄 Сброс статистики');
-        isStatsInitialized = false;
-        startPosition = null;
-        flightStartTime = null;
-        totalDistance = 0;
-        lastPosition = null;
-        positionCount = 0;
-        if (flightTimerInterval) {
-            clearInterval(flightTimerInterval);
-            flightTimerInterval = null;
-        }
-        document.getElementById('flightTime').textContent = '--:--:--';
-        document.getElementById('currentCoords').textContent = '--° --°';
-        document.getElementById('distanceActual').textContent = '-- km';
-        document.getElementById('distanceStraight').textContent = '-- km';
-        document.getElementById('startPosition').textContent = '--';
-    }
-
-    // ==================== ОТРИСОВКА БАЛЛОНА ====================
-    function createBalloonIcon() {
-        return L.divIcon({
-            className: 'balloon-marker',
-            html: `
-                <div style="position:relative; width:32px; height:32px;">
-                    <svg viewBox="0 0 32 32" style="width:32px; height:32px; filter:drop-shadow(0 2px 8px rgba(0,0,0,0.5));">
-                        <circle cx="16" cy="13" r="11" fill="#e74c3c" stroke="#c0392b" stroke-width="1.5"/>
-                        <circle cx="16" cy="13" r="11" fill="url(#balloonGrad)" stroke="#c0392b" stroke-width="1.5"/>
-                        <ellipse cx="16" cy="22" rx="4" ry="2" fill="#c0392b"/>
-                        <line x1="14" y1="24" x2="12" y2="30" stroke="#c0392b" stroke-width="1.5"/>
-                        <line x1="18" y1="24" x2="20" y2="30" stroke="#c0392b" stroke-width="1.5"/>
-                        <defs>
-                            <radialGradient id="balloonGrad" cx="40%" cy="35%">
-                                <stop offset="0%" stop-color="#ff6b6b"/>
-                                <stop offset="100%" stop-color="#c0392b"/>
-                            </radialGradient>
-                        </defs>
-                    </svg>
-                    <div style="position:absolute; top:-4px; right:-4px; width:10px; height:10px; background:#00ff88; border-radius:50%; border:2px solid #fff; box-shadow:0 0 10px rgba(0,255,136,0.5);"></div>
-                </div>
-            `,
-            iconSize: [32, 32],
-            iconAnchor: [16, 30],
-            popupAnchor: [0, -30]
-        });
-    }
-
-    // ==================== ОБНОВЛЕНИЕ ПОЗИЦИИ ====================
-    function updateBalloon(lat, lon) {
-        console.log(`📍 Новая позиция: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
-        
-        // Обновляем статистику
-        updateStats(lat, lon);
-
-        // Обновляем координаты в панели
-        document.getElementById('coords').innerHTML = `
-            <span class="status-dot"></span>
-            ${lat.toFixed(6)}° ${lat >= 0 ? 'N' : 'S'}, ${lon.toFixed(6)}° ${lon >= 0 ? 'E' : 'W'}
-        `;
-
-        // Создаём маркер при первом обновлении
-        if (!balloonMarker) {
-            console.log('🎈 Создание маркера баллона');
-            balloonMarker = L.marker([lat, lon], {
-                icon: createBalloonIcon(),
-                zIndexOffset: 1000
+        if (pathPoints.length > 1) {
+            publicPathLine = L.polyline(pathPoints, {
+                color: '#ff4444',
+                weight: 4,
+                opacity: 0.8,
+                smoothFactor: 1
             }).addTo(map);
             
-            pathLine = L.polyline([], {
-                color: '#ff6b6b',
-                weight: 2,
-                opacity: 0.6,
-                dashArray: '5, 8',
-                lineJoin: 'round'
-            }).addTo(map);
-        }
-
-        // Обновляем позицию
-        balloonMarker.setLatLng([lat, lon]);
-
-        // Добавляем точку в трек
-        trackPoints.push([lat, lon]);
-        if (trackPoints.length > CONFIG.maxTrackPoints) {
-            trackPoints.shift();
-        }
-        pathLine.setLatLngs(trackPoints);
-
-        // При первом обновлении центрируем карту
-        if (isFirstUpdate) {
-            console.log('🎯 Первое обновление - центрируем карту');
-            map.setView([lat, lon], 6, { animate: true });
-            isFirstUpdate = false;
+            console.log(`📏 Path drawn with ${pathPoints.length} points`);
         }
     }
 
-    // ==================== СОЕДИНЕНИЕ ПО WEBSOCKET ====================
-    function connectWebSocket() {
-        console.log('🔌 Подключение к WebSocket...');
+    // === 3. ЦЕНТРИРОВАНИЕ ===
+    const center = map.getCenter();
+    const distance = map.distance(center, currentPos);
+    
+    if (distance > 5000) {
+        map.setView(currentPos, map.getZoom());
+    } else if (distance > 100) {
+        map.panTo(currentPos);
+    }
+}
+
+// ========== ОБНОВЛЕНИЕ КООРДИНАТ В ПАНЕЛИ ==========
+function updateCoords(position) {
+    const coordsEl = document.getElementById('coords');
+    if (coordsEl && position) {
+        coordsEl.innerHTML = `
+            <span class="status-dot"></span>
+            📍 ${position.lat.toFixed(6)}°, ${position.lng.toFixed(6)}°
+        `;
+    }
+}
+
+// ========== СТАТУС ==========
+function updateStatus(message) {
+    const statusEl = document.getElementById('connectionStatus');
+    if (statusEl) {
+        statusEl.textContent = message;
         
-        try {
-            socket = io({
-                transports: ['websocket', 'polling'],
-                reconnection: true,
-                reconnectionAttempts: 10,
-                reconnectionDelay: 1000,
-                reconnectionDelayMax: 5000,
-                timeout: 20000
-            });
-
-            socket.on('connect', () => {
-                console.log('✅ Socket подключен');
-                document.getElementById('connectionStatus').textContent = '● Connected';
-                document.getElementById('connectionStatus').style.borderLeftColor = '#00ff88';
-                
-                // Запрашиваем данные при подключении
-                socket.emit('watch-join');
-                console.log('📤 Отправлен запрос watch-join');
-            });
-
-            socket.on('position', (data) => {
-                console.log('📡 Получены данные с сервера:', data);
-                if (data && typeof data.lat === 'number' && typeof data.lon === 'number') {
-                    // Проверяем, что координаты валидны
-                    if (data.lat >= -90 && data.lat <= 90 && data.lon >= -180 && data.lon <= 180) {
-                        updateBalloon(data.lat, data.lon);
-                    } else {
-                        console.warn('⚠️ Невалидные координаты:', data);
-                    }
-                } else {
-                    console.warn('⚠️ Неверный формат данных:', data);
-                }
-            });
-
-            socket.on('connect_error', (err) => {
-                console.warn('⚠️ Ошибка подключения:', err);
-                document.getElementById('connectionStatus').textContent = '⚠️ Connection error';
-                document.getElementById('connectionStatus').style.borderLeftColor = '#ff6b6b';
-            });
-
-            socket.on('reconnect', () => {
-                console.log('🔄 Переподключено');
-                document.getElementById('connectionStatus').textContent = '● Connected';
-                document.getElementById('connectionStatus').style.borderLeftColor = '#00ff88';
-                socket.emit('watch-join');
-            });
-
-            socket.on('disconnect', (reason) => {
-                console.log('🔌 Отключено:', reason);
-                document.getElementById('connectionStatus').textContent = '⏳ Disconnected';
-                document.getElementById('connectionStatus').style.borderLeftColor = '#ffaa00';
-            });
-
-        } catch (error) {
-            console.error('❌ Ошибка инициализации Socket:', error);
-            document.getElementById('connectionStatus').textContent = '❌ Connection failed';
-            document.getElementById('connectionStatus').style.borderLeftColor = '#ff0000';
-            setTimeout(connectWebSocket, 5000);
+        if (message.includes('LIVE') || message.includes('Connected')) {
+            statusEl.style.borderLeftColor = '#00ff88';
+        } else if (message.includes('Error') || message.includes('error')) {
+            statusEl.style.borderLeftColor = '#ff4444';
+        } else {
+            statusEl.style.borderLeftColor = '#ffaa00';
         }
     }
+}
 
-    // ==================== ИНИЦИАЛИЗАЦИЯ ====================
-    function init() {
-        console.log('🚀 Инициализация Watch App...');
+// ========== СКРЫТИЕ ЛИШНИХ ЭЛЕМЕНТОВ ==========
+function hideUnnecessaryElements() {
+    setTimeout(() => {
+        const selectors = [
+            '.control-panel',
+            '.sidebar', 
+            '.menu',
+            '.controls',
+            '#controls',
+            '.user-controls',
+            '#userControls',
+            '.user-panel',
+            '#userPanel',
+            '.auth-panel',
+            '#authPanel',
+            '.login-form',
+            '#loginForm'
+        ];
         
-        // Сброс статистики
-        resetStats();
-        
-        // Подключение к WebSocket
-        connectWebSocket();
-
-        // Обработка видимости страницы
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && socket && socket.connected) {
-                console.log('👁️ Страница видна - запрос обновления');
-                socket.emit('watch-join');
-            }
+        selectors.forEach(selector => {
+            document.querySelectorAll(selector).forEach(el => {
+                if (el) el.style.display = 'none';
+            });
         });
+        
+        console.log('✅ Unnecessary elements hidden');
+    }, 500);
+}
 
-        console.log('✅ Watch App инициализирован');
-        console.log('📊 Ожидание данных для статистики...');
+// ========== ОЧИСТКА ПРИ ЗАКРЫТИИ ==========
+window.addEventListener('beforeunload', () => {
+    if (updateInterval) {
+        clearInterval(updateInterval);
+        updateInterval = null;
     }
-
-    // Запуск
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
+    
+    if (publicBalloonMarker) {
+        map?.removeLayer(publicBalloonMarker);
+        publicBalloonMarker = null;
     }
+    
+    if (publicPathLine) {
+        map?.removeLayer(publicPathLine);
+        publicPathLine = null;
+    }
+});
 
-})();
+console.log('🎈 Watch main script loaded');
