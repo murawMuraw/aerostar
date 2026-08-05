@@ -42,6 +42,7 @@
     let isFlightActive = false;
     let currentLat = null;
     let currentLon = null;
+    let isStatsInitialized = false;
 
     // ==================== ФУНКЦИИ СТАТИСТИКИ ====================
     function haversineDistance(lat1, lon1, lat2, lon2) {
@@ -73,33 +74,57 @@
         return `${Math.abs(lat).toFixed(4)}°${latDir} ${Math.abs(lon).toFixed(4)}°${lonDir}`;
     }
 
+    function initStats(lat, lon) {
+        // ИНИЦИАЛИЗАЦИЯ СТАТИСТИКИ - вызывается только один раз
+        if (isStatsInitialized) return;
+        
+        console.log('🎯 Инициализация статистики с координатами:', lat, lon);
+        
+        startPosition = { lat, lon };
+        lastPosition = { lat, lon };
+        flightStartTime = Date.now();
+        isFlightActive = true;
+        isStatsInitialized = true;
+        
+        // Обновляем стартовые координаты
+        document.getElementById('startPosition').textContent = 
+            `${lat.toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}, ${lon.toFixed(4)}° ${lon >= 0 ? 'E' : 'W'}`;
+        
+        // Запускаем таймер
+        if (flightTimerInterval) clearInterval(flightTimerInterval);
+        flightTimerInterval = setInterval(() => {
+            if (flightStartTime) {
+                const elapsed = (Date.now() - flightStartTime) / 1000;
+                document.getElementById('flightTime').textContent = formatTime(elapsed);
+            }
+        }, 1000);
+        
+        // Первое обновление
+        document.getElementById('flightTime').textContent = '00:00:00';
+        document.getElementById('currentCoords').textContent = formatCoords(lat, lon);
+        document.getElementById('distanceActual').textContent = '0 m';
+        document.getElementById('distanceStraight').textContent = '0 m';
+    }
+
     function updateStats(lat, lon) {
         currentLat = lat;
         currentLon = lon;
         
+        // Если статистика ещё не инициализирована - инициализируем
+        if (!isStatsInitialized) {
+            initStats(lat, lon);
+            return;
+        }
+        
         const currentTime = Date.now();
         
-        // Инициализация старта
-        if (!startPosition) {
-            startPosition = { lat, lon };
-            flightStartTime = currentTime;
-            isFlightActive = true;
-            document.getElementById('startPosition').textContent = 
-                `${lat.toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}, ${lon.toFixed(4)}° ${lon >= 0 ? 'E' : 'W'}`;
-            
-            // Запускаем таймер
-            if (flightTimerInterval) clearInterval(flightTimerInterval);
-            flightTimerInterval = setInterval(() => {
-                const elapsed = (Date.now() - flightStartTime) / 1000;
-                document.getElementById('flightTime').textContent = formatTime(elapsed);
-            }, 1000);
+        // Обновляем время
+        if (flightStartTime) {
+            const elapsed = (currentTime - flightStartTime) / 1000;
+            document.getElementById('flightTime').textContent = formatTime(elapsed);
         }
 
-        // Обновляем время
-        const elapsed = (currentTime - flightStartTime) / 1000;
-        document.getElementById('flightTime').textContent = formatTime(elapsed);
-
-        // Обновляем текущие координаты (отдельно от coords)
+        // Обновляем текущие координаты
         document.getElementById('currentCoords').textContent = formatCoords(lat, lon);
 
         // Расчёт расстояний
@@ -108,7 +133,9 @@
                 lastPosition.lat, lastPosition.lon,
                 lat, lon
             );
-            totalDistance += segmentDist;
+            if (segmentDist > 0.1) { // игнорируем микро-изменения
+                totalDistance += segmentDist;
+            }
         }
         lastPosition = { lat, lon };
 
@@ -116,14 +143,17 @@
         document.getElementById('distanceActual').textContent = formatDistance(totalDistance);
 
         // Прямое расстояние от старта
-        const straightDist = haversineDistance(
-            startPosition.lat, startPosition.lon,
-            lat, lon
-        );
-        document.getElementById('distanceStraight').textContent = formatDistance(straightDist);
+        if (startPosition) {
+            const straightDist = haversineDistance(
+                startPosition.lat, startPosition.lon,
+                lat, lon
+            );
+            document.getElementById('distanceStraight').textContent = formatDistance(straightDist);
+        }
     }
 
     function resetStats() {
+        isStatsInitialized = false;
         startPosition = null;
         flightStartTime = null;
         totalDistance = 0;
@@ -172,6 +202,8 @@
 
     // ==================== ОБНОВЛЕНИЕ ПОЗИЦИИ ====================
     function updateBalloon(lat, lon) {
+        console.log('📍 Обновление позиции:', lat, lon);
+        
         // Обновляем статистику
         updateStats(lat, lon);
 
@@ -231,13 +263,16 @@
                 document.getElementById('connectionStatus').textContent = '● Connected';
                 document.getElementById('connectionStatus').style.borderLeftColor = '#00ff88';
                 reconnectAttempts = 0;
+                
+                // Запрашиваем данные при подключении
+                socket.emit('watch-join');
             });
 
             socket.on('position', (data) => {
+                console.log('📡 Получены данные:', data);
                 if (data && typeof data.lat === 'number' && typeof data.lon === 'number') {
-                    if (!lastPosition || 
-                        Math.abs(data.lat - lastPosition.lat) > 0.000001 || 
-                        Math.abs(data.lon - lastPosition.lon) > 0.000001) {
+                    // Проверяем, что координаты валидны
+                    if (data.lat >= -90 && data.lat <= 90 && data.lon >= -180 && data.lon <= 180) {
                         updateBalloon(data.lat, data.lon);
                     }
                 }
@@ -257,6 +292,8 @@
             socket.on('reconnect', () => {
                 document.getElementById('connectionStatus').textContent = '● Connected';
                 document.getElementById('connectionStatus').style.borderLeftColor = '#00ff88';
+                // Запрашиваем данные после переподключения
+                socket.emit('watch-join');
             });
 
             socket.on('reconnect_failed', () => {
@@ -274,10 +311,6 @@
                 document.getElementById('connectionStatus').style.borderLeftColor = '#ffaa00';
             });
 
-            socket.on('connect', () => {
-                socket.emit('watch-join');
-            });
-
         } catch (error) {
             console.error('❌ Socket initialization error:', error);
             document.getElementById('connectionStatus').textContent = '❌ Connection failed';
@@ -288,9 +321,13 @@
 
     // ==================== ИНИЦИАЛИЗАЦИЯ ====================
     function init() {
-        connectWebSocket();
+        // Сброс статистики
         resetStats();
+        
+        // Подключение к WebSocket
+        connectWebSocket();
 
+        // Обработка видимости страницы
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden && socket && socket.connected) {
                 socket.emit('watch-join');
@@ -298,6 +335,7 @@
         });
 
         console.log('🎈 Aerostar Watch Page initialized');
+        console.log('📊 Ожидание данных для инициализации статистики...');
     }
 
     if (document.readyState === 'loading') {
