@@ -353,6 +353,63 @@ router.post('/public-aerostar', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
+// ========== WATCH PAGE MESSAGE ==========
+
+router.get('/message', (req, res) => {
+
+    try {
+
+        const data = JSON.parse(
+            fs.readFileSync(messageFile, "utf8")
+        );
+
+        res.json(data);
+
+    } catch(error) {
+
+        console.error(error);
+
+        res.json({
+            message: "Aerostar LIVE Balloon"
+        });
+
+    }
+
+});
+
+
+router.post('/message', (req, res) => {
+
+    try {
+
+        const data = {
+            message: req.body.message
+        };
+
+
+        fs.writeFileSync(
+            messageFile,
+            JSON.stringify(data, null, 2)
+        );
+
+
+        res.json({
+            success:true
+        });
+
+
+    } catch(error) {
+
+        console.error(error);
+
+        res.status(500).json({
+            error:"Cannot save message"
+        });
+
+    }
+
+});
+
 
 // ========== СТАТИСТИКА ==========
 router.get('/stats', async (req, res) => {
