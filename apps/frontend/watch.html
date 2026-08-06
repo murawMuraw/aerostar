@@ -188,23 +188,118 @@
     
 <script>
 
+let currentMessage = "";
+
+
 fetch('/api/message')
 .then(response => response.json())
 .then(data => {
 
+    currentMessage = data.message;
+
     document.getElementById('admin-message').innerHTML =
-        data.message.replace(/\n/g, "<br>");
-
-})
-.catch(error => {
-
-    console.error("Message loading error:", error);
+        data.message.replace(/\n/g,"<br>");
 
 });
 
+
 </script>
+<script>
+
+if(window.location.search.includes("admin")){
 
 
+    let password = prompt("Admin password");
+
+
+    if(password === "ВАШ_ПАРОЛЬ"){
+
+
+        document.getElementById("admin-panel").style.display="block";
+
+
+        document.getElementById("message-editor").value =
+            currentMessage;
+
+
+    }
+
+}
+
+</script>
+<script>
+
+function saveMessage(){
+
+
+let text =
+document.getElementById("message-editor").value;
+
+
+
+fetch('/api/message',{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+message:text
+})
+
+})
+
+
+.then(response=>response.json())
+
+.then(()=>{
+
+alert("Message saved");
+
+location.reload();
+
+});
+
+
+}
+
+
+</script>
+    
+    
+
+<div id="admin-panel" style="
+display:none;
+position:fixed;
+top:80px;
+left:50%;
+transform:translateX(-50%);
+background:#111;
+color:white;
+padding:20px;
+border-radius:15px;
+z-index:99999;
+width:600px;
+">
+
+<h3>🎈 Aerostar Mission Control</h3>
+
+<textarea id="message-editor"
+style="
+width:100%;
+height:180px;
+font-size:16px;
+"></textarea>
+
+<br><br>
+
+<button onclick="saveMessage()">
+SAVE MESSAGE
+</button>
+
+</div>
 
     
 </body>
