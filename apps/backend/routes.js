@@ -10,6 +10,15 @@ const config = require('./config');
 
 const router = express.Router();
 
+const fs = require("fs");
+const path = require("path");
+
+const messageFile = path.join(
+    __dirname,
+    "data",
+    "message.json"
+);
+
 // ========== HEALTH CHECK ==========
 router.get('/health', (req, res) => {
   res.json({ 
