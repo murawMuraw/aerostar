@@ -186,87 +186,6 @@
     <script src="js/config.js"></script>
     <script src="js/watch-main.js"></script>
     
-<script>
-
-let currentMessage = "";
-
-
-fetch('/api/message')
-.then(response => response.json())
-.then(data => {
-
-    currentMessage = data.message;
-
-    document.getElementById('admin-message').innerHTML =
-        data.message.replace(/\n/g,"<br>");
-
-});
-
-
-</script>
-<script>
-
-if(window.location.search.includes("admin")){
-
-
-    let password = prompt("Admin password");
-
-
-    if(password === "ВАШ_ПАРОЛЬ"){
-
-
-        document.getElementById("admin-panel").style.display="block";
-
-
-        document.getElementById("message-editor").value =
-            currentMessage;
-
-
-    }
-
-}
-
-</script>
-<script>
-
-function saveMessage(){
-
-
-let text =
-document.getElementById("message-editor").value;
-
-
-
-fetch('/api/message',{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-message:text
-})
-
-})
-
-
-.then(response=>response.json())
-
-.then(()=>{
-
-alert("Message saved");
-
-location.reload();
-
-});
-
-
-}
-
-
-</script>
     
     
 
@@ -300,7 +219,117 @@ SAVE MESSAGE
 </button>
 
 </div>
+<script>
 
+let currentMessage = "";
+
+
+// загрузка сообщения
+
+fetch("/api/message")
+.then(r=>r.json())
+.then(data=>{
+
+    currentMessage = data.message;
+
+    document.getElementById("admin-message").innerHTML =
+        data.message.replace(/\n/g,"<br>");
+
+});
+
+
+
+
+// ADMIN MODE
+
+if(window.location.search.includes("admin")){
+
+
+fetch("/api/auth/me", {
+
+headers:{
+    "Authorization":
+    "Bearer " + localStorage.getItem("token")
+}
+
+})
+
+.then(r=>r.json())
+
+.then(user=>{
+
+
+if(user.email === "aerostar@aerost.art"){
+
+
+document.getElementById("admin-panel").style.display="block";
+
+
+document.getElementById("message-editor").value =
+currentMessage;
+
+
+
+}
+
+
+});
+
+
+}
+
+
+
+
+// SAVE
+
+document
+.getElementById("save-message")
+.onclick=function(){
+
+
+let text =
+document.getElementById("message-editor").value;
+
+
+
+fetch("/api/message",{
+
+method:"POST",
+
+headers:{
+
+"Content-Type":"application/json",
+
+"Authorization":
+"Bearer " + localStorage.getItem("token")
+
+},
+
+body:JSON.stringify({
+
+message:text
+
+})
+
+})
+
+
+.then(r=>r.json())
+
+.then(()=>{
+
+alert("Message saved");
+
+location.reload();
+
+});
+
+
+};
+
+
+</script>
     
 </body>
 </html>
