@@ -430,5 +430,56 @@ router.get('/stats', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// ========== WATCH MESSAGE ==========
 
+router.get('/message', (req, res) => {
+
+    try {
+
+        const data = JSON.parse(
+            fs.readFileSync(messageFile, "utf8")
+        );
+
+        res.json(data);
+
+    } catch(error) {
+
+        console.error(error);
+
+        res.status(500).json({
+            error: "Cannot read message"
+        });
+
+    }
+
+});
+
+
+router.post('/message', (req, res) => {
+
+    try {
+
+        fs.writeFileSync(
+            messageFile,
+            JSON.stringify({
+                message: req.body.message
+            }, null, 2)
+        );
+
+
+        res.json({
+            success:true
+        });
+
+    } catch(error) {
+
+        console.error(error);
+
+        res.status(500).json({
+            error:"Cannot save message"
+        });
+
+    }
+
+});
 module.exports = router;
