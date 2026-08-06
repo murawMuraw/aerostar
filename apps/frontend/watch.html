@@ -175,17 +175,7 @@
     </div>
     
     <div id="connectionStatus">⏳ Connecting...</div>
-    
-    <!-- ========== СКРИПТЫ ========== -->
 
-    
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    
-    <!-- ========== ТОЛЬКО НЕОБХОДИМЫЕ ФАЙЛЫ ========== -->
-    <script src="js/config.js"></script>
-    <script src="js/watch-main.js"></script>
-    
     <div id="admin-panel" style="display:none">
 
 <h3>🎈 Aerostar Mission Control</h3>
@@ -205,15 +195,24 @@ SAVE MESSAGE
 
 </div>
     
+    
+    <!-- ========== СКРИПТЫ ========== -->
 
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- ========== ТОЛЬКО НЕОБХОДИМЫЕ ФАЙЛЫ ========== -->
+    <script src="js/config.js"></script>
+    <script src="js/watch-main.js"></script>
+    
+    
 
 <script>
 
 let currentMessage = "";
 
-
 // загрузка сообщения
-
 fetch("/api/message")
 .then(r=>r.json())
 .then(data=>{
@@ -246,19 +245,21 @@ headers:{
 
 .then(user=>{
 
-
 if(user.email === "aerostar@aerost.art"){
-
 
 document.getElementById("admin-panel").style.display="block";
 
+fetch("/api/message")
+.then(r=>r.json())
+.then(data=>{
 
 document.getElementById("message-editor").value =
-currentMessage;
+data.message;
 
-
+});
 
 }
+
 
 
 });
