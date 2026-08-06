@@ -384,10 +384,21 @@
 /* Мигающая кнопка Live Balloon */
 .live-balloon-btn {
     position: relative;
-    animation: livePulse 1.5s infinite;
-    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%) !important;
-    box-shadow: 0 4px 20px rgba(255, 65, 108, 0.4) !important;
+    animation: liveStrongPulse 0.9s infinite;
+    background: linear-gradient(135deg, #ff0000 0%, #ff6a00 100%) !important;
+    box-shadow: 0 0 25px rgba(255,0,0,0.8) !important;
 }
+
+.live-balloon-btn::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 50px;
+    background: rgba(255,0,0,0.35);
+    animation: liveRing 0.9s infinite;
+    z-index: -1;
+}
+
 .live-balloon-btn::after {
     content: '●';
     position: absolute;
@@ -395,24 +406,40 @@
     top: 50%;
     transform: translateY(-50%);
     color: white;
-    font-size: 10px;
-    animation: blink 1s infinite;
-}
-@keyframes livePulse {
-    0%, 100% { 
-        transform: scale(1);
-        box-shadow: 0 4px 20px rgba(255, 65, 108, 0.4);
-    }
-    50% { 
-        transform: scale(1.02);
-        box-shadow: 0 4px 35px rgba(255, 65, 108, 0.7);
-    }
-}
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.2; }
+    font-size: 14px;
+    animation: liveDot 0.5s infinite;
 }
 
+@keyframes liveStrongPulse {
+    0%,100% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+    50% {
+        transform: scale(1.08);
+        filter: brightness(1.4);
+    }
+}
+
+@keyframes liveRing {
+    0% {
+        opacity: 0.8;
+        transform: scale(0.95);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.25);
+    }
+}
+
+@keyframes liveDot {
+    0%,100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.2;
+    }
+}
     
 </style>
 
