@@ -353,62 +353,7 @@ router.post('/public-aerostar', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
-// ========== WATCH PAGE MESSAGE ==========
 
-router.get('/message', (req, res) => {
-
-    try {
-
-        const data = JSON.parse(
-            fs.readFileSync(messageFile, "utf8")
-        );
-
-        res.json(data);
-
-    } catch(error) {
-
-        console.error(error);
-
-        res.json({
-            message: "Aerostar LIVE Balloon"
-        });
-
-    }
-
-});
-
-
-router.post('/message', (req, res) => {
-
-    try {
-
-        const data = {
-            message: req.body.message
-        };
-
-
-        fs.writeFileSync(
-            messageFile,
-            JSON.stringify(data, null, 2)
-        );
-
-
-        res.json({
-            success:true
-        });
-
-
-    } catch(error) {
-
-        console.error(error);
-
-        res.status(500).json({
-            error:"Cannot save message"
-        });
-
-    }
-
-});
 
 
 // ========== СТАТИСТИКА ==========
@@ -455,31 +400,37 @@ router.get('/message', (req, res) => {
 });
 
 
-router.post('/message', (req, res) => {
-
-    try {
-
-        fs.writeFileSync(
-            messageFile,
-            JSON.stringify({
-                message: req.body.message
-            }, null, 2)
-        );
+router.post('/message', authenticateToken, (req,res)=>{
 
 
-        res.json({
-            success:true
-        });
+if(req.user.email !== "aerostar@aerost.art"){
 
-    } catch(error) {
+return res.status(403).json({
+error:"Forbidden"
+});
 
-        console.error(error);
+}
 
-        res.status(500).json({
-            error:"Cannot save message"
-        });
 
-    }
+
+fs.writeFileSync(
+
+messageFile,
+
+JSON.stringify({
+
+message:req.body.message
+
+},null,2)
+
+);
+
+
+
+res.json({
+success:true
+});
+
 
 });
 module.exports = router;
