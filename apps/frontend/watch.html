@@ -186,39 +186,27 @@
     <script src="js/config.js"></script>
     <script src="js/watch-main.js"></script>
     
-    
-    
-
-<div id="admin-panel" style="
-display:none;
-position:fixed;
-top:80px;
-left:50%;
-transform:translateX(-50%);
-background:#111;
-color:white;
-padding:20px;
-border-radius:15px;
-z-index:99999;
-width:600px;
-">
+    <div id="admin-panel" style="display:none">
 
 <h3>🎈 Aerostar Mission Control</h3>
 
-<textarea id="message-editor"
+<textarea 
+id="message-editor"
 style="
-width:100%;
-height:180px;
-font-size:16px;
+width:600px;
+height:200px;
 "></textarea>
 
-<br><br>
+<br>
 
-<button onclick="saveMessage()">
+<button id="save-message">
 SAVE MESSAGE
 </button>
 
 </div>
+    
+
+
 <script>
 
 let currentMessage = "";
@@ -282,10 +270,9 @@ currentMessage;
 
 
 // SAVE
-
 document
 .getElementById("save-message")
-.onclick=function(){
+.addEventListener("click", function(){
 
 
 let text =
@@ -317,7 +304,9 @@ message:text
 
 .then(r=>r.json())
 
-.then(()=>{
+.then(data=>{
+
+console.log(data);
 
 alert("Message saved");
 
@@ -326,7 +315,7 @@ location.reload();
 });
 
 
-};
+});
 
 
 </script>
