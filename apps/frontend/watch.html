@@ -161,7 +161,7 @@
     <div class="live-badge">● LIVE</div>
     
  <div id="admin-message" class="admin-message">
-    Jules Verne, *Five Weeks in a Balloon*
+    
 </div>
     
     
@@ -185,5 +185,27 @@
     <!-- ========== ТОЛЬКО НЕОБХОДИМЫЕ ФАЙЛЫ ========== -->
     <script src="js/config.js"></script>
     <script src="js/watch-main.js"></script>
+    
+<script>
+
+fetch('/api/message')
+.then(response => response.json())
+.then(data => {
+
+    document.getElementById('admin-message').innerHTML =
+        data.message.replace(/\n/g, "<br>");
+
+})
+.catch(error => {
+
+    console.error("Message loading error:", error);
+
+});
+
+</script>
+
+
+
+    
 </body>
 </html>
