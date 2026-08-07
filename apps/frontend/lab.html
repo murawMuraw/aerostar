@@ -17,14 +17,36 @@
 <style>
 
 body {
+    {
     margin:0;
     background: #0b111f;
-    background-image: radial-gradient(circle at 50% 0%, #1a2a4a 0%, #0b111f 70%);
+    background-image: 
+        url('https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Blue_Marble_2002.png/1280px-Blue_Marble_2002.png'),
+        radial-gradient(circle at 50% 0%, #1a2a4a 0%, #0b111f 70%);
+    background-size: cover, 100% 100%;
+    background-position: center, center;
+    background-blend-mode: overlay;
+    background-attachment: fixed;
     color:white;
     font-family: system-ui,-apple-system,sans-serif;
     overflow-y:auto;
     overflow-x:hidden;
+    position: relative;
 }
+
+/* Полупрозрачный слой для читаемости текста */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(11, 17, 31, 0.75);
+    z-index: 0;
+    pointer-events: none;
+}
+
 
 
 .lab-wrapper {
@@ -387,7 +409,8 @@ Launch Experiment
 
 <p>
 A sailing experiment where ships are influenced by
-wind conditions and navigation decisions.
+wind conditions and navigation decisions. <br>
+    (In development)
 </p>
 
 
