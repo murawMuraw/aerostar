@@ -157,18 +157,39 @@ body {
 
 
 
-.gallery img {
+.gallery-item {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s;
+}
 
+.gallery-item:hover {
+    transform: scale(1.02);
+}
+
+.gallery-item img {
     width:100%;
-
     height:180px;
-
     object-fit:cover;
-
     border-radius:15px;
-
     background:#111;
+    display: block;
+}
 
+.gallery-caption {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #b0c4d9;
+    line-height: 1.6;
+    padding: 0 4px;
+    min-height: 110px;
+}
+
+.gallery-caption strong {
+    color: #ffb347;
+    display: block;
+    margin-bottom: 4px;
 }
 
 
@@ -185,6 +206,38 @@ body {
 
 
 
+/* --- Return Button --- */
+.btn-wrapper {
+    margin: 2rem 0 0.5rem;
+}
+
+.btn-return {
+    display: inline-block;
+    padding: 14px 42px;
+    border-radius: 60px;
+    background: linear-gradient(135deg, #ff9800, #e67e22);
+    color: #0b111f;
+    font-weight: 700;
+    font-size: 1.2rem;
+    text-decoration: none;
+    letter-spacing: 0.5px;
+    box-shadow: 0 6px 20px rgba(255, 152, 0, 0.35);
+    transition: all 0.25s ease;
+    border: none;
+}
+
+.btn-return:hover {
+    transform: scale(1.06);
+    box-shadow: 0 10px 30px rgba(255, 152, 0, 0.55);
+    background: linear-gradient(135deg, #ffa726, #f57c00);
+    color: #fff;
+}
+
+.btn-return:active {
+    transform: scale(0.97);
+}
+
+/* --- Footer --- */
 footer {
 
     text-align:center;
@@ -377,18 +430,38 @@ Snapshots and results from virtual journeys.
 
 <div class="gallery">
 
+  <!-- Фото 1 -->
+  <a class="gallery-item" href="gallery-page.html?img=La.png&caption=He wanted to fly across the English Channel but got carried away.">
+    <img src="images/lab/La.png"
+         alt="He wanted to fly across the English Channel but got carried away.">
+    <div class="gallery-caption">
+      <strong>Flight over the Channel</strong>
+      How the attempt to fly across the English Channel ended
+    </div>
+  </a>
 
-<img src="images/lab/La.png"
-alt="He wanted to fly across the English Channel but got carried away.">
+  <!-- Фото 2 -->
+  <a class="gallery-item" href="gallery-page.html?img=Paris_1.png&caption=In the footsteps of Montgolfier">
+    <img src="images/lab/Paris_1.png"
+         alt="In the footsteps of Montgolfier">
+    <div class="gallery-caption">
+      <strong>Montgolfier Legacy</strong>
+      Flight over Paris.<br>
+      The flight launched from the Château de la Muette, <br>
+        replicating the conditions of 1783.<br>
+      A tribute to the pioneers of aeronautics.
+    </div>
+  </a>
 
-
-<img src="images/lab/Paris_1.png"
-alt="In the footsteps of Montgolfier">
-
-
-<img src="images/lab/pilot_fiesta.png"
-alt="Balloon journey result">
-
+  <!-- Фото 3 -->
+  <a class="gallery-item" href="gallery-page.html?img=pilot_fiesta.png&caption=Balloon journey result">
+    <img src="images/lab/pilot_fiesta.png"
+         alt="Balloon journey result">
+    <div class="gallery-caption">
+      <strong>Fiesta Finale</strong>
+    A virtual fiesta with real wind
+    </div>
+  </a>
 
 </div>
 
@@ -415,13 +488,17 @@ wind, weather, oceans and natural forces.
 
 
 </section>
-<!--  Return button -->
-    <section id="try-yourself" class="glass-section section-6" style="text-align: center; padding-bottom: 2rem;">
-      <h2 style="border-bottom: none; margin-bottom: 0.5rem;">✨ Try it yourself</h2>
-      <p style="max-width: 100%; margin-bottom: 0.8rem; color: #b5d4ea;">Explore how wind at different altitudes changes the route.</p>
-      <div class="btn-wrapper">
-        <a href="index.html" class="btn-return">← Back to main</a>
-      </div>
+
+
+
+<!--  Return button — made more noticeable -->
+<section id="try-yourself" class="glass-section section-6" style="text-align: center; padding: 1.5rem 0 0.5rem;">
+  <h2 style="border-bottom: none; margin-bottom: 0.5rem;">✨ Try it yourself</h2>
+  <p style="max-width: 100%; margin-bottom: 0.8rem; color: #b5d4ea;">Explore how wind at different altitudes changes the route.</p>
+  <div class="btn-wrapper">
+    <a href="index.html" class="btn-return">← Back to main</a>
+  </div>
+</section>
 
 
 
