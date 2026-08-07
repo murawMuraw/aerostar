@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gallery — Atmosphere Lab</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0b111f;
+      background-image: radial-gradient(circle at 50% 0%, #1a2a4a 0%, #0b111f 70%);
+      color: white;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 30px;
+    }
+    .container {
+      max-width: 900px;
+      width: 100%;
+      background: #1b263b;
+      border-radius: 28px;
+      padding: 40px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    }
+    .image-wrapper {
+      width: 100%;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #111;
+      margin-bottom: 30px;
+    }
+    .image-wrapper img {
+      width: 100%;
+      height: auto;
+      max-height: 600px;
+      object-fit: contain;
+      display: block;
+    }
+    .text-field {
+      background: #243447;
+      border-radius: 16px;
+      padding: 24px 28px;
+      font-size: 18px;
+      line-height: 1.7;
+      color: #d0dcee;
+      min-height: 320px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border: 1px solid #3a4a66;
+    }
+    .text-field strong {
+      color: #ffb347;
+    }
+    .back-link {
+      display: inline-block;
+      margin-top: 28px;
+      padding: 12px 32px;
+      background: #ff9800;
+      border-radius: 40px;
+      color: #0b111f;
+      text-decoration: none;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+    .back-link:hover {
+      transform: scale(1.05);
+      background: #ffa726;
+    }
+    .caption-title {
+      color: #ffb347;
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="image-wrapper">
+    <img id="galleryImage" src="" alt="Full view">
+  </div>
+  <div class="caption-title" id="captionTitle"></div>
+  <div class="text-field" id="textField">
+    <!-- Здесь будет 20 строк текста -->
+  </div>
+  <a href="index.html" class="back-link">← Back to Lab</a>
+</div>
+
+<script>
+  // Получаем параметры из URL
+  const params = new URLSearchParams(window.location.search);
+  const imgName = params.get('img') || 'La.png';
+  const caption = params.get('caption') || 'Journey snapshot';
+
+  // Формируем путь к изображению
+  document.getElementById('galleryImage').src = 'images/lab/' + imgName;
+
+  // Заголовок
+  document.getElementById('captionTitle').textContent = '📌 ' + caption;
+
+  // Текстовое поле на 20 строк (заполняем подробным описанием)
+  const descriptions = {
+    'La.png': `I had intended to look into the possibility of crossing the strait in a balloon, but I got carried away by the flight. The result was a flight over the Atlantic lasting several days.`,
+
+    'Paris_1.png': `In the footsteps of Montgolfier.
+
+The launch took place at dawn near the Bois de Boulogne.
+The wind was gentle, carrying the balloon eastward.
+We followed the same path as the historic 1783 flight.
+Notre Dame and the Eiffel Tower appeared in the distance.
+The balloon climbed slowly, reaching 500 meters.
+Passing over the Seine, we felt the city's pulse.
+Modern sensors recorded every gust and thermal.
+The data matched the historical records closely.
+A perfect blend of past and present.
+The journey lasted about two hours in total.
+
+Landing was smooth in a field outside the city.
+We collected valuable atmospheric measurements.
+This experiment honors the spirit of early aviators.
+It also tests our simulation algorithms.
+We plan to repeat this flight with different weather.`,
+
+    'pilot_fiesta.png': `Balloon journey result — Fiesta Experiment.
+
+The experiment was a resounding success.
+Over 50 virtual balloons participated in the event.
+Each one followed a unique wind-driven path.
+The goal was to gather diverse flight trajectories.
+Data was collected from multiple altitudes.
+Some balloons traveled over 200 kilometers.
+Others stayed within a small region.
+The variety of outcomes was astonishing.
+We analyzed wind patterns across the region.
+The results will help us build better models.
+
+Participants shared their experiences online.
+The event fostered a sense of community.
+We are planning a larger Fiesta next year.
+This experiment proved the value of crowdsourced data.
+The future of atmospheric exploration is collaborative.`
+  };
+
+  // Если описание для конкретного изображения есть — используем его, иначе генерируем из caption
+  let textContent = descriptions[imgName];
+  if (!textContent) {
+    textContent = `📝 ${caption}\n\n`;
+    for (let i = 1; i <= 19; i++) {
+      textContent += `This is line ${i} of the detailed description for "${caption}".\n`;
+    }
+    textContent += `The full story of this journey will be added soon.`;
+  }
+
+  document.getElementById('textField').textContent = textContent;
+</script>
+</body>
+</html>
