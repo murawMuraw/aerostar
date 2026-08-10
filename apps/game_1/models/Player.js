@@ -1,19 +1,23 @@
 class Player {
 
-    constructor(userId) {
+    constructor(userId, username = null, email = null, password = null) {
 
         this.userId = userId;
+        this.id = userId;
+
+        this.username = username || userId;
+        this.email = email || null;
+        this.password = password || null;
 
         this.sessionId = null;
 
         this.socketId = null;
-
         this.connected = false;
 
         this.shipId = null;
+        this.shipName = null;
 
         this.loginTime = Date.now();
-
         this.lastSeen = Date.now();
 
     }
@@ -34,15 +38,17 @@ class Player {
 
     }
 
-    assignShip(shipId) {
+    assignShip(shipId, shipName = null) {
 
         this.shipId = shipId;
+        this.shipName = shipName || shipId;
 
     }
 
     removeShip() {
 
         this.shipId = null;
+        this.shipName = null;
 
     }
 
