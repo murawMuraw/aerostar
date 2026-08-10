@@ -2,45 +2,48 @@ class Ship {
 
     constructor(type) {
 
+        this.id = null;
         this.type = type;
+        this.name = "";
 
         this.owner = null;
-
-        this.name = "";
+        this.ownerId = null;
 
         this.lat = 0;
         this.lng = 0;
 
         this.heading = 0;
-
         this.speed = 0;
 
         this.rudder = 0;
-
         this.sail = 100;
-
         this.anchor = true;
 
         this.finished = false;
-
         this.distance = 0;
 
         this.lastUpdate = Date.now();
 
     }
 
-  setOwner(player) {
+    setOwner(player) {
 
-    if (!player) {
-        this.ownerId = null;
-        this.owner = null;
-        return;
+        if (!player) {
+
+            this.owner = null;
+            this.ownerId = null;
+
+            return;
+
+        }
+
+        this.owner = player;
+        this.ownerId =
+            player.userId ||
+            player.id ||
+            null;
+
     }
-
-    this.ownerId = player.userId || player.id;
-    this.owner = player;
-
-}
 
     updatePosition(lat, lng) {
 
