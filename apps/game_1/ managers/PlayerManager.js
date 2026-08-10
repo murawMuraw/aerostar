@@ -1,5 +1,3 @@
-// managers/PlayerManager.js
-
 const Player = require("../models/Player");
 
 class PlayerManager {
@@ -11,58 +9,60 @@ class PlayerManager {
 
     }
 
-    /**
-     * Создать игрока
-     */
-    create(userId) {
+    create(username, email = null, password = null) {
 
-        if (this.players.has(userId)) {
-            return this.players.get(userId);
+        // Не создаём второго игрока с тем же username
+        if (this.players.has(username)) {
+            return null;
         }
 
-        const player = new Player(userId);
+        // Проверяем email
+        for (const player of this.players.values()) {
 
-        this.players.set(userId, player);
+            if (email && player.email === email) {
+                return null;
+            }
+
+        }
+
+        const player = new Player(
+            username,
+            username,
+            email,
+            password
+        );
+
+        this.players.set(username, player);
 
         return player;
 
     }
 
-    /**
-     * Получить игрока
-     */
     get(userId) {
 
         return this.players.get(userId) || null;
 
     }
 
-    /**
-     * Проверить существование
-     */
     exists(userId) {
 
         return this.players.has(userId);
 
     }
 
-    /**
-     * Удалить игрока
-     */
     remove(userId) {
 
         return this.players.delete(userId);
 
     }
 
-    /**
-     * Подключение сокета
-     */
     connect(userId, socketId) {
 
         const player = this.get(userId);
 
-        if (!player) return null;
+        if (!player) {
+            return null;
+        }
 
         player.connect(socketId);
 
@@ -70,42 +70,41 @@ class PlayerManager {
 
     }
 
-    /**
-     * Отключение сокета
-     */
     disconnect(userId) {
 
         const player = this.get(userId);
 
-        if (!player) return;
+        if (!player) {
+            return false;
+        }
 
         player.disconnect();
-
-    }
-
-    /**
-     * Назначить корабль
-     */
-    assignShip(userId, ship) {
-
-        const player = this.get(userId);
-
-        if (!player) return false;
-
-        player.assignShip(ship);
 
         return true;
 
     }
 
-    /**
-     * Удалить корабль
-     */
+    assignShip(userId, shipId, shipName = null) {
+
+        const player = this.get(userId);
+
+        if (!player) {
+            return false;
+        }
+
+        player.assignShip(shipId, shipName);
+
+        return true;
+
+    }
+
     removeShip(userId) {
 
         const player = this.get(userId);
 
-        if (!player) return false;
+        if (!player) {
+            return false;
+        }
 
         player.removeShip();
 
@@ -113,55 +112,45 @@ class PlayerManager {
 
     }
 
-    /**
-     * Все игроки
-     */
+    getBySocket(socketId) {
+
+        for (const player of this.players.values()) {
+
+            if (player.socketId === socketId) {
+                return player;
+            }
+
+        }
+
+        return null;
+
+    }
+
     getAll() {
 
         return Array.from(this.players.values());
 
     }
 
-    /**
-     * Только подключённые
-     */
     getOnline() {
 
-        return this.getAll().filter(player => player.connected);
+        return this.getAll()
+            .filter(player => player.connected);
 
     }
 
-    /**
-     * Количество игроков
-     */
     count() {
 
         return this.players.size;
 
     }
 
-    /**
-     * Очистить
-     */
     clear() {
 
         this.players.clear();
 
     }
 
-}
-
-getBySocket(socketId) {
-
-    for (const player of this.players.values()) {
-
-        if (player.socketId === socketId) {
-            return player;
-        }
-
-    }
-
-    return null;
 }
 
 module.exports = PlayerManager;
