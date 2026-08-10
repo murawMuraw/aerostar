@@ -1,150 +1,110 @@
-// core/GameServer.js
+const Player = require("../models/Player");
 
-const SessionManager = require("../managers/SessionManager");
-const PlayerManager  = require("../managers/PlayerManager");
-const ShipManager    = require("../managers/ShipManager");
+class PlayerManager {
 
-const WindManager    = require("../managers/WindManager");
-const OceanManager   = require("../managers/OceanManager");
-const RaceManager    = require("../managers/RaceManager");
-const World = require("./World");
+    constructor() {
 
-const GameLoop       = require("./GameLoop");
-
-class GameServer {
-
-    constructor(io) {
-
-        this.io = io;
-
-        this.sessions = new SessionManager();
-        this.players  = new PlayerManager();
-        this.ships    = new ShipManager();
-
-        this.wind  = new WindManager();
-        this.ocean = new OceanManager();
-        this.race  = new RaceManager();
-        this.world = new World(this);
-        this.loop = new GameLoop(this);
+        // userId -> Player
+        this.players = new Map();
 
     }
 
-    //----------------------------------------------------------
-    // Запуск
-    //----------------------------------------------------------
-start() {
+    create(username, email = null, password = null) {
 
-    console.log("Game server started");
+        // Не создаём второго игрока с тем же username
+        if (this.players.has(username)) {
+            return null;
+        }
 
-    this.world.start();
-    this.loop.start();
+        // Проверяем email
+        for (const player of this.players.values()) {
 
-}
+            if (email && player.email === email) {
+                return null;
+            }
 
-stop() {
+        }
 
-    this.loop.stop();
-    this.world.stop();
+        const player = new Player(
+            username,
+            username,
+            email,
+            password
+        );
 
-}
+        this.players.set(username, player);
 
-    //----------------------------------------------------------
-    // Авторизация
-    //----------------------------------------------------------
-
-    login(userId) {
-
-        let player = this.players.get(userId);
-
-        if (!player)
-            player = this.players.create(userId);
-
-        const sessionId = this.sessions.create(userId);
-
-        player.sessionId = sessionId;
-
-        return {
-
-            player,
-            sessionId
-
-        };
+        return player;
 
     }
 
-    logout(sessionId) {
+    get(userId) {
 
-        const userId = this.sessions.getUser(sessionId);
-
-        if (!userId)
-            return false;
-
-        this.disconnect(userId);
-
-        this.leaveRace(userId);
-
-        this.sessions.remove(sessionId);
-
-        this.players.remove(userId);
-
-        return true;
+        return this.players.get(userId) || null;
 
     }
 
-    //----------------------------------------------------------
-    // Socket
-    //----------------------------------------------------------
+    exists(userId) {
+
+        return this.players.has(userId);
+
+    }
+
+    remove(userId) {
+
+        return this.players.delete(userId);
+
+    }
 
     connect(userId, socketId) {
 
-        return this.players.connect(userId, socketId);
+        const player = this.get(userId);
+
+        if (!player) {
+            return null;
+        }
+
+        player.connect(socketId);
+
+        return player;
 
     }
 
     disconnect(userId) {
 
-        return this.players.disconnect(userId);
+        const player = this.get(userId);
 
-    }
-
-    //----------------------------------------------------------
-    // Регата
-    //----------------------------------------------------------
-
-    joinRace(userId, shipType) {
-
-        const player = this.players.get(userId);
-
-        if (!player)
-            return null;
-
-        const ship = this.ships.getByType(shipType);
-
-        if (!ship)
-            return null;
-
-        if (!this.ships.isAvailable(shipType))
-            return null;
-
-        this.ships.assignOwner(ship.id, player);
-
-        player.assignShip(ship.id);
-
-        return ship;
-
-    }
-
-    leaveRace(userId) {
-
-        const player = this.players.get(userId);
-
-        if (!player)
+        if (!player) {
             return false;
+        }
 
-        if (!player.shipId)
-            return true;
+        player.disconnect();
 
-        this.ships.release(player.shipId);
+        return true;
+
+    }
+
+    assignShip(userId, shipId, shipName = null) {
+
+        const player = this.get(userId);
+
+        if (!player) {
+            return false;
+        }
+
+        player.assignShip(shipId, shipName);
+
+        return true;
+
+    }
+
+    removeShip(userId) {
+
+        const player = this.get(userId);
+
+        if (!player) {
+            return false;
+        }
 
         player.removeShip();
 
@@ -152,124 +112,45 @@ stop() {
 
     }
 
-    //----------------------------------------------------------
-    // Управление кораблем
-    //----------------------------------------------------------
+    getBySocket(socketId) {
 
-    updatePosition(userId, lat, lng) {
+        for (const player of this.players.values()) {
 
-        const player = this.players.get(userId);
+            if (player.socketId === socketId) {
+                return player;
+            }
 
-        if (!player || !player.shipId)
-            return false;
+        }
 
-        return this.ships.setPosition(
-            player.shipId,
-            lat,
-            lng
-        );
+        return null;
 
     }
 
-    setHeading(userId, heading) {
+    getAll() {
 
-        const player = this.players.get(userId);
-
-        if (!player || !player.shipId)
-            return false;
-
-        return this.ships.setHeading(
-            player.shipId,
-            heading
-        );
+        return Array.from(this.players.values());
 
     }
 
-    setSail(userId, sail) {
+    getOnline() {
 
-        const player = this.players.get(userId);
-
-        if (!player || !player.shipId)
-            return false;
-
-        return this.ships.setSail(
-            player.shipId,
-            sail
-        );
+        return this.getAll()
+            .filter(player => player.connected);
 
     }
 
-    setRudder(userId, rudder) {
+    count() {
 
-        const player = this.players.get(userId);
-
-        if (!player || !player.shipId)
-            return false;
-
-        return this.ships.setRudder(
-            player.shipId,
-            rudder
-        );
+        return this.players.size;
 
     }
 
-    setAnchor(userId, anchor) {
+    clear() {
 
-        const player = this.players.get(userId);
-
-        if (!player || !player.shipId)
-            return false;
-
-        return this.ships.setAnchor(
-            player.shipId,
-            anchor
-        );
-
-    }
-
-    //----------------------------------------------------------
-    // Состояние игры
-    //----------------------------------------------------------
-
-    getGameState() {
-
-        return {
-
-            players : this.players.count(),
-
-            online  : this.players.getOnline().length,
-
-            ships   : this.ships.getActive(),
-
-            race    : this.race.getState()
-
-        };
-
-    }
-
-    //----------------------------------------------------------
-    // Рассылка
-    //----------------------------------------------------------
-
-    broadcastState() {
-
-        this.io.emit(
-            "game_state",
-            this.getGameState()
-        );
-
-    }
-
-    //----------------------------------------------------------
-    // Игровой тик
-    //----------------------------------------------------------
-
-    tick(dt) {
-
-        this.world.update(dt);
+        this.players.clear();
 
     }
 
 }
 
-module.exports = GameServer;
+module.exports = PlayerManager;
