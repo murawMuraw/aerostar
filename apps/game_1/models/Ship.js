@@ -29,11 +29,18 @@ class Ship {
 
     }
 
-    setOwner(player) {
+  setOwner(player) {
 
+    if (!player) {
         this.ownerId = null;
-
+        this.owner = null;
+        return;
     }
+
+    this.ownerId = player.userId || player.id;
+    this.owner = player;
+
+}
 
     updatePosition(lat, lng) {
 
