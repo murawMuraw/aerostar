@@ -1,20 +1,19 @@
-// apps/game_1/server.js
+// server.js
 
 const path = require("path");
 const http = require("http");
-
 const express = require("express");
 const { Server } = require("socket.io");
 
 const GameServer = require("./core/GameServer");
 const registerSocketHandlers = require("./socket/SocketHandlers");
 
+const shipsRoutes = require("./routes/ships");
+const authRoutes = require("./routes/auth");
+const raceRoutes = require("./routes/race");
+
 const app = express();
 const server = http.createServer(app);
-
-// ---------------------------------------------------------
-// Socket.IO
-// ---------------------------------------------------------
 
 const io = new Server(server, {
     cors: {
@@ -23,79 +22,85 @@ const io = new Server(server, {
     }
 });
 
-// ---------------------------------------------------------
-// Configuration
-// ---------------------------------------------------------
-
 const PORT = process.env.PORT || 3002;
 
-// ---------------------------------------------------------
+// ----------------------------------------------------------
 // Middleware
-// ---------------------------------------------------------
+// ----------------------------------------------------------
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// ---------------------------------------------------------
-// Game Server
-// ---------------------------------------------------------
-
-const game = new GameServer(io);
-
-// ---------------------------------------------------------
-// API Routes
-// ---------------------------------------------------------
-
-const shipsRoutes = require("./routes/ships");
-const authRoutes = require("./routes/auth");
-
-shipsRoutes(app, game);
-authRoutes(app, game);
-
-// ---------------------------------------------------------
-// Static files
-// ---------------------------------------------------------
 
 app.use(express.static(
     path.join(__dirname, "public")
 ));
 
-// ---------------------------------------------------------
-// Create ships
+// ----------------------------------------------------------
+// Game Server
+// ----------------------------------------------------------
+
+const game = new GameServer(io);
+
+// ----------------------------------------------------------
+// Ships
 //
-// IMPORTANT:
-// These IDs must correspond to the ships used by
-// public/selection.html
-// ---------------------------------------------------------
+// ID/type должны совпадать с selection.html
+// ----------------------------------------------------------
 
 const ships = [
-    "klip_10",
-    "klip_20",
-    "klip_30",
-    "columb",
-    "pirat",
-    "ap",
-    "19c_m"
+    {
+        id: "klip_10",
+        name: "Clipper-10"
+    },
+    {
+        id: "klip_20",
+        name: "Clipper-20"
+    },
+    {
+        id: "klip_30",
+        name: "Clipper-30"
+    },
+    {
+        id: "columb",
+        name: "Columbus"
+    },
+    {
+        id: "pirat",
+        name: "Pirate"
+    },
+    {
+        id: "ap",
+        name: "AP"
+    },
+    {
+        id: "19c_m",
+        name: "19th Century"
+    }
 ];
 
-for (const type of ships) {
-    try {
-        game.ships.create(type, type);
-        console.log(`Ship created: ${type}`);
-    } catch (error) {
-        console.error(`Failed to create ship "${type}":`, error);
-    }
+for (const ship of ships) {
+    game.ships.create(ship.id, ship.name);
 }
 
-// ---------------------------------------------------------
-// Socket handlers
-// ---------------------------------------------------------
+// ----------------------------------------------------------
+// HTTP API
+// ----------------------------------------------------------
+
+shipsRoutes(app, game);
+authRoutes(app, game);
+
+if (typeof raceRoutes === "function") {
+    raceRoutes(app, game);
+}
+
+// ----------------------------------------------------------
+// Socket.IO
+// ----------------------------------------------------------
 
 registerSocketHandlers(io, game);
 
-// ---------------------------------------------------------
-// Health check
-// ---------------------------------------------------------
+// ----------------------------------------------------------
+// Health
+// ----------------------------------------------------------
 
 app.get("/health", (req, res) => {
     res.json({
@@ -105,15 +110,15 @@ app.get("/health", (req, res) => {
     });
 });
 
-// ---------------------------------------------------------
+// ----------------------------------------------------------
 // Full game state
-// ---------------------------------------------------------
+// ----------------------------------------------------------
 
 app.get("/state", (req, res) => {
     try {
         res.json(game.getGameState());
     } catch (error) {
-        console.error("GET /state error:", error);
+        console.error("GET /state ERROR:", error);
 
         res.status(500).json({
             success: false,
@@ -122,86 +127,17 @@ app.get("/state", (req, res) => {
     }
 });
 
-// ---------------------------------------------------------
-// 404 API handler
-// ---------------------------------------------------------
+// ----------------------------------------------------------
+// Start
+// ----------------------------------------------------------
 
-app.use("/api", (req, res) => {
-    res.status(404).json({
-        success: false,
-        message: "API endpoint not found",
-        path: req.originalUrl
-    });
-});
-
-// ---------------------------------------------------------
-// Error handler
-// ---------------------------------------------------------
-
-app.use((err, req, res, next) => {
-    console.error("Express error:", err);
-
-    if (res.headersSent) {
-        return next(err);
-    }
-
-    res.status(500).json({
-        success: false,
-        message: "Internal server error"
-    });
-});
-
-// ---------------------------------------------------------
-// Start game
-// ---------------------------------------------------------
-
-console.log("--------------------------------------");
-console.log("Initializing Regatta server...");
-
-try {
-    game.start();
-    console.log("Game server started");
-} catch (error) {
-    console.error("Failed to start game:", error);
-    process.exit(1);
-}
-
-// ---------------------------------------------------------
-// Start HTTP server
-// ---------------------------------------------------------
+game.start();
 
 server.listen(PORT, "0.0.0.0", () => {
+
     console.log("--------------------------------------");
     console.log("Regatta server started");
     console.log("Port:", PORT);
-    console.log("Ships:", ships.join(", "));
     console.log("--------------------------------------");
+
 });
-
-// ---------------------------------------------------------
-// Graceful shutdown
-// ---------------------------------------------------------
-
-function shutdown(signal) {
-    console.log(`\n${signal} received. Shutting down...`);
-
-    try {
-        game.stop();
-    } catch (error) {
-        console.error("Game stop error:", error);
-    }
-
-    server.close(() => {
-        console.log("HTTP server stopped");
-        process.exit(0);
-    });
-
-    setTimeout(() => {
-        console.error("Forced shutdown");
-        process.exit(1);
-    }, 5000);
-}
-
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-
