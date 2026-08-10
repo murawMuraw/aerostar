@@ -1,4 +1,3 @@
-
 // routes/ships.js
 
 module.exports = function(app, game) {
@@ -17,13 +16,18 @@ module.exports = function(app, game) {
 
         } catch (error) {
 
-            console.error("GET /api/ships ERROR:", error);
+            console.error(
+                "GET /api/ships ERROR:",
+                error
+            );
 
             res.status(500).json({
                 success: false,
-                message: "Failed to load ships"
+                message: error.message
             });
+
         }
+
     });
 
 
@@ -49,9 +53,11 @@ module.exports = function(app, game) {
 
             res.status(500).json({
                 success: false,
-                message: "Failed to load ship state"
+                message: error.message
             });
+
         }
+
     });
 
 
@@ -71,48 +77,59 @@ module.exports = function(app, game) {
                 shipName
             } = req.body;
 
+            console.log(
+                "SELECT SHIP:",
+                {
+                    sessionId,
+                    shipId,
+                    shipName
+                }
+            );
+
             if (!sessionId) {
+
                 return res.status(401).json({
                     success: false,
                     message: "Not authenticated"
                 });
+
             }
 
             if (!shipId) {
+
                 return res.status(400).json({
                     success: false,
                     message: "Ship ID is required"
                 });
-            }
 
-            // -------------------------------------------------
-            // Получаем пользователя из session
-            // -------------------------------------------------
-
-            if (!game.sessions ||
-                typeof game.sessions.get !== "function") {
-
-                return res.status(500).json({
-                    success: false,
-                    message: "Session system unavailable"
-                });
             }
 
             const session =
                 game.sessions.get(sessionId);
 
             if (!session) {
+
                 return res.status(401).json({
                     success: false,
                     message: "Invalid session"
                 });
+
             }
 
-            const userId = session.userId;
+            const userId =
+                session.userId;
 
-            // -------------------------------------------------
-            // Выбираем корабль
-            // -------------------------------------------------
+            const player =
+                game.players.get(userId);
+
+            if (!player) {
+
+                return res.status(401).json({
+                    success: false,
+                    message: "Player not found"
+                });
+
+            }
 
             const ship =
                 game.joinRace(
@@ -121,21 +138,28 @@ module.exports = function(app, game) {
                 );
 
             if (!ship) {
+
                 return res.status(400).json({
                     success: false,
                     message: "Ship unavailable"
                 });
+
             }
 
             res.json({
+
                 success: true,
 
                 data: {
-                    shipId: shipId,
-                    shipName: shipName || shipId
+                    shipId: ship.id || shipId,
+                    shipName:
+                        ship.name ||
+                        shipName ||
+                        shipId
                 },
 
-                ship: ship
+                ship
+
             });
 
         } catch (error) {
@@ -145,11 +169,22 @@ module.exports = function(app, game) {
                 error
             );
 
+            // Временно возвращаем реальную ошибку.
+            // После отладки можно заменить message
+            // на общее "Failed to select ship".
+
             res.status(500).json({
+
                 success: false,
-                message: "Failed to select ship"
+
+                message:
+                    error.message ||
+                    "Failed to select ship"
+
             });
+
         }
+
     });
 
 
@@ -165,56 +200,64 @@ module.exports = function(app, game) {
                 req.headers["x-session-id"];
 
             if (!sessionId) {
+
                 return res.json({
-                    success: false,
+                    success: true,
                     data: null
                 });
+
             }
 
             const session =
                 game.sessions.get(sessionId);
 
             if (!session) {
-                return res.json({
-                    success: false,
-                    data: null
-                });
-            }
 
-            const userId = session.userId;
-
-            const player =
-                game.players.get(userId);
-
-            if (!player) {
-                return res.json({
-                    success: false,
-                    data: null
-                });
-            }
-
-            // Если PlayerManager хранит выбранный корабль
-            const shipId =
-                player.shipId ||
-                player.shipType ||
-                player.selectedShip;
-
-            if (!shipId) {
                 return res.json({
                     success: true,
                     data: null
                 });
+
+            }
+
+            const player =
+                game.players.get(
+                    session.userId
+                );
+
+            if (!player) {
+
+                return res.json({
+                    success: true,
+                    data: null
+                });
+
+            }
+
+            if (!player.shipId) {
+
+                return res.json({
+                    success: true,
+                    data: null
+                });
+
             }
 
             res.json({
+
                 success: true,
 
                 data: {
-                    shipId: shipId,
+
+                    shipId:
+                        player.shipId,
+
                     shipName:
                         player.shipName ||
-                        shipId
+                        player.shipId
+
                 }
+
             });
 
         } catch (error) {
@@ -225,15 +268,23 @@ module.exports = function(app, game) {
             );
 
             res.status(500).json({
+
                 success: false,
+
+                message:
+                    error.message,
+
                 data: null
+
             });
+
         }
+
     });
 
 
     // -----------------------------------------------------
-    // POST /api/clear_ship_selection
+    // CLEAR SHIP
     // -----------------------------------------------------
 
     app.post("/api/clear_ship_selection", (req, res) => {
@@ -244,38 +295,30 @@ module.exports = function(app, game) {
                 req.headers["x-session-id"];
 
             if (!sessionId) {
+
                 return res.status(401).json({
                     success: false,
                     message: "Not authenticated"
                 });
+
             }
 
             const session =
                 game.sessions.get(sessionId);
 
             if (!session) {
+
                 return res.status(401).json({
                     success: false,
                     message: "Invalid session"
                 });
+
             }
 
-            const userId = session.userId;
+            const userId =
+                session.userId;
 
-            // Используем существующий механизм выхода
-            if (typeof game.leaveRace === "function") {
-                game.leaveRace(userId);
-            }
-
-            const player =
-                game.players.get(userId);
-
-            if (player) {
-                player.shipId = null;
-                player.shipType = null;
-                player.selectedShip = null;
-                player.shipName = null;
-            }
+            game.leaveRace(userId);
 
             res.json({
                 success: true
@@ -284,16 +327,21 @@ module.exports = function(app, game) {
         } catch (error) {
 
             console.error(
-                "POST /api/clear_ship_selection ERROR:",
+                "CLEAR SHIP ERROR:",
                 error
             );
 
             res.status(500).json({
+
                 success: false,
-                message: "Failed to clear ship selection"
+
+                message:
+                    error.message
+
             });
+
         }
+
     });
 
 };
-
