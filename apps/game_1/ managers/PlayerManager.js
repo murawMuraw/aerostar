@@ -151,4 +151,17 @@ class PlayerManager {
 
 }
 
+getBySocket(socketId) {
+
+    for (const player of this.players.values()) {
+
+        if (player.socketId === socketId) {
+            return player;
+        }
+
+    }
+
+    return null;
+}
+
 module.exports = PlayerManager;
