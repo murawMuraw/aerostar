@@ -32,23 +32,21 @@ class GameServer {
     //----------------------------------------------------------
     // Запуск
     //----------------------------------------------------------
+start() {
 
-    start() {
+    console.log("Game server started");
 
-        console.log("Game server started");
+    this.world.start();
+    this.loop.start();
 
-        this.loop.start();
-        this.world.start();
-       this.loop.start();
+}
 
-    }
+stop() {
 
-    stop() {
+    this.loop.stop();
+    this.world.stop();
 
-        this.loop.stop();
-       this.loop.stop();
-       this.world.stop();
-    }
+}
 
     //----------------------------------------------------------
     // Авторизация
