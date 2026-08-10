@@ -1,110 +1,171 @@
-const Player = require("../models/Player");
+const SessionManager = require("../managers/SessionManager");
+const PlayerManager  = require("../managers/PlayerManager");
+const ShipManager    = require("../managers/ShipManager");
 
-class PlayerManager {
+const WindManager  = require("../managers/WindManager");
+const OceanManager = require("../managers/OceanManager");
+const RaceManager  = require("../managers/RaceManager");
 
-    constructor() {
+const World = require("./World");
+const GameLoop = require("./GameLoop");
 
-        // userId -> Player
-        this.players = new Map();
+class GameServer {
 
-    }
+    constructor(io) {
 
-    create(username, email = null, password = null) {
+        this.io = io;
 
-        // Не создаём второго игрока с тем же username
-        if (this.players.has(username)) {
-            return null;
-        }
+        this.sessions = new SessionManager();
+        this.players = new PlayerManager();
+        this.ships = new ShipManager();
 
-        // Проверяем email
-        for (const player of this.players.values()) {
+        this.wind = new WindManager();
+        this.ocean = new OceanManager();
+        this.race = new RaceManager();
 
-            if (email && player.email === email) {
-                return null;
-            }
-
-        }
-
-        const player = new Player(
-            username,
-            username,
-            email,
-            password
-        );
-
-        this.players.set(username, player);
-
-        return player;
+        this.world = new World(this);
+        this.loop = new GameLoop(this);
 
     }
 
-    get(userId) {
+    // ----------------------------------------------------------
+    // START / STOP
+    // ----------------------------------------------------------
 
-        return this.players.get(userId) || null;
+    start() {
 
-    }
+        console.log("Game server started");
 
-    exists(userId) {
-
-        return this.players.has(userId);
-
-    }
-
-    remove(userId) {
-
-        return this.players.delete(userId);
+        this.world.start();
+        this.loop.start();
 
     }
 
-    connect(userId, socketId) {
+    stop() {
 
-        const player = this.get(userId);
+        this.loop.stop();
+        this.world.stop();
+
+    }
+
+    // ----------------------------------------------------------
+    // AUTH
+    // ----------------------------------------------------------
+
+    login(username, password) {
+
+        const player = this.players.get(username);
 
         if (!player) {
             return null;
         }
 
-        player.connect(socketId);
+        if (player.password !== password) {
+            return null;
+        }
 
-        return player;
+        const sessionId = this.sessions.create(username);
+
+        player.sessionId = sessionId;
+
+        return {
+            player,
+            sessionId
+        };
+
+    }
+
+    logout(sessionId) {
+
+        const userId = this.sessions.getUser(sessionId);
+
+        if (!userId) {
+            return false;
+        }
+
+        this.disconnect(userId);
+        this.leaveRace(userId);
+
+        this.sessions.remove(sessionId);
+        this.players.remove(userId);
+
+        return true;
+
+    }
+
+    // ----------------------------------------------------------
+    // SOCKET
+    // ----------------------------------------------------------
+
+    connect(userId, socketId) {
+
+        return this.players.connect(
+            userId,
+            socketId
+        );
 
     }
 
     disconnect(userId) {
 
-        const player = this.get(userId);
-
-        if (!player) {
-            return false;
-        }
-
-        player.disconnect();
-
-        return true;
+        return this.players.disconnect(userId);
 
     }
 
-    assignShip(userId, shipId, shipName = null) {
+    // ----------------------------------------------------------
+    // RACE
+    // ----------------------------------------------------------
 
-        const player = this.get(userId);
+    joinRace(userId, shipId) {
+
+        const player = this.players.get(userId);
 
         if (!player) {
-            return false;
+            console.log("joinRace: player not found", userId);
+            return null;
         }
 
-        player.assignShip(shipId, shipName);
+        const ship = this.ships.getByType(shipId);
 
-        return true;
+        if (!ship) {
+            console.log("joinRace: ship not found", shipId);
+            return null;
+        }
+
+        if (!this.ships.isAvailable(shipId)) {
+            console.log("joinRace: ship unavailable", shipId);
+            return null;
+        }
+
+        this.ships.assignOwner(
+            ship.id,
+            player
+        );
+
+        player.assignShip(
+            ship.id,
+            ship.name || ship.type || shipId
+        );
+
+        return ship;
 
     }
 
-    removeShip(userId) {
+    leaveRace(userId) {
 
-        const player = this.get(userId);
+        const player = this.players.get(userId);
 
         if (!player) {
             return false;
         }
+
+        if (!player.shipId) {
+            return true;
+        }
+
+        this.ships.release(
+            player.shipId
+        );
 
         player.removeShip();
 
@@ -112,45 +173,132 @@ class PlayerManager {
 
     }
 
-    getBySocket(socketId) {
+    // ----------------------------------------------------------
+    // SHIP CONTROL
+    // ----------------------------------------------------------
 
-        for (const player of this.players.values()) {
+    updatePosition(userId, lat, lng) {
 
-            if (player.socketId === socketId) {
-                return player;
-            }
+        const player = this.players.get(userId);
 
+        if (!player || !player.shipId) {
+            return false;
         }
 
-        return null;
+        return this.ships.setPosition(
+            player.shipId,
+            lat,
+            lng
+        );
 
     }
 
-    getAll() {
+    setHeading(userId, heading) {
 
-        return Array.from(this.players.values());
+        const player = this.players.get(userId);
 
-    }
+        if (!player || !player.shipId) {
+            return false;
+        }
 
-    getOnline() {
-
-        return this.getAll()
-            .filter(player => player.connected);
-
-    }
-
-    count() {
-
-        return this.players.size;
+        return this.ships.setHeading(
+            player.shipId,
+            heading
+        );
 
     }
 
-    clear() {
+    setSail(userId, sail) {
 
-        this.players.clear();
+        const player = this.players.get(userId);
+
+        if (!player || !player.shipId) {
+            return false;
+        }
+
+        return this.ships.setSail(
+            player.shipId,
+            sail
+        );
+
+    }
+
+    setRudder(userId, rudder) {
+
+        const player = this.players.get(userId);
+
+        if (!player || !player.shipId) {
+            return false;
+        }
+
+        return this.ships.setRudder(
+            player.shipId,
+            rudder
+        );
+
+    }
+
+    setAnchor(userId, anchor) {
+
+        const player = this.players.get(userId);
+
+        if (!player || !player.shipId) {
+            return false;
+        }
+
+        return this.ships.setAnchor(
+            player.shipId,
+            anchor
+        );
+
+    }
+
+    // ----------------------------------------------------------
+    // STATE
+    // ----------------------------------------------------------
+
+    getGameState() {
+
+        return {
+
+            players: this.players.count(),
+
+            online:
+                this.players.getOnline().length,
+
+            ships:
+                this.ships.getActive(),
+
+            race:
+                this.race.getState()
+
+        };
+
+    }
+
+    // ----------------------------------------------------------
+    // BROADCAST
+    // ----------------------------------------------------------
+
+    broadcastState() {
+
+        this.io.emit(
+            "game_state",
+            this.getGameState()
+        );
+
+    }
+
+    // ----------------------------------------------------------
+    // TICK
+    // ----------------------------------------------------------
+
+    tick(dt) {
+
+        this.world.update(dt);
 
     }
 
 }
 
-module.exports = PlayerManager;
+module.exports = GameServer;
