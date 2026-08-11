@@ -1,13 +1,13 @@
-const SessionManager = require("../managers/SessionManager");
-const PlayerManager  = require("../managers/PlayerManager");
-const ShipManager    = require("../managers/ShipManager");
+// core/GameServer.js
 
-const WindManager  = require("../managers/WindManager");
+const ShipManager = require("../managers/ShipManager");
+
+const WindManager = require("../managers/WindManager");
 const OceanManager = require("../managers/OceanManager");
-const RaceManager  = require("../managers/RaceManager");
 
 const World = require("./World");
 const GameLoop = require("./GameLoop");
+
 
 class GameServer {
 
@@ -15,272 +15,257 @@ class GameServer {
 
         this.io = io;
 
-        this.sessions = new SessionManager();
-        this.players = new PlayerManager();
+        // ==================================================
+        // КОРАБЛЬ
+        // ==================================================
+
+        // В игре существует один парусник
         this.ships = new ShipManager();
 
+
+        // ==================================================
+        // ОКРУЖЕНИЕ
+        // ==================================================
+
+        // Реальный ветер
         this.wind = new WindManager();
+
+        // Океан / течения / суша
         this.ocean = new OceanManager();
-        this.race = new RaceManager();
+
+
+        // ==================================================
+        // МИР
+        // ==================================================
 
         this.world = new World(this);
+
+
+        // ==================================================
+        // ИГРОВОЙ ЦИКЛ
+        // ==================================================
+
         this.loop = new GameLoop(this);
+
+
+        // ==================================================
+        // СОСТОЯНИЕ
+        // ==================================================
+
+        this.running = false;
 
     }
 
-    // ----------------------------------------------------------
-    // START / STOP
-    // ----------------------------------------------------------
+
+    // ======================================================
+    // ЗАПУСК СЕРВЕРА
+    // ======================================================
 
     start() {
 
+        if (this.running) {
+            return;
+        }
+
         console.log("Game server started");
 
+
+        // Создаём единственный корабль
+        this.ships.create(
+            "klip_20",
+            "Klip_20"
+        );
+
+
+        // Запускаем мир
         this.world.start();
+
+
+        // Запускаем постоянный серверный цикл
         this.loop.start();
 
+
+        this.running = true;
+
     }
+
+
+    // ======================================================
+    // ОСТАНОВКА СЕРВЕРА
+    // ======================================================
 
     stop() {
 
+        if (!this.running) {
+            return;
+        }
+
+
         this.loop.stop();
+
         this.world.stop();
 
-    }
 
-    // ----------------------------------------------------------
-    // AUTH
-    // ----------------------------------------------------------
-
-    login(username, password) {
-
-        const player = this.players.get(username);
-
-        if (!player) {
-            return null;
-        }
-
-        if (player.password !== password) {
-            return null;
-        }
-
-        const sessionId = this.sessions.create(username);
-
-        player.sessionId = sessionId;
-
-        return {
-            player,
-            sessionId
-        };
+        this.running = false;
 
     }
 
-    logout(sessionId) {
 
-        const userId = this.sessions.getUser(sessionId);
+    // ======================================================
+    // ПОЛУЧИТЬ КОРАБЛЬ
+    // ======================================================
 
-        if (!userId) {
-            return false;
-        }
+    getShip() {
 
-        this.disconnect(userId);
-        this.leaveRace(userId);
-
-        this.sessions.remove(sessionId);
-        this.players.remove(userId);
-
-        return true;
+        return this.ships.getShip();
 
     }
 
-    // ----------------------------------------------------------
-    // SOCKET
-    // ----------------------------------------------------------
 
-    connect(userId, socketId) {
+    // ======================================================
+    // СОСТОЯНИЕ КОРАБЛЯ
+    // ======================================================
 
-        return this.players.connect(
-            userId,
-            socketId
-        );
+    getShipState() {
+
+        return this.ships.getState();
 
     }
 
-    disconnect(userId) {
 
-        return this.players.disconnect(userId);
+    // ======================================================
+    // УПРАВЛЕНИЕ КОРАБЛЁМ
+    // ======================================================
 
-    }
+    setHeading(heading) {
 
-    // ----------------------------------------------------------
-    // RACE
-    // ----------------------------------------------------------
-
-    joinRace(userId, shipId) {
-
-        const player = this.players.get(userId);
-
-        if (!player) {
-            console.log("joinRace: player not found", userId);
-            return null;
-        }
-
-        const ship = this.ships.getByType(shipId);
-
-        if (!ship) {
-            console.log("joinRace: ship not found", shipId);
-            return null;
-        }
-
-        if (!this.ships.isAvailable(shipId)) {
-            console.log("joinRace: ship unavailable", shipId);
-            return null;
-        }
-
-        this.ships.assignOwner(
-            ship.id,
-            player
-        );
-
-        player.assignShip(
-            ship.id,
-            ship.name || ship.type || shipId
-        );
-
-        return ship;
+        return this.ships.setHeading(heading);
 
     }
 
-    leaveRace(userId) {
 
-        const player = this.players.get(userId);
+    setRudder(rudder) {
 
-        if (!player) {
-            return false;
-        }
-
-        if (!player.shipId) {
-            return true;
-        }
-
-        this.ships.release(
-            player.shipId
-        );
-
-        player.removeShip();
-
-        return true;
+        return this.ships.setRudder(rudder);
 
     }
 
-    // ----------------------------------------------------------
-    // SHIP CONTROL
-    // ----------------------------------------------------------
 
-    updatePosition(userId, lat, lng) {
+    setSail(sail) {
 
-        const player = this.players.get(userId);
+        return this.ships.setSail(sail);
 
-        if (!player || !player.shipId) {
-            return false;
-        }
+    }
+
+
+    // ======================================================
+    // ЯКОРЬ
+    // ======================================================
+
+    dropAnchor() {
+
+        return this.ships.dropAnchor();
+
+    }
+
+
+    raiseAnchor() {
+
+        return this.ships.raiseAnchor();
+
+    }
+
+
+    toggleAnchor() {
+
+        return this.ships.toggleAnchor();
+
+    }
+
+
+    // ======================================================
+    // ПОЛОЖЕНИЕ
+    // ======================================================
+
+    setPosition(lat, lng) {
 
         return this.ships.setPosition(
-            player.shipId,
             lat,
             lng
         );
 
     }
 
-    setHeading(userId, heading) {
 
-        const player = this.players.get(userId);
+    // ======================================================
+    // ВЕТЕР
+    // ======================================================
 
-        if (!player || !player.shipId) {
-            return false;
-        }
+    setWind(speed, direction) {
 
-        return this.ships.setHeading(
-            player.shipId,
-            heading
+        return this.ships.setWind(
+            speed,
+            direction
         );
 
     }
 
-    setSail(userId, sail) {
 
-        const player = this.players.get(userId);
+    // ======================================================
+    // ТЕЧЕНИЕ
+    // ======================================================
 
-        if (!player || !player.shipId) {
-            return false;
-        }
+    setCurrent(speed, direction) {
 
-        return this.ships.setSail(
-            player.shipId,
-            sail
+        return this.ships.setCurrent(
+            speed,
+            direction
         );
 
     }
 
-    setRudder(userId, rudder) {
 
-        const player = this.players.get(userId);
+    // ======================================================
+    // ПРОВЕРКА ДВИЖЕНИЯ
+    // ======================================================
 
-        if (!player || !player.shipId) {
-            return false;
-        }
+    isMoving() {
 
-        return this.ships.setRudder(
-            player.shipId,
-            rudder
-        );
+        return this.ships.isMoving();
 
     }
 
-    setAnchor(userId, anchor) {
 
-        const player = this.players.get(userId);
-
-        if (!player || !player.shipId) {
-            return false;
-        }
-
-        return this.ships.setAnchor(
-            player.shipId,
-            anchor
-        );
-
-    }
-
-    // ----------------------------------------------------------
-    // STATE
-    // ----------------------------------------------------------
+    // ======================================================
+    // СОСТОЯНИЕ ИГРЫ
+    // ======================================================
 
     getGameState() {
 
+        const ship = this.ships.getState();
+
         return {
 
-            players: this.players.count(),
+            running: this.running,
 
-            online:
-                this.players.getOnline().length,
+            ship: ship,
 
-            ships:
-                this.ships.getActive(),
-
-            race:
-                this.race.getState()
+            timestamp: Date.now()
 
         };
 
     }
 
-    // ----------------------------------------------------------
-    // BROADCAST
-    // ----------------------------------------------------------
+
+    // ======================================================
+    // РАССЫЛКА СОСТОЯНИЯ
+    // ======================================================
 
     broadcastState() {
+
+        if (!this.io) {
+            return;
+        }
 
         this.io.emit(
             "game_state",
@@ -289,16 +274,36 @@ class GameServer {
 
     }
 
-    // ----------------------------------------------------------
-    // TICK
-    // ----------------------------------------------------------
+
+    // ======================================================
+    // ИГРОВОЙ ТИК
+    // ======================================================
 
     tick(dt) {
 
+        // World отвечает за физику:
+        //
+        // ветер
+        // течение
+        // парус
+        // руль
+        // координаты
+        // столкновение с сушей
+        //
+        // GameServer только передаёт управление миру.
+
         this.world.update(dt);
+
+
+        // После расчёта нового состояния
+        // отправляем его подключённым клиентам.
+
+        this.broadcastState();
 
     }
 
 }
 
+
 module.exports = GameServer;
+
