@@ -7,25 +7,22 @@ class ShipManager {
 
     constructor() {
 
-        // shipId -> Ship
-        this.ships = new Map();
-
-        // userId -> shipId
-        this.playerShips = new Map();
-
-        // type -> shipId
-        // пока один корабль каждого типа
-        this.typeShips = new Map();
+        // Единственный корабль игры
+        this.ship = null;
 
     }
 
-    /**
-     * Создать корабль
-     */
-    create(type, name = "") {
 
-        if (this.typeShips.has(type)) {
-            throw new Error(`Ship type '${type}' already exists`);
+    // ======================================================
+    // СОЗДАНИЕ КОРАБЛЯ
+    // ======================================================
+
+    create(type = "klip_20", name = "Klip_20") {
+
+        // Если корабль уже существует —
+        // не создаём второй
+        if (this.ship) {
+            return this.ship;
         }
 
         const ship = new Ship(type);
@@ -33,287 +30,250 @@ class ShipManager {
         ship.id = crypto.randomUUID();
         ship.name = name;
 
-        this.ships.set(ship.id, ship);
-        this.typeShips.set(type, ship.id);
+        this.ship = ship;
 
         return ship;
-
     }
 
-    /**
-     * Получить по shipId
-     */
-    get(shipId) {
 
-        return this.ships.get(shipId) || null;
+    // ======================================================
+    // ПОЛУЧИТЬ КОРАБЛЬ
+    // ======================================================
 
+    get() {
+
+        return this.ship;
     }
 
-    /**
-     * Получить по типу
-     */
-    getByType(type) {
 
-        const shipId = this.typeShips.get(type);
+    // ======================================================
+    // ПОЛУЧИТЬ СОСТОЯНИЕ
+    // ======================================================
 
-        if (!shipId) return null;
+    getState() {
 
-        return this.get(shipId);
-
-    }
-
-    /**
-     * Получить корабль игрока
-     */
-    getByPlayer(userId) {
-
-        const shipId = this.playerShips.get(userId);
-
-        if (!shipId) return null;
-
-        return this.get(shipId);
-
-    }
-
-    /**
-     * Назначить владельца
-     */
-    assignOwner(shipId, player) {
-
-        const ship = this.get(shipId);
-
-        if (!ship)
-            return false;
-
-        // если корабль уже кому-то принадлежит
-        if (ship.owner) {
-
-            this.playerShips.delete(ship.owner.userId);
-
+        if (!this.ship) {
+            return null;
         }
 
-        // если у игрока уже есть корабль
-        const oldShip = this.getByPlayer(player.userId);
+        return this.ship.getState();
+    }
 
-        if (oldShip) {
 
-            oldShip.owner = null;
+    // ======================================================
+    // ПОЛОЖЕНИЕ
+    // ======================================================
 
+    setPosition(lat, lng) {
+
+        if (!this.ship) {
+            return false;
         }
 
-        ship.owner = player;
-
-        this.playerShips.set(player.userId, shipId);
+        this.ship.setPosition(lat, lng);
 
         return true;
-
     }
 
-    /**
-     * Освободить корабль
-     */
-    release(shipId) {
 
-        const ship = this.get(shipId);
+    // ======================================================
+    // КУРС
+    // ======================================================
 
-        if (!ship)
+    setHeading(heading) {
+
+        if (!this.ship) {
             return false;
-
-        if (ship.owner) {
-
-            this.playerShips.delete(ship.owner.userId);
-
         }
 
-        ship.owner = null;
-
-        return true;
-
+        return this.ship.setHeading(heading);
     }
 
-    /**
-     * Удалить корабль
-     */
-    remove(shipId) {
 
-        const ship = this.get(shipId);
+    // ======================================================
+    // РУЛЬ
+    // ======================================================
 
-        if (!ship)
+    setRudder(rudder) {
+
+        if (!this.ship) {
             return false;
-
-        if (ship.owner) {
-
-            this.playerShips.delete(ship.owner.userId);
-
         }
 
-        this.typeShips.delete(ship.type);
+        return this.ship.setRudder(rudder);
+    }
 
-        this.ships.delete(shipId);
+
+    // ======================================================
+    // ПАРУС
+    // ======================================================
+
+    setSail(sail) {
+
+        if (!this.ship) {
+            return false;
+        }
+
+        return this.ship.setSail(sail);
+    }
+
+
+    // ======================================================
+    // ЯКОРЬ
+    // ======================================================
+
+    dropAnchor() {
+
+        if (!this.ship) {
+            return false;
+        }
+
+        return this.ship.dropAnchor();
+    }
+
+
+    raiseAnchor() {
+
+        if (!this.ship) {
+            return false;
+        }
+
+        return this.ship.raiseAnchor();
+    }
+
+
+    toggleAnchor() {
+
+        if (!this.ship) {
+            return false;
+        }
+
+        return this.ship.toggleAnchor();
+    }
+
+
+    // ======================================================
+    // ВЕТЕР
+    // ======================================================
+
+    setWind(speed, direction) {
+
+        if (!this.ship) {
+            return false;
+        }
+
+        this.ship.setWind(speed, direction);
 
         return true;
-
     }
 
-    /**
-     * Координаты
-     */
-    setPosition(shipId, lat, lng) {
 
-        const ship = this.get(shipId);
+    // ======================================================
+    // ТЕЧЕНИЕ
+    // ======================================================
 
-        if (!ship)
+    setCurrent(speed, direction) {
+
+        if (!this.ship) {
             return false;
+        }
 
-        ship.lat = lat;
-        ship.lng = lng;
-        ship.lastUpdate = Date.now();
+        this.ship.setCurrent(speed, direction);
 
         return true;
-
     }
 
-    /**
-     * Курс
-     */
-    setHeading(shipId, heading) {
 
-        const ship = this.get(shipId);
+    // ======================================================
+    // ПРОВЕРКА ДВИЖЕНИЯ
+    // ======================================================
 
-        if (!ship)
+    isMoving() {
+
+        if (!this.ship) {
             return false;
+        }
 
-        ship.heading = heading;
+        return this.ship.isMoving();
+    }
+
+
+    // ======================================================
+    // ПОСАДКА НА МЕЛЬ
+    // ======================================================
+
+    ground() {
+
+        if (!this.ship) {
+            return false;
+        }
+
+        return this.ship.ground();
+    }
+
+
+    // ======================================================
+    // СКОРОСТЬ
+    // ======================================================
+
+    setSpeed(speed) {
+
+        if (!this.ship) {
+            return false;
+        }
+
+        const value = Number(speed);
+
+        if (!Number.isFinite(value)) {
+            return false;
+        }
+
+        this.ship.speed = Math.max(0, value);
 
         return true;
-
     }
 
-    /**
-     * Скорость
-     */
-    setSpeed(shipId, speed) {
 
-        const ship = this.get(shipId);
+    // ======================================================
+    // ПОЛУЧИТЬ КОРАБЛЬ ДЛЯ WORLD
+    // ======================================================
 
-        if (!ship)
-            return false;
+    getShip() {
 
-        ship.speed = speed;
-
-        return true;
-
+        return this.ship;
     }
 
-    /**
-     * Руль
-     */
-    setRudder(shipId, rudder) {
 
-        const ship = this.get(shipId);
+    // ======================================================
+    // ПОЛУЧИТЬ ПУБЛИЧНОЕ СОСТОЯНИЕ
+    // ======================================================
 
-        if (!ship)
-            return false;
+    getPublicState() {
 
-        ship.rudder = rudder;
+        if (!this.ship) {
+            return {
+                exists: false
+            };
+        }
 
-        return true;
-
+        return {
+            exists: true,
+            ship: this.ship.getState()
+        };
     }
 
-    /**
-     * Парус
-     */
-    setSail(shipId, sail) {
 
-        const ship = this.get(shipId);
+    // ======================================================
+    // ОЧИСТКА
+    // ======================================================
 
-        if (!ship)
-            return false;
-
-        ship.sail = sail;
-
-        return true;
-
-    }
-
-    /**
-     * Якорь
-     */
-    setAnchor(shipId, anchor) {
-
-        const ship = this.get(shipId);
-
-        if (!ship)
-            return false;
-
-        ship.anchor = anchor;
-
-        return true;
-
-    }
-
-    /**
-     * Есть ли корабль такого типа
-     */
-    hasType(type) {
-
-        return this.typeShips.has(type);
-
-    }
-
-    /**
-     * Свободен ли корабль
-     */
-    isAvailable(type) {
-
-        const ship = this.getByType(type);
-
-        if (!ship)
-            return false;
-
-        return ship.owner === null;
-
-    }
-
-    /**
-     * Все корабли
-     */
-    getAll() {
-
-        return [...this.ships.values()];
-
-    }
-
-    /**
-     * Все активные корабли
-     */
-    getActive() {
-
-        return this.getAll().filter(ship => ship.owner);
-
-    }
-
-    /**
-     * Количество
-     */
-    count() {
-
-        return this.ships.size;
-
-    }
-
-    /**
-     * Очистить
-     */
     clear() {
 
-        this.ships.clear();
-        this.playerShips.clear();
-        this.typeShips.clear();
-
+        this.ship = null;
     }
 
 }
 
+
 module.exports = ShipManager;
+
