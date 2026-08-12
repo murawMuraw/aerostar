@@ -2,18 +2,33 @@
 
 const path = require("path");
 const http = require("http");
+
 const express = require("express");
 const { Server } = require("socket.io");
 
 const GameServer = require("./core/GameServer");
 const registerSocketHandlers = require("./socket/SocketHandlers");
 
-const shipsRoutes = require("./routes/ships");
-const authRoutes = require("./routes/auth");
-const raceRoutes = require("./routes/race");
+
+// ==========================================================
+// EXPRESS
+// ==========================================================
 
 const app = express();
+
+app.use(express.json());
+
+
+// ==========================================================
+// HTTP SERVER
+// ==========================================================
+
 const server = http.createServer(app);
+
+
+// ==========================================================
+// SOCKET.IO
+// ==========================================================
 
 const io = new Server(server, {
     cors: {
@@ -22,122 +37,264 @@ const io = new Server(server, {
     }
 });
 
+
+// ==========================================================
+// PORT
+// ==========================================================
+
 const PORT = process.env.PORT || 3002;
 
-// ----------------------------------------------------------
-// Middleware
-// ----------------------------------------------------------
 
-app.use(express.json());
+// ==========================================================
+// STATIC FILES
+// ==========================================================
 
 app.use(express.static(
     path.join(__dirname, "public")
 ));
 
-// ----------------------------------------------------------
-// Game Server
-// ----------------------------------------------------------
+
+// ==========================================================
+// GAME SERVER
+// ==========================================================
 
 const game = new GameServer(io);
 
-// ----------------------------------------------------------
-// Ships
-//
-// ID/type должны совпадать с selection.html
-// ----------------------------------------------------------
 
-const ships = [
-    {
-        id: "klip_10",
-        name: "Clipper-10"
-    },
-    {
-        id: "klip_20",
-        name: "Clipper-20"
-    },
-    {
-        id: "klip_30",
-        name: "Clipper-30"
-    },
-    {
-        id: "columb",
-        name: "Columbus"
-    },
-    {
-        id: "pirat",
-        name: "Pirate"
-    },
-    {
-        id: "ap",
-        name: "AP"
-    },
-    {
-        id: "19c_m",
-        name: "19th Century"
-    }
-];
-
-for (const ship of ships) {
-    game.ships.create(ship.id, ship.name);
-}
-
-// ----------------------------------------------------------
-// HTTP API
-// ----------------------------------------------------------
-
-shipsRoutes(app, game);
-authRoutes(app, game);
-
-if (typeof raceRoutes === "function") {
-    raceRoutes(app, game);
-}
-
-// ----------------------------------------------------------
-// Socket.IO
-// ----------------------------------------------------------
+// ==========================================================
+// SOCKET HANDLERS
+// ==========================================================
 
 registerSocketHandlers(io, game);
 
+
+// ==========================================================
+// API
+// ==========================================================
+
+
 // ----------------------------------------------------------
-// Health
+// Health check
 // ----------------------------------------------------------
 
 app.get("/health", (req, res) => {
+
     res.json({
         status: "ok",
-        service: "regatta",
-        port: PORT
+        gameRunning: game.running
     });
+
 });
 
+
 // ----------------------------------------------------------
-// Full game state
+// Полное состояние игры
 // ----------------------------------------------------------
 
-app.get("/state", (req, res) => {
-    try {
-        res.json(game.getGameState());
-    } catch (error) {
-        console.error("GET /state ERROR:", error);
+app.get("/api/state", (req, res) => {
 
-        res.status(500).json({
+    res.json(
+        game.getGameState()
+    );
+
+});
+
+
+// ----------------------------------------------------------
+// Состояние корабля
+// ----------------------------------------------------------
+
+app.get("/api/ship", (req, res) => {
+
+    const ship = game.getShip();
+
+    if (!ship) {
+
+        return res.status(404).json({
             success: false,
-            message: "Failed to get game state"
+            message: "Ship not initialized"
         });
+
     }
+
+    res.json({
+        success: true,
+        ship: ship.getState()
+    });
+
 });
 
+
 // ----------------------------------------------------------
-// Start
+// Управление курсом
 // ----------------------------------------------------------
+
+app.post("/api/control/heading", (req, res) => {
+
+    const { heading } = req.body;
+
+    const success = game.setHeading(heading);
+
+    if (!success) {
+
+        return res.status(400).json({
+            success: false,
+            message: "Invalid heading"
+        });
+
+    }
+
+    res.json({
+        success: true,
+        heading: game.getShip().heading
+    });
+
+});
+
+
+// ----------------------------------------------------------
+// Управление рулём
+// ----------------------------------------------------------
+
+app.post("/api/control/rudder", (req, res) => {
+
+    const { rudder } = req.body;
+
+    const success = game.setRudder(rudder);
+
+    if (!success) {
+
+        return res.status(400).json({
+            success: false,
+            message: "Invalid rudder value"
+        });
+
+    }
+
+    res.json({
+        success: true,
+        rudder: game.getShip().rudder
+    });
+
+});
+
+
+// ----------------------------------------------------------
+// Управление парусом
+// ----------------------------------------------------------
+
+app.post("/api/control/sail", (req, res) => {
+
+    const { sail } = req.body;
+
+    const success = game.setSail(sail);
+
+    if (!success) {
+
+        return res.status(400).json({
+            success: false,
+            message: "Invalid sail value"
+        });
+
+    }
+
+    res.json({
+        success: true,
+        sail: game.getShip().sail
+    });
+
+});
+
+
+// ----------------------------------------------------------
+// ЯКОРЬ
+// ----------------------------------------------------------
+
+app.post("/api/control/anchor", (req, res) => {
+
+    const { anchor } = req.body;
+
+    let success;
+
+    if (anchor === true) {
+
+        success = game.dropAnchor();
+
+    } else if (anchor === false) {
+
+        success = game.raiseAnchor();
+
+    } else {
+
+        success = game.toggleAnchor();
+
+    }
+
+    if (!success) {
+
+        return res.status(400).json({
+            success: false,
+            message: "Unable to change anchor state"
+        });
+
+    }
+
+    const ship = game.getShip();
+
+    res.json({
+        success: true,
+        anchor: ship.anchor
+    });
+
+});
+
+
+// ==========================================================
+// ROOT
+// ==========================================================
+
+app.get("/", (req, res) => {
+
+    res.sendFile(
+        path.join(__dirname, "public", "game.html")
+    );
+
+});
+
+
+// ==========================================================
+// ERROR HANDLER
+// ==========================================================
+
+app.use((err, req, res, next) => {
+
+    console.error("Server error:", err);
+
+    res.status(500).json({
+        success: false,
+        message: "Internal server error"
+    });
+
+});
+
+
+// ==========================================================
+// START GAME
+// ==========================================================
 
 game.start();
+
+
+// ==========================================================
+// START HTTP SERVER
+// ==========================================================
 
 server.listen(PORT, "0.0.0.0", () => {
 
     console.log("--------------------------------------");
-    console.log("Regatta server started");
+    console.log("Sailing game server started");
     console.log("Port:", PORT);
+    console.log("Ship: klip_20");
     console.log("--------------------------------------");
 
 });
