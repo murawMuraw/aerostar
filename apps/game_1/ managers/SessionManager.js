@@ -1,5 +1,4 @@
 // managers/SessionManager.js
-
 const crypto = require("crypto");
 
 class SessionManager {
