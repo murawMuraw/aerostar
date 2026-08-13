@@ -1,5 +1,4 @@
 // managers/ShipManager.js
-
 const crypto = require("crypto");
 const Ship = require("../models/Ship");
 
