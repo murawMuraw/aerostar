@@ -1,65 +1,104 @@
 // managers/OceanManager.js
 
+
 class OceanManager {
+
 
     constructor() {
 
+
+        this.current = {
+
+            speed: 0,
+            direction: 0,
+            timestamp: Date.now()
+
+        };
+
+
         this.cache = new Map();
 
-        this.cacheTTL = 30 * 60 * 1000;
+
+        /*
+         * обновление течения
+         * позже можно заменить API
+         */
+
+        this.updateInterval =
+            60 * 60 * 1000;
+
+
 
     }
 
+
+
+
+
     // ----------------------------------------------------------
-    // Получить течение в точке
+    // World.js вызывает этот метод
     // ----------------------------------------------------------
 
     get(lat, lng) {
 
-        if (
-            !Number.isFinite(Number(lat)) ||
-            !Number.isFinite(Number(lng))
-        ) {
-            return {
-                speed: 0,
-                direction: 0
-            };
+
+        const key =
+            this.getCacheKey(
+                lat,
+                lng
+            );
+
+
+
+        const cached =
+            this.cache.get(key);
+
+
+
+        if (cached) {
+
+            return cached;
+
         }
 
-        lat = Number(lat);
-        lng = Number(lng);
 
-        const key = this.getCacheKey(lat, lng);
-
-        const cached = this.cache.get(key);
-
-        if (
-            cached &&
-            Date.now() - cached.timestamp < this.cacheTTL
-        ) {
-            return cached.data;
-        }
 
         /*
-         * Пока используем базовую модель.
+         * Пока простая модель течений.
          *
-         * Здесь позже можно подключить
-         * реальный источник океанических течений.
+         * Позже здесь будет:
+         *
+         * Copernicus Marine
+         * NOAA
+         * HYCOM
+         *
          */
 
-        const current = this.calculateCurrent(
-            lat,
-            lng
+
+        const current =
+            this.calculateCurrent(
+                lat,
+                lng
+            );
+
+
+
+        this.cache.set(
+            key,
+            current
         );
 
-        this.cache.set(key, {
-            timestamp: Date.now(),
-            data: current
-        });
 
         return current;
 
+
     }
+
+
+
+
+
+
 
     // ----------------------------------------------------------
     // Модель течения
@@ -67,46 +106,96 @@ class OceanManager {
 
     calculateCurrent(lat, lng) {
 
+
+
         /*
-         * Временная модель.
+         * Базовое океаническое течение.
          *
-         * Она НЕ является реальными
-         * океаническими данными.
+         * Скорость:
+         * метров в секунду
          *
-         * Пока ставим слабое течение.
+         * Направление:
+         * градусы
+         *
+         * 0   север
+         * 90  восток
+         * 180 юг
+         * 270 запад
          */
+
+
 
         return {
 
-            speed: 0.1,
 
-            direction: 90
+            speed:
+                0.05,
+
+
+            direction:
+                90,
+
+
+            timestamp:
+                Date.now()
+
 
         };
 
+
     }
 
+
+
+
+
+
+
     // ----------------------------------------------------------
-    // Проверка суши
+    // Проверка берега
     // ----------------------------------------------------------
 
     isLand(lat, lng) {
 
+
+
         /*
-         * ВАЖНО:
+         * Здесь будет проверка
+         * по береговой линии.
          *
-         * Этот метод нельзя делать через простую
-         * проверку диапазона координат.
-         *
-         * Для реального столкновения с берегом
-         * нужна геометрия береговой линии.
-         *
-         * Пока возвращаем false.
+         * Пока океан открыт.
          */
+
+
 
         return false;
 
+
     }
+
+
+
+
+
+
+
+    // ----------------------------------------------------------
+    // Очистка кеша
+    // ----------------------------------------------------------
+
+    clear() {
+
+
+        this.cache.clear();
+
+
+    }
+
+
+
+
+
+
 
     // ----------------------------------------------------------
     // Ключ кеша
@@ -114,26 +203,38 @@ class OceanManager {
 
     getCacheKey(lat, lng) {
 
-        const roundedLat =
-            Math.round(lat * 10) / 10;
 
-        const roundedLng =
-            Math.round(lng * 10) / 10;
+        /*
+         * 0.1 градуса примерно 10 км
+         *
+         * Нет смысла хранить
+         * каждую точку.
+         */
 
-        return `${roundedLat}:${roundedLng}`;
+
+        const rLat =
+            Math.round(
+                lat * 10
+            ) / 10;
+
+
+
+        const rLng =
+            Math.round(
+                lng * 10
+            ) / 10;
+
+
+
+        return `${rLat}:${rLng}`;
+
 
     }
 
-    // ----------------------------------------------------------
-    // Очистить кеш
-    // ----------------------------------------------------------
 
-    clearCache() {
-
-        this.cache.clear();
-
-    }
 
 }
+
+
 
 module.exports = OceanManager;
