@@ -2,6 +2,7 @@
 
 const https = require("https");
 
+
 class WindManager {
 
     constructor(options = {}) {
@@ -12,231 +13,384 @@ class WindManager {
             process.env.OPENWEATHERMAP_API_KEY ||
             "";
 
-        this.cache = new Map();
+        // последние данные ветра
+        this.current = {
 
-        // Время жизни данных о ветре
-        // 10 минут.
-        this.cacheTTL = 10 * 60 * 1000;
+            speed: 0,
+            direction: 0,
+            gust: 0,
+            timestamp: 0
 
-        this.timeout = 8000;
+        };
+
+
+        // координаты последнего запроса
+
+        this.lastLat = null;
+        this.lastLng = null;
+
+
+        // обновление не чаще чем раз в 10 минут
+
+        this.updateInterval = 
+            10 * 60 * 1000;
+
+
+        this.lastUpdate = 0;
+
+
+        this.requestRunning = false;
+
 
     }
 
+
+
     // ----------------------------------------------------------
-    // Получить ветер в точке
+    // World.js вызывает этот метод
+    // Он НЕ async
     // ----------------------------------------------------------
 
-    async get(lat, lng) {
+    get(lat, lng) {
+
+
+        const now = Date.now();
+
+
+        /*
+         * Если корабль ушёл далеко
+         * или прошло время обновления,
+         * запускаем новый запрос
+         */
 
         if (
-            !Number.isFinite(Number(lat)) ||
-            !Number.isFinite(Number(lng))
+
+            !this.requestRunning &&
+
+            (
+                !this.lastLat ||
+                this.distanceChanged(lat, lng) ||
+                now - this.lastUpdate > this.updateInterval
+            )
+
         ) {
-            return null;
+
+            this.update(
+                lat,
+                lng
+            );
+
         }
 
-        lat = Number(lat);
-        lng = Number(lng);
 
-        const key = this.getCacheKey(lat, lng);
 
-        const cached = this.cache.get(key);
+        return this.current;
 
-        if (
-            cached &&
-            Date.now() - cached.timestamp < this.cacheTTL
-        ) {
-            return cached.data;
-        }
+    }
+
+
+
+
+
+    // ----------------------------------------------------------
+    // Фоновое обновление ветра
+    // ----------------------------------------------------------
+
+    async update(lat, lng) {
+
 
         if (!this.apiKey) {
 
             console.warn(
-                "WindManager: OPENWEATHER_API_KEY is not configured"
+                "WindManager: API key missing"
             );
 
-            return null;
+            return;
+
         }
+
+
+
+        this.requestRunning = true;
+
 
         try {
 
-            const data = await this.fetchWind(lat, lng);
 
-            if (!data) {
-                return null;
+            const wind =
+                await this.fetchWind(
+                    lat,
+                    lng
+                );
+
+
+            if (wind) {
+
+
+                this.current = wind;
+
+
+                this.lastLat = Number(lat);
+                this.lastLng = Number(lng);
+
+                this.lastUpdate =
+                    Date.now();
+
+
             }
 
-            this.cache.set(key, {
-                timestamp: Date.now(),
-                data
-            });
 
-            return data;
+        }
 
-        } catch (error) {
+        catch(error) {
+
 
             console.error(
-                "WindManager error:",
+                "Wind update failed:",
                 error.message
             );
 
+
             /*
-             * Если API временно недоступен,
-             * используем старые данные.
+             * Старый ветер сохраняем.
+             * Корабль продолжает движение.
              */
 
-            if (cached) {
-                return cached.data;
-            }
+        }
 
-            return null;
+
+        finally {
+
+            this.requestRunning = false;
+
         }
 
     }
 
+
+
+
+
     // ----------------------------------------------------------
-    // OpenWeather
+    // Запрос OpenWeather
     // ----------------------------------------------------------
 
     fetchWind(lat, lng) {
 
-        return new Promise((resolve, reject) => {
 
-            const url =
-                "https://api.openweathermap.org/data/2.5/weather" +
-                `?lat=${encodeURIComponent(lat)}` +
-                `&lon=${encodeURIComponent(lng)}` +
-                `&appid=${encodeURIComponent(this.apiKey)}` +
-                "&units=metric";
+        return new Promise(
+            (resolve, reject) => {
 
-            const request = https.get(
-                url,
-                response => {
 
-                    let body = "";
+                const url =
+                    "https://api.openweathermap.org/data/2.5/weather" +
+                    `?lat=${lat}` +
+                    `&lon=${lng}` +
+                    `&appid=${this.apiKey}` +
+                    "&units=metric";
 
-                    response.on(
-                        "data",
-                        chunk => {
-                            body += chunk;
-                        }
-                    );
 
-                    response.on(
-                        "end",
-                        () => {
 
-                            if (
-                                response.statusCode < 200 ||
-                                response.statusCode >= 300
-                            ) {
+                const req = https.get(
+                    url,
+                    res => {
 
-                                reject(
-                                    new Error(
-                                        `OpenWeather HTTP ${response.statusCode}`
-                                    )
-                                );
 
-                                return;
-                            }
+                        let data = "";
 
-                            try {
 
-                                const json =
-                                    JSON.parse(body);
 
-                                const wind =
-                                    json.wind || {};
+                        res.on(
+                            "data",
+                            chunk => {
 
-                                const speed =
-                                    Number(wind.speed) || 0;
-
-                                const direction =
-                                    Number(wind.deg) || 0;
-
-                                resolve({
-
-                                    speed,
-                                    direction,
-
-                                    // Дополнительная информация
-                                    gust:
-                                        Number(wind.gust) || 0,
-
-                                    timestamp:
-                                        Date.now()
-
-                                });
-
-                            } catch (error) {
-
-                                reject(error);
+                                data += chunk;
 
                             }
+                        );
 
-                        }
-                    );
 
-                }
-            );
 
-            request.setTimeout(
-                this.timeout,
-                () => {
+                        res.on(
+                            "end",
+                            () => {
 
-                    request.destroy();
 
-                    reject(
-                        new Error(
-                            "OpenWeather request timeout"
-                        )
-                    );
+                                if (
+                                    res.statusCode !== 200
+                                ) {
 
-                }
-            );
+                                    reject(
+                                        new Error(
+                                            "OpenWeather HTTP " +
+                                            res.statusCode
+                                        )
+                                    );
 
-            request.on(
-                "error",
-                reject
-            );
+                                    return;
 
-        });
+                                }
+
+
+
+                                try {
+
+
+                                    const json =
+                                        JSON.parse(data);
+
+
+
+                                    const wind =
+                                        json.wind || {};
+
+
+
+                                    resolve({
+
+                                        speed:
+                                            Number(
+                                                wind.speed
+                                            ) || 0,
+
+
+                                        direction:
+                                            Number(
+                                                wind.deg
+                                            ) || 0,
+
+
+                                        gust:
+                                            Number(
+                                                wind.gust
+                                            ) || 0,
+
+
+                                        timestamp:
+                                            Date.now()
+
+                                    });
+
+
+
+                                }
+
+                                catch(e) {
+
+                                    reject(e);
+
+                                }
+
+
+                            }
+                        );
+
+
+                    }
+                );
+
+
+
+                req.setTimeout(
+                    8000,
+                    () => {
+
+                        req.destroy();
+
+                        reject(
+                            new Error(
+                                "Wind timeout"
+                            )
+                        );
+
+                    }
+                );
+
+
+
+                req.on(
+                    "error",
+                    reject
+                );
+
+
+            }
+        );
 
     }
 
+
+
+
+
     // ----------------------------------------------------------
-    // Ключ кеша
+    // Проверка изменения координат
     // ----------------------------------------------------------
 
-    getCacheKey(lat, lng) {
+    distanceChanged(lat, lng) {
+
+
+        if (
+            this.lastLat === null ||
+            this.lastLng === null
+        ) {
+
+            return true;
+
+        }
+
+
+
+        const dLat =
+            Math.abs(
+                lat - this.lastLat
+            );
+
+
+        const dLng =
+            Math.abs(
+                lng - this.lastLng
+            );
+
+
 
         /*
-         * Не нужно хранить ветер для каждого
-         * миллиметра координат.
-         *
-         * Округляем до 0.1 градуса.
+         * примерно 10 км
          */
 
-        const roundedLat =
-            Math.round(lat * 10) / 10;
-
-        const roundedLng =
-            Math.round(lng * 10) / 10;
-
-        return `${roundedLat}:${roundedLng}`;
+        return (
+            dLat > 0.1 ||
+            dLng > 0.1
+        );
 
     }
 
+
+
+
     // ----------------------------------------------------------
-    // Очистить кеш
+    // Очистка
     // ----------------------------------------------------------
 
-    clearCache() {
+    clear() {
 
-        this.cache.clear();
+        this.current = {
+
+            speed:0,
+            direction:0,
+            gust:0,
+            timestamp:0
+
+        };
+
+
+        this.lastLat = null;
+        this.lastLng = null;
 
     }
 
 }
+
+
 
 module.exports = WindManager;
