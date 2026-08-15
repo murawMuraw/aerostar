@@ -1,7 +1,6 @@
 // core/GameServer.js
 
 const ShipManager = require("../managers/ShipManager");
-
 const WindManager = require("../managers/WindManager");
 const OceanManager = require("../managers/OceanManager");
 
@@ -16,10 +15,9 @@ class GameServer {
         this.io = io;
 
         // ==================================================
-        // КОРАБЛЬ
+        // ЕДИНСТВЕННЫЙ КОРАБЛЬ
         // ==================================================
 
-        // В игре существует один парусник
         this.ships = new ShipManager();
 
 
@@ -27,10 +25,8 @@ class GameServer {
         // ОКРУЖЕНИЕ
         // ==================================================
 
-        // Реальный ветер
         this.wind = new WindManager();
 
-        // Океан / течения / суша
         this.ocean = new OceanManager();
 
 
@@ -53,12 +49,11 @@ class GameServer {
         // ==================================================
 
         this.running = false;
-
     }
 
 
     // ======================================================
-    // ЗАПУСК СЕРВЕРА
+    // ЗАПУСК
     // ======================================================
 
     start() {
@@ -70,28 +65,37 @@ class GameServer {
         console.log("Game server started");
 
 
-        // Создаём единственный корабль
-        this.ships.create(
-            "klip_20",
-            "Klip_20"
-        );
+        // Создаём единственный корабль.
+        //
+        // ShipManager должен сам восстановить
+        // сохранённое состояние из data/ship.json,
+        // если оно существует.
+
+        if (!this.ships.getShip()) {
+
+            this.ships.create(
+                "klip_20",
+                "Klip_20"
+            );
+        }
 
 
-        // Запускаем мир
+        // Запускаем World
+
         this.world.start();
 
 
         // Запускаем постоянный серверный цикл
+
         this.loop.start();
 
 
         this.running = true;
-
     }
 
 
     // ======================================================
-    // ОСТАНОВКА СЕРВЕРА
+    // ОСТАНОВКА
     // ======================================================
 
     stop() {
@@ -100,61 +104,49 @@ class GameServer {
             return;
         }
 
-
         this.loop.stop();
 
         this.world.stop();
 
-
         this.running = false;
-
     }
 
 
     // ======================================================
-    // ПОЛУЧИТЬ КОРАБЛЬ
+    // КОРАБЛЬ
     // ======================================================
 
     getShip() {
 
         return this.ships.getShip();
-
     }
 
-
-    // ======================================================
-    // СОСТОЯНИЕ КОРАБЛЯ
-    // ======================================================
 
     getShipState() {
 
         return this.ships.getState();
-
     }
 
 
     // ======================================================
-    // УПРАВЛЕНИЕ КОРАБЛЁМ
+    // УПРАВЛЕНИЕ
     // ======================================================
 
     setHeading(heading) {
 
         return this.ships.setHeading(heading);
-
     }
 
 
     setRudder(rudder) {
 
         return this.ships.setRudder(rudder);
-
     }
 
 
     setSail(sail) {
 
         return this.ships.setSail(sail);
-
     }
 
 
@@ -165,21 +157,18 @@ class GameServer {
     dropAnchor() {
 
         return this.ships.dropAnchor();
-
     }
 
 
     raiseAnchor() {
 
         return this.ships.raiseAnchor();
-
     }
 
 
     toggleAnchor() {
 
         return this.ships.toggleAnchor();
-
     }
 
 
@@ -193,7 +182,6 @@ class GameServer {
             lat,
             lng
         );
-
     }
 
 
@@ -201,13 +189,13 @@ class GameServer {
     // ВЕТЕР
     // ======================================================
 
-    setWind(speed, direction) {
+    setWind(speed, direction, gust = 0) {
 
         return this.ships.setWind(
             speed,
-            direction
+            direction,
+            gust
         );
-
     }
 
 
@@ -221,18 +209,16 @@ class GameServer {
             speed,
             direction
         );
-
     }
 
 
     // ======================================================
-    // ПРОВЕРКА ДВИЖЕНИЯ
+    // ДВИЖЕНИЕ
     // ======================================================
 
     isMoving() {
 
         return this.ships.isMoving();
-
     }
 
 
@@ -242,23 +228,16 @@ class GameServer {
 
     getGameState() {
 
-        const ship = this.ships.getState();
-
         return {
-
             running: this.running,
-
-            ship: ship,
-
+            ship: this.ships.getState(),
             timestamp: Date.now()
-
         };
-
     }
 
 
     // ======================================================
-    // РАССЫЛКА СОСТОЯНИЯ
+    // SOCKET.IO
     // ======================================================
 
     broadcastState() {
@@ -271,7 +250,6 @@ class GameServer {
             "game_state",
             this.getGameState()
         );
-
     }
 
 
@@ -281,29 +259,9 @@ class GameServer {
 
     tick(dt) {
 
-        // World отвечает за физику:
-        //
-        // ветер
-        // течение
-        // парус
-        // руль
-        // координаты
-        // столкновение с сушей
-        //
-        // GameServer только передаёт управление миру.
-
         this.world.update(dt);
-
-
-        // После расчёта нового состояния
-        // отправляем его подключённым клиентам.
-
-        this.broadcastState();
-
     }
-
 }
 
 
 module.exports = GameServer;
-
