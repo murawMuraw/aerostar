@@ -1,36 +1,32 @@
-
 // models/Ship.js
 
 class Ship {
 
-    constructor(type = "klip_20") {
+    constructor(type = "klip_20", name = "Klip_20") {
 
-        // --------------------------------------------------
-        // Идентификация
-        // --------------------------------------------------
+        // ==================================================
+        // ИДЕНТИФИКАЦИЯ
+        // ==================================================
 
         this.id = null;
-
         this.type = type;
-        this.name = "Klip_20";
+        this.name = name;
 
-        // --------------------------------------------------
-        // Положение
-        // --------------------------------------------------
+        // ==================================================
+        // ПОЛОЖЕНИЕ
+        // ==================================================
 
         this.lat = 0;
         this.lng = 0;
 
-        // Последнее серверное обновление
         this.lastUpdate = Date.now();
 
-        // --------------------------------------------------
-        // Движение
-        // --------------------------------------------------
+        // ==================================================
+        // ДВИЖЕНИЕ
+        // ==================================================
 
-        // Курс корабля в градусах
-        // 0   = север
-        // 90  = восток
+        // 0 = север
+        // 90 = восток
         // 180 = юг
         // 270 = запад
         this.heading = 0;
@@ -38,48 +34,42 @@ class Ship {
         // Скорость в узлах
         this.speed = 0;
 
-        // --------------------------------------------------
-        // Управление
-        // --------------------------------------------------
+        // ==================================================
+        // УПРАВЛЕНИЕ
+        // ==================================================
 
-        // Положение руля:
-        // -1 = полностью влево
-        //  0 = прямо
-        //  1 = полностью вправо
+        // -1 ... +1
         this.rudder = 0;
 
-        // Парус:
-        // 0 = убраны
-        // 1 = полностью подняты
+        // 0 ... 1
         this.sail = 1;
 
-        // --------------------------------------------------
-        // Якорь
-        // --------------------------------------------------
+        // ==================================================
+        // ЯКОРЬ
+        // ==================================================
 
         this.anchor = false;
 
-        // --------------------------------------------------
-        // Состояние корабля
-        // --------------------------------------------------
+        // ==================================================
+        // СОСТОЯНИЕ
+        // ==================================================
 
-        // Корабль сел на мель / столкнулся с сушей
+        // Столкнулся с сушей
         this.grounded = false;
 
-        // Игра закончена
+        // Зарезервировано для будущего завершения путешествия
         this.finished = false;
 
-        // --------------------------------------------------
-        // Окружение
-        // --------------------------------------------------
+        // ==================================================
+        // ОКРУЖЕНИЕ
+        // ==================================================
 
-        // Текущий ветер
         this.wind = {
             speed: 0,
-            direction: 0
+            direction: 0,
+            gust: 0
         };
 
-        // Текущее течение
         this.current = {
             speed: 0,
             direction: 0
@@ -93,10 +83,21 @@ class Ship {
 
     setPosition(lat, lng) {
 
-        this.lat = Number(lat);
-        this.lng = Number(lng);
+        lat = Number(lat);
+        lng = Number(lng);
 
+        if (
+            !Number.isFinite(lat) ||
+            !Number.isFinite(lng)
+        ) {
+            return false;
+        }
+
+        this.lat = lat;
+        this.lng = lng;
         this.lastUpdate = Date.now();
+
+        return true;
     }
 
 
@@ -112,7 +113,6 @@ class Ship {
             return false;
         }
 
-        // Нормализуем 0...360
         value = ((value % 360) + 360) % 360;
 
         this.heading = value;
@@ -133,7 +133,6 @@ class Ship {
             return false;
         }
 
-        // Ограничиваем диапазон -1...1
         value = Math.max(-1, Math.min(1, value));
 
         this.rudder = value;
@@ -154,7 +153,6 @@ class Ship {
             return false;
         }
 
-        // 0...1
         value = Math.max(0, Math.min(1, value));
 
         this.sail = value;
@@ -169,6 +167,10 @@ class Ship {
 
     dropAnchor() {
 
+        if (this.grounded || this.finished) {
+            return false;
+        }
+
         this.anchor = true;
         this.speed = 0;
 
@@ -177,6 +179,10 @@ class Ship {
 
 
     raiseAnchor() {
+
+        if (this.grounded || this.finished) {
+            return false;
+        }
 
         this.anchor = false;
 
@@ -198,15 +204,26 @@ class Ship {
     // ВЕТЕР
     // ======================================================
 
-    setWind(speed, direction) {
+    setWind(speed, direction, gust = 0) {
 
-        this.wind.speed = Number(speed) || 0;
+        const windSpeed = Number(speed);
+        const windDirection = Number(direction);
+        const windGust = Number(gust);
 
-        let value = Number(direction) || 0;
+        this.wind.speed =
+            Number.isFinite(windSpeed)
+                ? Math.max(0, windSpeed)
+                : 0;
 
-        value = ((value % 360) + 360) % 360;
+        this.wind.direction =
+            Number.isFinite(windDirection)
+                ? ((windDirection % 360) + 360) % 360
+                : 0;
 
-        this.wind.direction = value;
+        this.wind.gust =
+            Number.isFinite(windGust)
+                ? Math.max(0, windGust)
+                : 0;
     }
 
 
@@ -216,13 +233,18 @@ class Ship {
 
     setCurrent(speed, direction) {
 
-        this.current.speed = Number(speed) || 0;
+        const currentSpeed = Number(speed);
+        const currentDirection = Number(direction);
 
-        let value = Number(direction) || 0;
+        this.current.speed =
+            Number.isFinite(currentSpeed)
+                ? Math.max(0, currentSpeed)
+                : 0;
 
-        value = ((value % 360) + 360) % 360;
-
-        this.current.direction = value;
+        this.current.direction =
+            Number.isFinite(currentDirection)
+                ? ((currentDirection % 360) + 360) % 360
+                : 0;
     }
 
 
@@ -233,6 +255,7 @@ class Ship {
     ground() {
 
         this.grounded = true;
+        this.anchor = false;
         this.speed = 0;
         this.rudder = 0;
 
@@ -241,24 +264,28 @@ class Ship {
 
 
     // ======================================================
-    // СОСТОЯНИЕ
+    // ПРОВЕРКА ДВИЖЕНИЯ
     // ======================================================
 
     isMoving() {
 
-        return !this.anchor &&
-               !this.grounded &&
-               !this.finished;
+        return (
+            !this.anchor &&
+            !this.grounded &&
+            !this.finished &&
+            this.sail > 0
+        );
     }
 
 
     // ======================================================
-    // СЕРВЕРНОЕ СОСТОЯНИЕ
+    // СОСТОЯНИЕ
     // ======================================================
 
     getState() {
 
         return {
+
             id: this.id,
 
             type: this.type,
@@ -280,7 +307,8 @@ class Ship {
 
             wind: {
                 speed: this.wind.speed,
-                direction: this.wind.direction
+                direction: this.wind.direction,
+                gust: this.wind.gust
             },
 
             current: {
@@ -295,4 +323,3 @@ class Ship {
 
 
 module.exports = Ship;
-
