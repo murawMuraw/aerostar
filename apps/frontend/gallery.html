@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gallery | Atmosphere Lab</title>
+
+<style>
+
+body {
+    margin:0;
+    background: #0b111f;
+    background-image: url('apps/frontend/images/lab/nebo.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    color:white;
+    font-family: system-ui,-apple-system,sans-serif;
+    overflow-y:auto;
+    overflow-x:hidden;
+}
+
+.gallery-wrapper {
+    max-width:1200px;
+    margin:auto;
+    padding:40px 20px 80px;
+}
+
+.header {
+    text-align:center;
+    padding:30px 0 20px;
+}
+
+.header h1 {
+    font-size:44px;
+    margin-bottom:10px;
+}
+
+.header p {
+    font-size:20px;
+    color:#b8c4d6;
+}
+
+.back-link {
+    display:inline-block;
+    margin:20px 0 30px;
+    padding:12px 30px;
+    border-radius:40px;
+    background:#ff9800;
+    color:#111;
+    text-decoration:none;
+    font-weight:bold;
+    transition: transform 0.2s;
+}
+
+.back-link:hover {
+    transform:scale(1.05);
+}
+
+.gallery-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+    gap:30px;
+    margin-top:20px;
+}
+
+.gallery-card {
+    background:#1b263b;
+    border-radius:20px;
+    overflow:hidden;
+    box-shadow:0 8px 25px rgba(0,0,0,.4);
+    transition: transform 0.3s;
+}
+
+.gallery-card:hover {
+    transform: translateY(-8px);
+}
+
+.gallery-card img {
+    width:100%;
+    height:250px;
+    object-fit:cover;
+    display:block;
+    background:#111;
+}
+
+.gallery-card .info {
+    padding:18px 20px 22px;
+}
+
+.gallery-card .info h3 {
+    color:#ffb347;
+    margin:0 0 8px;
+    font-size:22px;
+}
+
+.gallery-card .info p {
+    color:#b0c4d9;
+    margin:0;
+    font-size:15px;
+    line-height:1.5;
+}
+
+.gallery-card .info .date {
+    color:#6a7f9a;
+    font-size:13px;
+    margin-top:10px;
+    display:block;
+}
+
+/* Пустое состояние */
+.empty-gallery {
+    text-align:center;
+    padding:60px 20px;
+    grid-column:1/-1;
+}
+
+.empty-gallery h2 {
+    color:#ffb347;
+    font-size:28px;
+}
+
+.empty-gallery p {
+    color:#b0c4d9;
+    font-size:18px;
+}
+
+footer {
+    text-align:center;
+    color:#777;
+    padding:30px;
+    margin-top:40px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="gallery-wrapper">
+
+    <div class="header">
+        <h1>🖼️ Art Gallery</h1>
+        <p>Visual experiments from Atmosphere Lab</p>
+        <a href="lab.html" class="back-link">← Back to Lab</a>
+    </div>
+
+    <div class="gallery-grid" id="galleryGrid">
+        <!-- Карточки будут загружены из JavaScript -->
+    </div>
+
+    <footer>
+        © 2026 Aerost.art — Real wind. Real journeys.
+    </footer>
+
+</div>
+
+<script>
+    // Данные для галереи (снимки из папки apps/frontend/images/lab/)
+    const galleryData = [
+        {
+            src: 'apps/frontend/images/lab/La.png',
+            title: 'Flight over the Channel',
+            description: 'How the attempt to fly across the English Channel ended',
+            date: '2026-08-20'
+        },
+        {
+            src: 'apps/frontend/images/lab/Paris_1.png',
+            title: 'Montgolfier Legacy',
+            description: 'Flight over Paris. Replicating the conditions of 1783. A tribute to the pioneers of aeronautics.',
+            date: '2026-08-18'
+        },
+        {
+            src: 'apps/frontend/images/lab/pilot_fiesta.png',
+            title: 'Fiesta Finale',
+            description: 'A virtual fiesta with real wind',
+            date: '2026-08-15'
+        },
+        // Добавьте новые снимки сюда, они автоматически появятся на странице
+        // {
+        //     src: 'apps/frontend/images/lab/your_image.png',
+        //     title: 'Your Title',
+        //     description: 'Your description',
+        //     date: '2026-08-23'
+        // }
+    ];
+
+    function renderGallery() {
+        const grid = document.getElementById('galleryGrid');
+        if (!grid) return;
+
+        if (galleryData.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-gallery">
+                    <h2>✨ Gallery is empty</h2>
+                    <p>Check back soon for new visual experiments!</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        galleryData.forEach(item => {
+            html += `
+                <div class="gallery-card">
+                    <img src="${item.src}" alt="${item.title}" loading="lazy">
+                    <div class="info">
+                        <h3>${item.title}</h3>
+                        <p>${item.description}</p>
+                        <span class="date">📅 ${item.date}</span>
+                    </div>
+                </div>
+            `;
+        });
+        grid.innerHTML = html;
+    }
+
+    document.addEventListener('DOMContentLoaded', renderGallery);
+</script>
+
+</body>
+
+</html>
