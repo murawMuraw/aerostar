@@ -496,7 +496,7 @@
     
     <a href="register.html" class="register-btn" id="register-btn">📝 Register for Race</a>
     
-    <button class="map-toggle" id="layer-toggle">🛰️ Satellite</button>
+    <button class="map-toggle" id="layer-toggle">🗺️ OSM</button>
     
     <!-- Info Panel -->
     <div class="info-panel">
@@ -587,18 +587,38 @@
         let lastWeatherUpdate = 0;
         const WEATHER_UPDATE_INTERVAL = 3600; // 1 час в секундах
 
-        const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-            attribution: '© OpenStreetMap', 
+        // ============================================
+        // ⚠️ ОБЯЗАТЕЛЬНЫЙ USER-AGENT ДЛЯ OSM
+        // Без этого ваш IP могут заблокировать!
+        // Подробнее: https://operations.osmfoundation.org/policies/tiles/
+        // ============================================
+        L.tileLayer.prototype.options.headers = {
+            'User-Agent': 'AerostarFiesta/1.0 (https://aerost.art; admin@aerost.art)'
+        };
+
+        // ============================================
+        // СЛОИ КАРТЫ (БЕЗ API КЛЮЧЕЙ)
+        // ============================================
+
+        // 🗺️ Схема OSM (без ключа)
+        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', 
             maxZoom: 19 
         });
-        
-       
-        
+
+        // 🛰️ Спутниковые снимки ESRI (без ключа)
         const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri',
+            attribution: 'Tiles &copy; <a href="https://www.esri.com">Esri</a>',
             maxZoom: 19
         });
-        
+
+        // 🌙 Тёмная схема (без ключа, использует CDN CARTO)
+        const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        });
+
         // ============================================
         // МАППИНГ СТАРЫХ СТИЛЕЙ
         // ============================================
@@ -641,17 +661,47 @@
         function initMap() {
             console.log('🗺️ Initializing map...');
             map = L.map('map').setView([30, -90], 4);
+            
+            // Добавляем OSM по умолчанию
+            streetLayer.addTo(map);
             currentTileLayer = streetLayer;
-            currentTileLayer.addTo(map);
+            
+            // Добавляем контрол масштаба
             L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
+            
+            // Добавляем контрол переключения слоёв
+            L.control.layers(
+                { 
+                    "🗺️ Схема OSM": streetLayer,
+                    "🛰️ Спутник ESRI": satelliteLayer,
+                    "🌙 Тёмная схема": darkLayer
+                }, 
+                null, 
+                { 
+                    position: 'topleft', 
+                    collapsed: false 
+                }
+            ).addTo(map);
         }
         
+        // ============================================
+        // ПЕРЕКЛЮЧЕНИЕ СЛОЁВ (для кнопки)
+        // ============================================
         function toggleLayer() {
-            map.removeLayer(currentTileLayer);
-            currentTileLayer = (currentTileLayer === streetLayer) ? satelliteLayer : streetLayer;
-            currentTileLayer.addTo(map);
+            const current = currentTileLayer;
+            const layers = [streetLayer, satelliteLayer, darkLayer];
+            const currentIndex = layers.indexOf(current);
+            const nextIndex = (currentIndex + 1) % layers.length;
+            
+            map.removeLayer(current);
+            layers[nextIndex].addTo(map);
+            currentTileLayer = layers[nextIndex];
+            
             const btn = document.getElementById('layer-toggle');
-            if (btn) btn.innerHTML = (currentTileLayer === streetLayer) ? '🛰️ Satellite' : '🗺️ Streets';
+            if (btn) {
+                const names = ['🗺️ OSM', '🛰️ Satellite', '🌙 Dark'];
+                btn.innerHTML = names[nextIndex];
+            }
         }
         
         function focusOnFinish() {
@@ -830,11 +880,7 @@
                     totalDist += getDistance(balloon.path[i-1].lat, balloon.path[i-1].lng, balloon.path[i].lat, balloon.path[i].lng);
                 }
             }
-                 if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng) {
-    const dist = getDistance(balloon.lat, balloon.lng, currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
-    const distEl = document.getElementById('distance-finish');
-    if (distEl) distEl.innerHTML = `${dist.toFixed(1)} km`; // Безопасное обновление
-}       
+                 
             updatePath(balloon);
         }
         
@@ -909,65 +955,58 @@
             });
         }
         
-    
-     // ============================================
-// ОБНОВЛЕНИЕ UI В ЗАВИСИМОСТИ ОТ СОСТОЯНИЯ И КОНФИГУРАЦИИ
-// ============================================
-function updateUIForState(state, config) {
-    currentGameState = state;
-    const statusMap = {
-        'idle': { text: '⏸ No race active', color: '#94a3b8' },
-        'registration': { text: '📝 Registration open!', color: '#fbbf24' },
-        'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981' },
-        'finished': { text: '🏆 RACE FINISHED', color: '#ef4444' }
-    };
+        // ============================================
+        // ОБНОВЛЕНИЕ UI В ЗАВИСИМОСТИ ОТ СОСТОЯНИЯ И КОНФИГУРАЦИИ
+        // ============================================
+        function updateUIForState(state, config) {
+            currentGameState = state;
+            const statusMap = {
+                'idle': { text: '⏸ No race active', color: '#94a3b8' },
+                'registration': { text: '📝 Registration open!', color: '#fbbf24' },
+                'racing': { text: '🏁 RACE IN PROGRESS', color: '#10b981' },
+                'finished': { text: '🏆 RACE FINISHED', color: '#ef4444' }
+            };
 
-    const info = statusMap[state] || statusMap['idle'];
-    const statusEl = document.getElementById('race-status');
-    if (statusEl) {
-        statusEl.innerHTML = info.text;
-        statusEl.style.color = info.color;
-    }
+            const info = statusMap[state] || statusMap['idle'];
+            const statusEl = document.getElementById('race-status');
+            if (statusEl) {
+                statusEl.innerHTML = info.text;
+                statusEl.style.color = info.color;
+            }
 
-    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Если сервер передал объект конфигурации, 
-    // жестко обновляем даты, чтобы они не слетали при обновлении состояния
-    if (config) {
-        // 1. Время старта (запланированное или фактическое)
-        const startTime = config.scheduledStartTime || config.raceStartDateTime;
-        const startEl = document.getElementById('race-start-time');
-        if (startEl && startTime) {
-            startEl.innerHTML = formatUTC(startTime);
-        }
+            if (config) {
+                const startTime = config.scheduledStartTime || config.raceStartDateTime;
+                const startEl = document.getElementById('race-start-time');
+                if (startEl && startTime) {
+                    startEl.innerHTML = formatUTC(startTime);
+                }
 
-        // 2. Время окончания гонки
-        const endEl = document.getElementById('race-deadline');
-        if (endEl) {
-            if (config.raceEndTime) {
-                endEl.innerHTML = formatUTC(config.raceEndTime);
-            } else if (startTime && config.raceDurationHours) {
-                const calcEnd = new Date(startTime);
-                calcEnd.setHours(calcEnd.getHours() + config.raceDurationHours);
-                endEl.innerHTML = formatUTC(calcEnd);
+                const endEl = document.getElementById('race-deadline');
+                if (endEl) {
+                    if (config.raceEndTime) {
+                        endEl.innerHTML = formatUTC(config.raceEndTime);
+                    } else if (startTime && config.raceDurationHours) {
+                        const calcEnd = new Date(startTime);
+                        calcEnd.setHours(calcEnd.getHours() + config.raceDurationHours);
+                        endEl.innerHTML = formatUTC(calcEnd);
+                    }
+                }
+                
+                const finishEl = document.getElementById('finish-coords');
+                if (finishEl && config.finishCoords) {
+                    finishEl.innerHTML = `${config.finishCoords.lat.toFixed(4)}, ${config.finishCoords.lng.toFixed(4)}`;
+                }
+            }
+
+            const registerBtn = document.getElementById('register-btn');
+            if (registerBtn) {
+                registerBtn.style.display = (state === 'registration' || state === 'idle') ? 'block' : 'none';
+            }
+            const registerLink = document.getElementById('register-link');
+            if (registerLink) {
+                registerLink.style.display = (state === 'registration' || state === 'idle') ? 'block' : 'none';
             }
         }
-        
-        // 3. Координаты финиша
-        const finishEl = document.getElementById('finish-coords');
-        if (finishEl && config.finishCoords) {
-            finishEl.innerHTML = `${config.finishCoords.lat.toFixed(4)}, ${config.finishCoords.lng.toFixed(4)}`;
-        }
-    }
-
-    // Видимость кнопок регистрации
-    const registerBtn = document.getElementById('register-btn');
-    if (registerBtn) {
-        registerBtn.style.display = (state === 'registration' || state === 'idle') ? 'block' : 'none';
-    }
-    const registerLink = document.getElementById('register-link');
-    if (registerLink) {
-        registerLink.style.display = (state === 'registration' || state === 'idle') ? 'block' : 'none';
-    }
-}
         
         // ============================================
         // ПОДКЛЮЧЕНИЕ К СОКЕТАМ
@@ -1049,12 +1088,10 @@ function updateUIForState(state, config) {
                 displayAnnouncement({ message: `Login failed: ${data.message}`, timestamp: Date.now() });
             });
             
-                       socket.on('fiesta-race-config', (config) => {
+            socket.on('fiesta-race-config', (config) => {
                 console.log('Race config received', config);
                 currentConfig = config;
                 
-                // 1. ОТОБРАЖЕНИЕ ДАТ (Вынесено из условия координат, чтобы никогда не слетало)
-                // Берем запланированный старт, если гонка еще не началась, иначе — фактический старт гонки
                 let startTime = config.scheduledStartTime || config.raceStartDateTime;
                 
                 if (startTime) {
@@ -1068,7 +1105,6 @@ function updateUIForState(state, config) {
                     document.getElementById('race-start-time').innerHTML = '--/--';
                 }
 
-                // Отображаем время окончания гонки (берем готовый raceEndTime от сервера, либо рассчитываем)
                 if (config.raceEndTime) {
                     document.getElementById('race-deadline').innerHTML = formatUTC(config.raceEndTime);
                 } else if (startTime) {
@@ -1080,11 +1116,9 @@ function updateUIForState(state, config) {
                     document.getElementById('race-deadline').innerHTML = '--/--';
                 }
                 
-                // 2. ОТОБРАЖЕНИЕ КООРДИНАТ И МАРКЕРА ФИНИША
                 if (config.finishCoords?.lat && config.finishCoords?.lng) {
                     document.getElementById('finish-coords').innerHTML = `${config.finishCoords.lat.toFixed(2)}°, ${config.finishCoords.lng.toFixed(2)}°`;
                     
-                    // Всегда показываем маркер финиша
                     if (finishMarker && map) map.removeLayer(finishMarker);
                     const finishIcon = L.divIcon({
                         html: '<span style="font-size: 32px;">🏁</span>',
@@ -1094,11 +1128,9 @@ function updateUIForState(state, config) {
                     finishMarker = L.marker([config.finishCoords.lat, config.finishCoords.lng], { icon: finishIcon }).addTo(map);
                     finishMarker.bindPopup('<b>🏁 FINISH LINE</b><br>First within 50km wins!');
                     
-                    // Обновляем погоду при получении конфигурации
                     updateFinishWeather(config.finishCoords.lat, config.finishCoords.lng);
                 }
                 
-                // 3. СИНХРОНИЗАЦИЯ СТАТУСА И UI
                 const statusMap = {
                     'idle': { text: '⏸️ No race active', color: '#94a3b8' },
                     'registration': { text: '📝 Registration open!', color: '#fbbf24' },
@@ -1117,21 +1149,17 @@ function updateUIForState(state, config) {
                     updateUIForState(config.raceStatus, config);
                 }
             });
-
             
-                       socket.on('fiesta-state-changed', (data) => {
+            socket.on('fiesta-state-changed', (data) => {
                 console.log(`🔄 State changed: ${data.oldState} -> ${data.newState}`, data);
                 
-                // 1. Сохраняем актуальный конфиг
                 if (data.config) {
                     currentConfig = data.config;
                 }
                 
                 const activeConfig = data.config || currentConfig;
 
-                // 2. КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Обновляем даты и координаты на экране, чтобы они не слетали
                 if (activeConfig) {
-                    // Время старта (запланированное или фактическое)
                     let startTime = activeConfig.scheduledStartTime || activeConfig.raceStartDateTime;
                     if (startTime) {
                         const startDiff = new Date(startTime);
@@ -1140,7 +1168,6 @@ function updateUIForState(state, config) {
                         }
                     }
 
-                    // Время окончания
                     if (activeConfig.raceEndTime) {
                         document.getElementById('race-deadline').innerHTML = formatUTC(activeConfig.raceEndTime);
                     } else if (startTime) {
@@ -1150,20 +1177,17 @@ function updateUIForState(state, config) {
                         document.getElementById('race-deadline').innerHTML = formatUTC(endTime);
                     }
 
-                    // Координаты финиша
                     if (activeConfig.finishCoords?.lat && activeConfig.finishCoords?.lng) {
                         document.getElementById('finish-coords').innerHTML = `${activeConfig.finishCoords.lat.toFixed(2)}°, ${activeConfig.finishCoords.lng.toFixed(2)}°`;
                     }
                 }
 
-                // 3. Обновляем статус и кнопки UI
                 updateUIForState(data.newState, activeConfig);
                 
                 if (data.newState === 'racing') {
                     socket.emit('fiesta-get-participants');
                 }
             });
-
             
             socket.on('fiesta-all-balloons', (balloons) => {
                 if (balloons && Array.isArray(balloons)) {
@@ -1252,7 +1276,6 @@ function updateUIForState(state, config) {
                 if (socket?.connected) socket.emit('fiesta-get-participants');
             }, 5000);
             
-            // Проверяем погоду раз в час (3600 секунд)
             setInterval(() => {
                 if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng) {
                     updateFinishWeather(currentConfig.finishCoords.lat, currentConfig.finishCoords.lng);
