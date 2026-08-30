@@ -570,54 +570,55 @@
     
     <script>
         // ============================================
-        // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
-        // ============================================
-        let map, socket;
-        let finishMarker = null;
-        let balloonsMarkers = {};
-        let pathLayer = null;
-        let myBalloonId = null;
-        let myRole = 'spectator';
-        let currentConfig = null;
-        let currentTileLayer;
-        let flightStartTime = null;
-        let flightTimerInterval = null;
-        let currentGameState = 'idle';
-        let lastPilotUIUpdate = null;
-        let lastWeatherUpdate = 0;
-        const WEATHER_UPDATE_INTERVAL = 3600; // 1 час в секундах
+// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+// ============================================
+let map, socket;
+let finishMarker = null;
+let balloonsMarkers = {};
+let pathLayer = null;
+let myBalloonId = null;
+let myRole = 'spectator';
+let currentConfig = null;
+let currentTileLayer;
+let flightStartTime = null;
+let flightTimerInterval = null;
+let currentGameState = 'idle';
+let lastPilotUIUpdate = null;
+let lastWeatherUpdate = 0;
+const WEATHER_UPDATE_INTERVAL = 3600; // 1 час в секундах
 
-        // ============================================
-        // ⚠️ ОБЯЗАТЕЛЬНЫЙ USER-AGENT ДЛЯ OSM
-        // Без этого ваш IP могут заблокировать!
-        // Подробнее: https://operations.osmfoundation.org/policies/tiles/
-        // ============================================
-        L.tileLayer.prototype.options.headers = {
-            'User-Agent': 'AerostarFiesta/1.0 (https://aerost.art; admin@aerost.art)'
-        };
+// ============================================
+// ⚠️ ОБЯЗАТЕЛЬНЫЙ USER-AGENT ДЛЯ OSM
+// Без этого ваш IP могут заблокировать!
+// Подробнее: https://operations.osmfoundation.org/policies/tiles/
+// ============================================
+const USER_AGENT = 'AerostarFiesta/1.0 (https://aerost.art; admin@aerost.art)';
 
-        // ============================================
-        // СЛОИ КАРТЫ (БЕЗ API КЛЮЧЕЙ)
-        // ============================================
+// ============================================
+// СЛОИ КАРТЫ (БЕЗ API КЛЮЧЕЙ)
+// ============================================
 
-        // 🗺️ Схема OSM (без ключа)
-        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', 
-            maxZoom: 19 
-        });
+// 🗺️ Схема OSM (без ключа)
+const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', 
+    maxZoom: 19,
+    headers: {
+        'User-Agent': USER_AGENT
+    }
+});
 
-        // 🛰️ Спутниковые снимки ESRI (без ключа)
-        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; <a href="https://www.esri.com">Esri</a>',
-            maxZoom: 19
-        });
+// 🛰️ Спутниковые снимки ESRI (без ключа)
+const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; <a href="https://www.esri.com">Esri</a>',
+    maxZoom: 19
+});
 
-        // 🌙 Тёмная схема (без ключа, использует CDN CARTO)
-        const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
-            subdomains: 'abcd',
-            maxZoom: 19
-        });
+// 🌙 Тёмная схема (без ключа, использует CDN CARTO)
+const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+});
 
         // ============================================
         // МАППИНГ СТАРЫХ СТИЛЕЙ
