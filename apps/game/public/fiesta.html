@@ -570,96 +570,49 @@
     
     <script>
         // ============================================
-// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
-// ============================================
-let map, socket;
-let finishMarker = null;
-let balloonsMarkers = {};
-let pathLayer = null;
-let myBalloonId = null;
-let myRole = 'spectator';
-let currentConfig = null;
-let currentTileLayer;
-let flightStartTime = null;
-let flightTimerInterval = null;
-let currentGameState = 'idle';
-let lastPilotUIUpdate = null;
-let lastWeatherUpdate = 0;
-const WEATHER_UPDATE_INTERVAL = 3600; // 1 час в секундах
+        // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+        // ============================================
+        let map, socket;
+        let finishMarker = null;
+        let balloonsMarkers = {};
+        let pathLayer = null;
+        let myBalloonId = null;
+        let myRole = 'spectator';
+        let currentConfig = null;
+        let currentTileLayer;
+        let flightStartTime = null;
+        let flightTimerInterval = null;
+        let currentGameState = 'idle';
+        let lastPilotUIUpdate = null;
+        let lastWeatherUpdate = 0;
+        const WEATHER_UPDATE_INTERVAL = 3600; // 1 час в секундах
 
-// ============================================
-// ⚠️ ОБЯЗАТЕЛЬНЫЙ USER-AGENT ДЛЯ OSM
-// Без этого ваш IP могут заблокировать!
-// Подробнее: https://operations.osmfoundation.org/policies/tiles/
-// ============================================
-const USER_AGENT = 'AerostarFiesta/1.0 (https://aerost.art; admin@aerost.art)';
+        // ============================================
+        // ⚠️ ОБЯЗАТЕЛЬНЫЙ USER-AGENT ДЛЯ OSM
+        // Без этого ваш IP могут заблокировать!
+        // Подробнее: https://operations.osmfoundation.org/policies/tiles/
+        // ============================================
+        const USER_AGENT = 'AerostarFiesta/1.0 (https://aerost.art; admin@aerost.art)';
 
-// ============================================
-// СЛОИ КАРТЫ (БЕЗ API КЛЮЧЕЙ)
-// ============================================
+        // ============================================
+        // СЛОИ КАРТЫ (БЕЗ API КЛЮЧЕЙ)
+        // ============================================
 
-// 🗺️ Схема OSM (без ключа)
-const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', 
-    maxZoom: 19,
-    headers: {
-        'User-Agent': USER_AGENT
-    }
-});
+        // 🗺️ Схема OSM (без ключа)
+        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', 
+            maxZoom: 19,
+            headers: {
+                'User-Agent': USER_AGENT
+            }
+        });
 
-// 🛰️ Спутниковые снимки ESRI (без ключа)
-const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Tiles &copy; <a href="https://www.esri.com">Esri</a>',
-    maxZoom: 19
-});
+        // 🛰️ Спутниковые снимки ESRI (без ключа)
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; <a href="https://www.esri.com">Esri</a>',
+            maxZoom: 19
+        });
 
-// ============================================
-// ИНИЦИАЛИЗАЦИЯ КАРТЫ
-// ============================================
-function initMap() {
-    console.log('🗺️ Initializing map...');
-    map = L.map('map').setView([30, -90], 4);
-    
-    // Добавляем OSM по умолчанию
-    streetLayer.addTo(map);
-    currentTileLayer = streetLayer;
-    
-    // Добавляем контрол масштаба
-    L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
-    
-    // Добавляем контрол переключения слоёв (только 2 слоя)
-    L.control.layers(
-        { 
-            "🗺️ Схема OSM": streetLayer,
-            "🛰️ Спутник ESRI": satelliteLayer
-        }, 
-        null, 
-        { 
-            position: 'topleft', 
-            collapsed: false 
-        }
-    ).addTo(map);
-}
-
-// ============================================
-// ПЕРЕКЛЮЧЕНИЕ СЛОЁВ (для кнопки)
-// ============================================
-function toggleLayer() {
-    const current = currentTileLayer;
-    const layers = [streetLayer, satelliteLayer];  // Только 2 слоя
-    const currentIndex = layers.indexOf(current);
-    const nextIndex = (currentIndex + 1) % layers.length;
-    
-    map.removeLayer(current);
-    layers[nextIndex].addTo(map);
-    currentTileLayer = layers[nextIndex];
-    
-    const btn = document.getElementById('layer-toggle');
-    if (btn) {
-        const names = ['🗺️ OSM', '🛰️ Satellite'];
-        btn.innerHTML = names[nextIndex];
-    }
-}
         // ============================================
         // МАППИНГ СТАРЫХ СТИЛЕЙ
         // ============================================
@@ -714,8 +667,7 @@ function toggleLayer() {
             L.control.layers(
                 { 
                     "🗺️ Схема OSM": streetLayer,
-                    "🛰️ Спутник ESRI": satelliteLayer,
-                    "🌙 Тёмная схема": darkLayer
+                    "🛰️ Спутник ESRI": satelliteLayer
                 }, 
                 null, 
                 { 
@@ -730,7 +682,7 @@ function toggleLayer() {
         // ============================================
         function toggleLayer() {
             const current = currentTileLayer;
-            const layers = [streetLayer, satelliteLayer, darkLayer];
+            const layers = [streetLayer, satelliteLayer];
             const currentIndex = layers.indexOf(current);
             const nextIndex = (currentIndex + 1) % layers.length;
             
@@ -740,7 +692,7 @@ function toggleLayer() {
             
             const btn = document.getElementById('layer-toggle');
             if (btn) {
-                const names = ['🗺️ OSM', '🛰️ Satellite', '🌙 Dark'];
+                const names = ['🗺️ OSM', '🛰️ Satellite'];
                 btn.innerHTML = names[nextIndex];
             }
         }
