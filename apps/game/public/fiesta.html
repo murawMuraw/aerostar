@@ -666,8 +666,8 @@
             // Добавляем контрол переключения слоёв
             L.control.layers(
                 { 
-                    "🗺️ Схема OSM": streetLayer,
-                    "🛰️ Спутник ESRI": satelliteLayer
+                    "🗺️ Map OSM": streetLayer,
+                    "🛰️ Satellite ESRI": satelliteLayer
                 }, 
                 null, 
                 { 
@@ -677,33 +677,7 @@
             ).addTo(map);
         }
         
-        // ============================================
-        // ПЕРЕКЛЮЧЕНИЕ СЛОЁВ (для кнопки)
-        // ============================================
-        function toggleLayer() {
-            const current = currentTileLayer;
-            const layers = [streetLayer, satelliteLayer];
-            const currentIndex = layers.indexOf(current);
-            const nextIndex = (currentIndex + 1) % layers.length;
-            
-            map.removeLayer(current);
-            layers[nextIndex].addTo(map);
-            currentTileLayer = layers[nextIndex];
-            
-            const btn = document.getElementById('layer-toggle');
-            if (btn) {
-                const names = ['🗺️ OSM', '🛰️ Satellite'];
-                btn.innerHTML = names[nextIndex];
-            }
-        }
-        
-        function focusOnFinish() {
-            if (currentConfig?.finishCoords?.lat && currentConfig?.finishCoords?.lng && map) {
-                map.setView([currentConfig.finishCoords.lat, currentConfig.finishCoords.lng], 6);
-                displayAnnouncement({ message: '📍 Map centered on finish line', timestamp: Date.now() });
-            }
-        }
-        
+       
         // ============================================
         // ПОГОДА НА ФИНИШЕ (обновление раз в час)
         // ============================================
