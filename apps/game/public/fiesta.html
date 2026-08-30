@@ -613,13 +613,53 @@ const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/
     maxZoom: 19
 });
 
-// 🌙 Тёмная схема (без ключа, использует CDN CARTO)
-const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
-    subdomains: 'abcd',
-    maxZoom: 19
-});
+// ============================================
+// ИНИЦИАЛИЗАЦИЯ КАРТЫ
+// ============================================
+function initMap() {
+    console.log('🗺️ Initializing map...');
+    map = L.map('map').setView([30, -90], 4);
+    
+    // Добавляем OSM по умолчанию
+    streetLayer.addTo(map);
+    currentTileLayer = streetLayer;
+    
+    // Добавляем контрол масштаба
+    L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
+    
+    // Добавляем контрол переключения слоёв (только 2 слоя)
+    L.control.layers(
+        { 
+            "🗺️ Схема OSM": streetLayer,
+            "🛰️ Спутник ESRI": satelliteLayer
+        }, 
+        null, 
+        { 
+            position: 'topleft', 
+            collapsed: false 
+        }
+    ).addTo(map);
+}
 
+// ============================================
+// ПЕРЕКЛЮЧЕНИЕ СЛОЁВ (для кнопки)
+// ============================================
+function toggleLayer() {
+    const current = currentTileLayer;
+    const layers = [streetLayer, satelliteLayer];  // Только 2 слоя
+    const currentIndex = layers.indexOf(current);
+    const nextIndex = (currentIndex + 1) % layers.length;
+    
+    map.removeLayer(current);
+    layers[nextIndex].addTo(map);
+    currentTileLayer = layers[nextIndex];
+    
+    const btn = document.getElementById('layer-toggle');
+    if (btn) {
+        const names = ['🗺️ OSM', '🛰️ Satellite'];
+        btn.innerHTML = names[nextIndex];
+    }
+}
         // ============================================
         // МАППИНГ СТАРЫХ СТИЛЕЙ
         // ============================================
