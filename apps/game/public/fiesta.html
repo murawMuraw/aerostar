@@ -496,7 +496,7 @@
     
     <a href="register.html" class="register-btn" id="register-btn">📝 Register for Race</a>
     
-    <!-- <button class="map-toggle" id="layer-toggle">🗺️ OSM</button> -->
+    <button class="map-toggle" id="layer-toggle">🗺️ OSM</button>
     
     <!-- Info Panel -->
     <div class="info-panel">
@@ -554,7 +554,6 @@
     </div>
     
     <div class="control-panel">
-        <button class="btn" id="focus-finish-btn" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">🎯 Focus Finish</button>
         <button class="btn btn-danger" id="logout-btn">🚪 Exit</button>
     </div>
     
@@ -666,8 +665,8 @@
             // Добавляем контрол переключения слоёв
             L.control.layers(
                 { 
-                    "🗺️ Map OSM": streetLayer,
-                    "🛰️ Satellite ESRI": satelliteLayer
+                    "🗺️ Схема OSM": streetLayer,
+                    "🛰️ Спутник ESRI": satelliteLayer
                 }, 
                 null, 
                 { 
@@ -677,7 +676,26 @@
             ).addTo(map);
         }
         
-       
+        // ============================================
+        // ПЕРЕКЛЮЧЕНИЕ СЛОЁВ (для кнопки)
+        // ============================================
+        function toggleLayer() {
+            const current = currentTileLayer;
+            const layers = [streetLayer, satelliteLayer];
+            const currentIndex = layers.indexOf(current);
+            const nextIndex = (currentIndex + 1) % layers.length;
+            
+            map.removeLayer(current);
+            layers[nextIndex].addTo(map);
+            currentTileLayer = layers[nextIndex];
+            
+            const btn = document.getElementById('layer-toggle');
+            if (btn) {
+                const names = ['🗺️ OSM', '🛰️ Satellite'];
+                btn.innerHTML = names[nextIndex];
+            }
+        }
+        
         // ============================================
         // ПОГОДА НА ФИНИШЕ (обновление раз в час)
         // ============================================
@@ -1236,7 +1254,6 @@
             connectSocket();
             
             document.getElementById('layer-toggle')?.addEventListener('click', toggleLayer);
-            document.getElementById('focus-finish-btn')?.addEventListener('click', focusOnFinish);
             document.getElementById('logout-btn')?.addEventListener('click', exit);
             
             setInterval(() => {
