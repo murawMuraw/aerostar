@@ -20,7 +20,6 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
 html { scroll-behavior: smooth; }
 
 body {
@@ -55,10 +54,12 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  text-decoration: none;
 }
 .nav-links {
   display: flex;
   gap: 28px;
+  align-items: center;
 }
 .nav-links a {
   color: var(--muted);
@@ -68,6 +69,17 @@ body {
   transition: color .3s ease;
 }
 .nav-links a:hover { color: var(--sunset); }
+.nav-links a.nav-back {
+  color: var(--sunset);
+  border: 1px solid rgba(251,191,36,0.3);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+.nav-links a.nav-back:hover {
+  background: rgba(251,191,36,0.1);
+  color: var(--sunset);
+}
 
 /* ============ HERO ============ */
 .hero {
@@ -190,9 +202,7 @@ body {
   padding: 0 24px;
   position: relative;
 }
-.zone-header {
-  margin-bottom: 40px;
-}
+.zone-header { margin-bottom: 40px; }
 .zone-tag {
   display: inline-block;
   font-size: 12px;
@@ -283,7 +293,6 @@ body {
   border: 1px solid var(--border);
   transition: transform .4s ease, border-color .4s ease;
   cursor: pointer;
-  position: relative;
 }
 .tile:hover {
   transform: translateY(-4px);
@@ -420,31 +429,6 @@ body {
 }
 .story-link:hover { color: var(--sunset); gap: 12px; }
 
-/* ============ CTA SECTION ============ */
-.cta {
-  max-width: 900px;
-  margin: 120px auto 80px;
-  padding: 60px 40px;
-  text-align: center;
-  background:
-    radial-gradient(600px 300px at 50% 0%, rgba(245,158,11,0.15), transparent 70%),
-    var(--card);
-  border: 1px solid var(--border);
-  border-radius: 28px;
-  position: relative;
-  overflow: hidden;
-}
-.cta h2 {
-  font-size: clamp(26px, 3vw, 36px);
-  margin-bottom: 14px;
-}
-.cta p {
-  color: var(--muted);
-  font-size: 16px;
-  max-width: 520px;
-  margin: 0 auto 28px;
-}
-
 /* ============ FOOTER ============ */
 .footer {
   border-top: 1px solid var(--border);
@@ -466,6 +450,23 @@ body {
   transition: color .3s ease;
 }
 .footer-links a:hover { color: var(--sunset); }
+.footer-back {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--amber), var(--amber-dark));
+  color: #1a1207;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all .3s ease;
+  box-shadow: 0 8px 24px rgba(245,158,11,0.25);
+}
+.footer-back:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(245,158,11,0.4);
+}
 
 /* ============ RESPONSIVE ============ */
 @media (max-width: 768px) {
@@ -477,12 +478,11 @@ body {
   .hero-emoji { font-size: 52px; }
   .masonry { columns: 2 160px; column-gap: 12px; }
   .tile { margin-bottom: 12px; }
-  .cta { margin: 80px 20px 60px; padding: 44px 24px; }
   .card { padding: 22px; }
   .story-body { padding: 18px 20px 20px; }
 }
 @media (max-width: 480px) {
-  .nav-links a:nth-child(n+4) { display: none; }
+  .nav-links a:not(.nav-back):nth-child(n+2) { display: none; }
   .masonry { columns: 1; }
   .hero-actions { flex-direction: column; width: 100%; }
   .hero-actions .btn { width: 100%; text-align: center; }
@@ -493,12 +493,12 @@ body {
 
 <!-- ============ NAV ============ -->
 <nav class="nav">
-  <div class="nav-logo">🎈 AEROSTAR</div>
+  <a href="https://aerost.art/" class="nav-logo">🎈 AEROSTAR</a>
   <div class="nav-links">
     <a href="#gallery">Галерея</a>
     <a href="#games">Игры</a>
     <a href="#travel">Путешествия</a>
-    <a href="/apps/game/public/fiesta.html">Fiesta Race</a>
+    <a href="https://aerost.art/" class="nav-back">← На главную</a>
   </div>
 </nav>
 
@@ -587,15 +587,7 @@ body {
       <div class="card-emoji">🎈</div>
       <h3>Fiesta Balloon Race</h3>
       <p>Поймай нужный слой ветра и обгони соперников в гонке через континенты. Финиш — в Гринвиче, на нулевом меридиане.</p>
-      <a href="/apps/game/public/fiesta.html" class="btn btn-primary btn-small">Играть →</a>
-    </article>
-
-    <article class="card">
-      <div class="card-badge">● LIVE</div>
-      <div class="card-emoji">🎨</div>
-      <h3>Художественный полёт</h3>
-      <p>Свободный режим без цели и таймера. Просто поднимайся выше, слушай ветер и смотри, как меняется земля под тобой.</p>
-      <a href="#" class="btn btn-ghost btn-small">Открыть →</a>
+      <a href="http://91.149.179.79:3001/fiesta.html" class="btn btn-primary btn-small">Играть →</a>
     </article>
 
     <article class="card">
@@ -603,7 +595,15 @@ body {
       <div class="card-emoji">⛵</div>
       <h3>Океанский ветер</h3>
       <p>Управление парусной лодкой в открытом океане. Те же ветра, что несут шары — теперь и для парусов.</p>
-      <a href="#" class="btn btn-ghost btn-small">Скоро →</a>
+      <a href="http://91.149.179.79:3002/index.html" class="btn btn-ghost btn-small">Скоро →</a>
+    </article>
+
+    <article class="card">
+      <div class="card-badge">● LIVE</div>
+      <div class="card-emoji">🎨</div>
+      <h3>Художественный полёт</h3>
+      <p>Свободный режим без цели и таймера. Просто поднимайся выше, слушай ветер и смотри, как меняется земля под тобой.</p>
+      <a href="https://aerost.art/" class="btn btn-primary btn-small">Открыть →</a>
     </article>
   </div>
 </section>
@@ -649,25 +649,15 @@ body {
   </div>
 </section>
 
-<!-- ============ CTA ============ -->
-<section class="cta">
-  <h2>Готов отдохнуть в небе?</h2>
-  <p>Зарегистрируйся как пилот или присоединись к гонке как зритель — ветер уже ждёт.</p>
-  <div class="hero-actions" style="position: static;">
-    <a href="/apps/game/public/fiesta.html" class="btn btn-primary">🎈 Войти в гонку</a>
-    <a href="#" class="btn btn-ghost">📝 Стать пилотом</a>
-  </div>
-</section>
-
 <!-- ============ FOOTER ============ -->
 <footer class="footer">
   <div class="footer-links">
     <a href="#gallery">Галерея</a>
     <a href="#games">Игры</a>
     <a href="#travel">Путешествия</a>
-    <a href="https://aerost.art">aerost.art</a>
   </div>
   <div>© 2026 Aerostar · Отдохни в небе 🎈</div>
+  <a href="https://aerost.art/" class="footer-back">← Вернуться на aerost.art</a>
 </footer>
 
 </body>
