@@ -1,447 +1,674 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="ru">
 <head>
-
-<meta charset="utf-8">
-
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>Atmosphere Lab | Aerost.art Experiments</title>
-
-<meta name="description" content="Atmosphere Lab explores how real wind data can create virtual journeys, simulations and interactive experiments.">
-
-<link rel="stylesheet" href="css/styles.css">
-
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aerostar — Отдохни в небе</title>
 <style>
+:root {
+  --bg-1: #0b1220;
+  --bg-2: #131a2e;
+  --card: rgba(255,255,255,0.04);
+  --card-hover: rgba(255,255,255,0.06);
+  --border: rgba(255,255,255,0.08);
+  --text: #e6edf7;
+  --muted: #94a3b8;
+  --amber: #f59e0b;
+  --amber-dark: #d97706;
+  --sky: #38bdf8;
+  --sunset: #fbbf24;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
 
 body {
-    margin:0;
-    background: #0b111f;
-    /* 1) Новый фон */
-    background-image: url('apps/frontend/images/lab/nebo.jpg');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-    color:white;
-    font-family: system-ui,-apple-system,sans-serif;
-    overflow-y:auto;
-    overflow-x:hidden;
-    position: relative;
+  background:
+    radial-gradient(1200px 800px at 70% -10%, #1e2a4a 0%, var(--bg-1) 60%),
+    linear-gradient(180deg, var(--bg-1), var(--bg-2));
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
-.lab-wrapper {
-    max-width:1100px;
-    margin:auto;
-    padding:40px 20px 80px;
+/* ============ NAV ============ */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 32px;
+  background: rgba(11,18,32,0.7);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
 }
+.nav-logo {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, var(--sunset), var(--sky));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.nav-links {
+  display: flex;
+  gap: 28px;
+}
+.nav-links a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color .3s ease;
+}
+.nav-links a:hover { color: var(--sunset); }
 
+/* ============ HERO ============ */
 .hero {
-    text-align:center;
-    padding:40px 0;
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 80px 24px 60px;
+  position: relative;
 }
-
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 20%;
+  right: 15%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(245,158,11,0.15), transparent 70%);
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: 10%;
+  left: 10%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(56,189,248,0.1), transparent 70%);
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+.hero-emoji {
+  font-size: 64px;
+  margin-bottom: 16px;
+  animation: float 6s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
 .hero h1 {
-    font-size:48px;
-    margin-bottom:15px;
+  font-size: clamp(32px, 5vw, 56px);
+  line-height: 1.15;
+  margin-bottom: 20px;
+  letter-spacing: -1px;
+  position: relative;
+  z-index: 1;
 }
-
+.hero h1 span {
+  background: linear-gradient(135deg, var(--sunset), var(--amber), var(--sky));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 .hero p {
-    font-size:22px;
-    color:#b8c4d6;
-    max-width:750px;
-    margin:auto;
-    line-height:1.5;
+  color: var(--muted);
+  font-size: clamp(15px, 1.6vw, 18px);
+  max-width: 620px;
+  margin-bottom: 32px;
+  position: relative;
+  z-index: 1;
+}
+.hero-actions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
 }
 
-.section {
-    background:#1b263b;
-    border-radius:22px;
-    padding:30px;
-    margin:30px 0;
-    box-shadow:0 10px 30px rgba(0,0,0,.25);
+/* ============ BUTTONS ============ */
+.btn {
+  display: inline-block;
+  padding: 13px 28px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all .3s ease;
+  font-family: inherit;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--amber), var(--amber-dark));
+  color: #1a1207;
+  box-shadow: 0 8px 24px rgba(245,158,11,0.25);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(245,158,11,0.4);
+}
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.btn-ghost:hover {
+  border-color: var(--sky);
+  color: var(--sky);
+  transform: translateY(-2px);
+}
+.btn-small {
+  padding: 9px 18px;
+  font-size: 13px;
 }
 
-.section h2 {
-    color:#ffb347;
-    margin-top:0;
+/* ============ ZONES ============ */
+.zone {
+  max-width: 1180px;
+  margin: 100px auto;
+  padding: 0 24px;
+  position: relative;
+}
+.zone-header {
+  margin-bottom: 40px;
+}
+.zone-tag {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--sunset);
+  margin-bottom: 10px;
+  opacity: 0.8;
+}
+.zone-header h2 {
+  font-size: clamp(28px, 3.5vw, 40px);
+  margin-bottom: 10px;
+  letter-spacing: -0.5px;
+}
+.zone-header p {
+  color: var(--muted);
+  font-size: 16px;
+  max-width: 620px;
 }
 
-.experiments {
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-    gap:25px;
+/* ============ CARDS (GAMES) ============ */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 22px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 28px;
+  backdrop-filter: blur(12px);
+  transition: transform .4s ease, border-color .4s ease, box-shadow .4s ease, background .4s ease;
+  display: flex;
+  flex-direction: column;
+}
+.card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(56,189,248,0.35);
+  background: var(--card-hover);
+  box-shadow: 0 24px 60px rgba(56,189,248,0.1);
+}
+.card-emoji {
+  font-size: 44px;
+  margin-bottom: 16px;
+  line-height: 1;
+}
+.card h3 {
+  font-size: 19px;
+  margin-bottom: 10px;
+  letter-spacing: -0.3px;
+}
+.card p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+  margin-bottom: 20px;
+  flex-grow: 1;
+}
+.card-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(56,189,248,0.15);
+  color: var(--sky);
+  margin-bottom: 12px;
+  width: fit-content;
+}
+.card-badge.badge-soon {
+  background: rgba(148,163,184,0.15);
+  color: var(--muted);
 }
 
-.experiment {
-    background:#243447;
-    border-radius:18px;
-    padding:25px;
+/* ============ MASONRY (GALLERY) ============ */
+.masonry {
+  columns: 3 240px;
+  column-gap: 18px;
+}
+.tile {
+  break-inside: avoid;
+  margin-bottom: 18px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--border);
+  transition: transform .4s ease, border-color .4s ease;
+  cursor: pointer;
+  position: relative;
+}
+.tile:hover {
+  transform: translateY(-4px);
+  border-color: rgba(251,191,36,0.4);
+}
+.tile-visual {
+  width: 100%;
+  display: block;
+  aspect-ratio: 4 / 3;
+  background: linear-gradient(135deg, #1e3a5f, #7c3aed 50%, #f59e0b);
+  position: relative;
+  overflow: hidden;
+}
+.tile:nth-child(3n) .tile-visual {
+  background: linear-gradient(135deg, #0c4a6e, #38bdf8 50%, #fbbf24);
+  aspect-ratio: 3 / 4;
+}
+.tile:nth-child(3n+1) .tile-visual {
+  background: linear-gradient(135deg, #7c2d12, #f59e0b 50%, #fde68a);
+}
+.tile:nth-child(4n) .tile-visual {
+  background: linear-gradient(135deg, #1e1b4b, #6366f1 50%, #f472b6);
+  aspect-ratio: 16 / 9;
+}
+.tile-visual::after {
+  content: attr(data-emoji);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  opacity: 0.85;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+}
+.tile figcaption {
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.tile figcaption strong {
+  color: var(--text);
+  font-weight: 600;
+  display: block;
+  font-size: 14px;
+}
+.tile figcaption small {
+  font-size: 11px;
+  color: #64748b;
 }
 
-.experiment h3 {
-    margin-top:0;
-    font-size:24px;
+/* ============ TRAVEL ============ */
+.travel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 22px;
+}
+.story {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  overflow: hidden;
+  transition: transform .4s ease, border-color .4s ease, box-shadow .4s ease;
+  display: flex;
+  flex-direction: column;
+}
+.story:hover {
+  transform: translateY(-6px);
+  border-color: rgba(251,191,36,0.35);
+  box-shadow: 0 24px 60px rgba(251,191,36,0.08);
+}
+.story-cover {
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, #0c4a6e, #f59e0b);
+  position: relative;
+  overflow: hidden;
+}
+.story:nth-child(2) .story-cover {
+  background: linear-gradient(135deg, #1e1b4b, #38bdf8);
+}
+.story:nth-child(3) .story-cover {
+  background: linear-gradient(135deg, #7c2d12, #fbbf24);
+}
+.story-cover::after {
+  content: attr(data-emoji);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+  opacity: 0.9;
+  filter: drop-shadow(0 6px 16px rgba(0,0,0,0.4));
+}
+.story-body {
+  padding: 22px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+.story-meta {
+  font-size: 12px;
+  color: var(--sunset);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.story h3 {
+  font-size: 20px;
+  margin-bottom: 10px;
+  letter-spacing: -0.3px;
+}
+.story p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 18px;
+  flex-grow: 1;
+}
+.story-link {
+  color: var(--sky);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: gap .3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.story-link:hover { color: var(--sunset); gap: 12px; }
+
+/* ============ CTA SECTION ============ */
+.cta {
+  max-width: 900px;
+  margin: 120px auto 80px;
+  padding: 60px 40px;
+  text-align: center;
+  background:
+    radial-gradient(600px 300px at 50% 0%, rgba(245,158,11,0.15), transparent 70%),
+    var(--card);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.cta h2 {
+  font-size: clamp(26px, 3vw, 36px);
+  margin-bottom: 14px;
+}
+.cta p {
+  color: var(--muted);
+  font-size: 16px;
+  max-width: 520px;
+  margin: 0 auto 28px;
 }
 
-.button {
-    display:inline-block;
-    margin-top:15px;
-    padding:12px 25px;
-    border-radius:40px;
-    background:#ff9800;
-    color:#111;
-    text-decoration:none;
-    font-weight:bold;
-    transition: transform 0.2s;
+/* ============ FOOTER ============ */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
 }
-
-.button:hover {
-    transform:scale(1.03);
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
-
-.gallery {
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-    gap:20px;
+.footer-links a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color .3s ease;
 }
+.footer-links a:hover { color: var(--sunset); }
 
-.gallery-item {
-    display: block;
-    text-decoration: none;
-    color: inherit;
-    transition: transform 0.2s;
+/* ============ RESPONSIVE ============ */
+@media (max-width: 768px) {
+  .nav { padding: 14px 20px; }
+  .nav-links { gap: 16px; }
+  .nav-links a { font-size: 13px; }
+  .zone { margin: 70px auto; }
+  .hero { padding: 60px 20px 40px; }
+  .hero-emoji { font-size: 52px; }
+  .masonry { columns: 2 160px; column-gap: 12px; }
+  .tile { margin-bottom: 12px; }
+  .cta { margin: 80px 20px 60px; padding: 44px 24px; }
+  .card { padding: 22px; }
+  .story-body { padding: 18px 20px 20px; }
 }
-
-.gallery-item:hover {
-    transform: scale(1.02);
+@media (max-width: 480px) {
+  .nav-links a:nth-child(n+4) { display: none; }
+  .masonry { columns: 1; }
+  .hero-actions { flex-direction: column; width: 100%; }
+  .hero-actions .btn { width: 100%; text-align: center; }
 }
-
-.gallery-item img {
-    width:100%;
-    height:180px;
-    object-fit:cover;
-    border-radius:15px;
-    background:#111;
-    display: block;
-}
-
-.gallery-caption {
-    margin-top: 10px;
-    font-size: 14px;
-    color: #b0c4d9;
-    line-height: 1.6;
-    padding: 0 4px;
-    min-height: 110px;
-}
-
-.gallery-caption strong {
-    color: #ffb347;
-    display: block;
-    margin-bottom: 4px;
-}
-
-.future {
-    text-align:center;
-    color:#ccd6e5;
-    font-size:18px;
-}
-
-/* --- Return Button --- */
-.btn-wrapper {
-    margin: 2rem 0 0.5rem;
-}
-
-.btn-return {
-    display: inline-block;
-    padding: 14px 42px;
-    border-radius: 60px;
-    background: linear-gradient(135deg, #ff9800, #e67e22);
-    color: #0b111f;
-    font-weight: 700;
-    font-size: 1.2rem;
-    text-decoration: none;
-    letter-spacing: 0.5px;
-    box-shadow: 0 6px 20px rgba(255, 152, 0, 0.35);
-    transition: all 0.25s ease;
-    border: none;
-}
-
-.btn-return:hover {
-    transform: scale(1.06);
-    box-shadow: 0 10px 30px rgba(255, 152, 0, 0.55);
-    background: linear-gradient(135deg, #ffa726, #f57c00);
-    color: #fff;
-}
-
-.btn-return:active {
-    transform: scale(0.97);
-}
-
-/* --- Footer --- */
-footer {
-    text-align:center;
-    color:#777;
-    padding:30px;
-}
-
 </style>
-
 </head>
-
 <body>
 
-
-<div class="lab-wrapper">
-
-
-<section class="hero">
-
-<h1>
-🧪 Atmosphere Lab
-</h1>
-
-
-<p>
-Experiments where real forces of nature become the engine of virtual worlds.
-</p>
-
-</section>
-
-
-
-
-<section class="section">
-
-
-<h2>
-🌍 Why Atmosphere Lab?
-</h2>
-
-
-<p>
-Wind is invisible, but it shapes our planet.
-It moves clouds, balloons, sailing ships and weather systems.
-</p>
-
-
-<p>
-Aerost.art explores how real atmospheric data can be transformed
-into interactive digital experiences.
-</p>
-
-
-<p>
-These are not traditional games.
-They are experiments using real-world conditions to create
-unique journeys.
-</p>
-
-
-</section>
-
-
-
-
-
-
-<section class="section">
-
-
-<h2>
-🔬 Current Experiments
-</h2>
-
-
-
-<div class="experiments">
-
-
-
-<div class="experiment">
-
-
-<h3>
-🎈 Balloon Journey
-</h3>
-
-
-<p>
-Gallery
-</p>
-
-<!-- 2) Кнопка "Art Experiment" → ссылка на gallery.html -->
-<a class="button" href="gallery.html">
-🎨 Art Experiment
-</a>
-
-
-</div>
-
-
-
-
-
-
-<div class="experiment">
-
-
-<h3>
-🎉 Fiesta Experiment
-</h3>
-
-
-<p>
-A playful experiment where wind, movement and virtual objects
-create an interactive experience.
-</p>
-
-
-<a class="button"
-href="http://91.149.179.79:3001/fiesta.html"
-target="_blank">
-
-Launch Experiment
-
-</a>
-
-
-</div>
-
-    <div class="experiment">
-
-
-<h3>
-⛵ Ocean Wind Experiment
-</h3>
-
-
-<p>
-A sailing experiment where ships are influenced by
-wind conditions and navigation decisions. <br>
-    (In development)
-</p>
-
-
-<a class="button"
-href="http://91.149.179.79:3002/"
-target="_blank">
-
-Launch Experiment
-
-</a>
-
-
-</div>
-
-
-</div>
-
-
-</section>
-
-
-
-
-<section class="section">
-
-
-<h2>
-📷 Experiment Gallery
-</h2>
-
-
-<p>
-Snapshots and results from virtual journeys.
-</p>
-
-
-
-<div class="gallery">
-
-  <!-- Фото 1 -->
-  <a class="gallery-item" href="gallery-page.html?img=La.png&caption=He wanted to fly across the English Channel but got carried away.">
-    <img src="apps/frontend/images/lab/La.png"
-         alt="He wanted to fly across the English Channel but got carried away.">
-    <div class="gallery-caption">
-      <strong>Flight over the Channel</strong>
-      How the attempt to fly across the English Channel ended
-    </div>
-  </a>
-
-  <!-- Фото 2 -->
-  <a class="gallery-item" href="gallery-page.html?img=Paris_1.png&caption=In the footsteps of Montgolfier">
-    <img src="apps/frontend/images/lab/Paris_1.png"
-         alt="In the footsteps of Montgolfier">
-    <div class="gallery-caption">
-      <strong>Montgolfier Legacy</strong>
-      Flight over Paris.<br>
-      The flight launched from the Château de la Muette, <br>
-        replicating the conditions of 1783.<br>
-      A tribute to the pioneers of aeronautics.
-    </div>
-  </a>
-
-  <!-- Фото 3 -->
-  <a class="gallery-item" href="gallery-page.html?img=pilot_fiesta.png&caption=Balloon journey result">
-    <img src="apps/frontend/images/lab/pilot_fiesta.png"
-         alt="Balloon journey result">
-    <div class="gallery-caption">
-      <strong>Fiesta Finale</strong>
-    A virtual fiesta with real wind
-    </div>
-  </a>
-
-</div>
-
-
-</section>
-
-
-
-
-
-
-<section class="section future">
-
-
-<h2>
-🚀 Future Experiments
-</h2>
-
-
-<p>
-Atmosphere Lab will grow with new experiments exploring
-wind, weather, oceans and natural forces.
-</p>
-
-
-</section>
-
-
-
-<!--  Return button -->
-<section id="try-yourself" class="glass-section section-6" style="text-align: center; padding: 1.5rem 0 0.5rem;">
-  <h2 style="border-bottom: none; margin-bottom: 0.5rem;">✨ Try it yourself</h2>
-  <p style="max-width: 100%; margin-bottom: 0.8rem; color: #b5d4ea;">Explore how wind at different altitudes changes the route.</p>
-  <div class="btn-wrapper">
-    <a href="index.html" class="btn-return">← Back to main</a>
+<!-- ============ NAV ============ -->
+<nav class="nav">
+  <div class="nav-logo">🎈 AEROSTAR</div>
+  <div class="nav-links">
+    <a href="#gallery">Галерея</a>
+    <a href="#games">Игры</a>
+    <a href="#travel">Путешествия</a>
+    <a href="/apps/game/public/fiesta.html">Fiesta Race</a>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="hero-emoji">🎈</div>
+  <h1>Почувствуй ветер.<br><span>Отдохни в небе.</span></h1>
+  <p>Медленные путешествия над облаками, красивые виды сверху и неспешные игры в потоках воздуха. Добро пожаловать в Aerostar.</p>
+  <div class="hero-actions">
+    <a href="#games" class="btn btn-primary">🎮 Начать приключение</a>
+    <a href="#gallery" class="btn btn-ghost">🖼 Смотреть галерею</a>
+  </div>
+</header>
+
+<!-- ============ ZONE 1: GALLERY ============ -->
+<section class="zone" id="gallery">
+  <div class="zone-header">
+    <div class="zone-tag">Зона 01</div>
+    <h2>🖼 Фото и арт-галерея</h2>
+    <p>Взгляд на мир с высоты птичьего полёта — рассветы над Альпами, облака над океаном и картины, рождённые ветром.</p>
+  </div>
+
+  <div class="masonry">
+    <figure class="tile">
+      <div class="tile-visual" data-emoji="🌅"></div>
+      <figcaption>
+        <div><strong>Рассвет над Альпами</strong><small>Монблан, 3800 м</small></div>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="tile-visual" data-emoji="☁️"></div>
+      <figcaption>
+        <div><strong>Море облаков</strong><small>Пиренейские горы</small></div>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="tile-visual" data-emoji="🏙"></div>
+      <figcaption>
+        <div><strong>Город сверху</strong><small>Полёт над Прагой</small></div>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="tile-visual" data-emoji="🌊"></div>
+      <figcaption>
+        <div><strong>Тихий океан</strong><small>Бискайский залив</small></div>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="tile-visual" data-emoji="🎨"></div>
+      <figcaption>
+        <div><strong>Ветер в красках</strong><small>Арт-серия «Слои атмосферы»</small></div>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="tile-visual" data-emoji="🦅"></div>
+      <figcaption>
+        <div><strong>На одной высоте</strong><small>Встреча с орлом</small></div>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="tile-visual" data-emoji="🌸"></div>
+      <figcaption>
+        <div><strong>Весна в долине</strong><small>Полёт над Ла-Маншем</small></div>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="tile-visual" data-emoji="🌌"></div>
+      <figcaption>
+        <div><strong>Ночное небо</strong><small>Высота 4000 м</small></div>
+      </figcaption>
+    </figure>
   </div>
 </section>
 
+<!-- ============ ZONE 2: GAMES ============ -->
+<section class="zone" id="games">
+  <div class="zone-header">
+    <div class="zone-tag">Зона 02</div>
+    <h2>🎮 Игры</h2>
+    <p>Неспешные приключения в потоках ветра. Никакой спешки — только ты, шар и бесконечное небо.</p>
+  </div>
 
+  <div class="cards">
+    <article class="card">
+      <div class="card-badge">● LIVE</div>
+      <div class="card-emoji">🎈</div>
+      <h3>Fiesta Balloon Race</h3>
+      <p>Поймай нужный слой ветра и обгони соперников в гонке через континенты. Финиш — в Гринвиче, на нулевом меридиане.</p>
+      <a href="/apps/game/public/fiesta.html" class="btn btn-primary btn-small">Играть →</a>
+    </article>
 
-</div>
+    <article class="card">
+      <div class="card-badge">● LIVE</div>
+      <div class="card-emoji">🎨</div>
+      <h3>Художественный полёт</h3>
+      <p>Свободный режим без цели и таймера. Просто поднимайся выше, слушай ветер и смотри, как меняется земля под тобой.</p>
+      <a href="#" class="btn btn-ghost btn-small">Открыть →</a>
+    </article>
 
+    <article class="card">
+      <div class="card-badge badge-soon">○ В РАЗРАБОТКЕ</div>
+      <div class="card-emoji">⛵</div>
+      <h3>Океанский ветер</h3>
+      <p>Управление парусной лодкой в открытом океане. Те же ветра, что несут шары — теперь и для парусов.</p>
+      <a href="#" class="btn btn-ghost btn-small">Скоро →</a>
+    </article>
+  </div>
+</section>
 
+<!-- ============ ZONE 3: TRAVEL ============ -->
+<section class="zone" id="travel">
+  <div class="zone-header">
+    <div class="zone-tag">Зона 03</div>
+    <h2>✈️ Путешествия</h2>
+    <p>Истории из воздуха — маршруты, дневники пилотов и идеи для следующего полёта.</p>
+  </div>
 
-<footer>
+  <div class="travel-grid">
+    <article class="story">
+      <div class="story-cover" data-emoji="🌊"></div>
+      <div class="story-body">
+        <div class="story-meta">Маршрут · 480 км</div>
+        <h3>Через Ла-Манш</h3>
+        <p>Как мы пересекли пролив на воздушном шаре — 6 часов над водой, встреча с чайками и мягкая посадка во Франции.</p>
+        <a href="#" class="story-link">Читать историю <span>→</span></a>
+      </div>
+    </article>
 
-© 2026 Aerost.art — Real wind. Real journeys.
+    <article class="story">
+      <div class="story-cover" data-emoji="🏔"></div>
+      <div class="story-body">
+        <div class="story-meta">Монголия · 12 дней</div>
+        <h3>Наследие Монгольфье</h3>
+        <p>Полёт над Пиренеями в память о первом пилотируемом полёте 1783 года. Тишина, которую помнят только пилоты шаров.</p>
+        <a href="#" class="story-link">Читать историю <span>→</span></a>
+      </div>
+    </article>
 
+    <article class="story">
+      <div class="story-cover" data-emoji="🎈"></div>
+      <div class="story-body">
+        <div class="story-meta">Дневник · Гринвич</div>
+        <h3>Финиш на нулевом</h3>
+        <p>Виртуальный праздник с настоящим ветром. Как финишная прямая гонки Fiesta проходит точно через нулевой меридиан.</p>
+        <a href="#" class="story-link">Читать историю <span>→</span></a>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="cta">
+  <h2>Готов отдохнуть в небе?</h2>
+  <p>Зарегистрируйся как пилот или присоединись к гонке как зритель — ветер уже ждёт.</p>
+  <div class="hero-actions" style="position: static;">
+    <a href="/apps/game/public/fiesta.html" class="btn btn-primary">🎈 Войти в гонку</a>
+    <a href="#" class="btn btn-ghost">📝 Стать пилотом</a>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="footer">
+  <div class="footer-links">
+    <a href="#gallery">Галерея</a>
+    <a href="#games">Игры</a>
+    <a href="#travel">Путешествия</a>
+    <a href="https://aerost.art">aerost.art</a>
+  </div>
+  <div>© 2026 Aerostar · Отдохни в небе 🎈</div>
 </footer>
 
 </body>
-
 </html>
