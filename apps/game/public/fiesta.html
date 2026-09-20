@@ -662,18 +662,7 @@
             // Добавляем контрол масштаба
             L.control.scale({ metric: true, position: 'bottomleft' }).addTo(map);
             
-            // Добавляем контрол переключения слоёв
-            L.control.layers(
-                { 
-                    "🗺️ Схема OSM": streetLayer,
-                    "🛰️ Спутник ESRI": satelliteLayer
-                }, 
-                null, 
-                { 
-                    position: 'topleft', 
-                    collapsed: false 
-                }
-            ).addTo(map);
+           
         }
         
         // ============================================
