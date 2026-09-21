@@ -3,636 +3,568 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aerostar Admin — Контент Lab</title>
+<title>Aerostar — Lab Content Admin</title>
 <style>
 :root {
-  --bg-1: #0b1220;
-  --bg-2: #131a2e;
+  --bg-1: #0b1220; --bg-2: #131a2e;
   --card: rgba(255,255,255,0.04);
   --border: rgba(255,255,255,0.08);
-  --text: #e6edf7;
-  --muted: #94a3b8;
-  --amber: #f59e0b;
-  --amber-dark: #d97706;
-  --sky: #38bdf8;
-  --sunset: #fbbf24;
-  --danger: #ef4444;
-  --success: #10b981;
+  --text: #e6edf7; --muted: #94a3b8;
+  --amber: #f59e0b; --amber-dark: #d97706;
+  --sky: #38bdf8; --sunset: #fbbf24;
+  --danger: #ef4444; --success: #10b981;
+  --pink: #f472b6;
 }
-
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
 body {
-  background:
-    radial-gradient(1200px 800px at 70% -10%, #1e2a4a 0%, var(--bg-1) 60%),
-    linear-gradient(180deg, var(--bg-1), var(--bg-2));
+  background: radial-gradient(1200px 800px at 70% -10%, #1e2a4a 0%, var(--bg-1) 60%),
+              linear-gradient(180deg, var(--bg-1), var(--bg-2));
   color: var(--text);
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
   min-height: 100vh;
 }
 
-/* ============ HEADER ============ */
+/* LOGIN */
+#login-screen {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(800px 500px at 50% 20%, rgba(56,189,248,0.08), transparent 70%), var(--bg-1);
+  z-index: 9000;
+}
+.login-card {
+  background: rgba(15,23,42,0.95);
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: 40px 36px; width: 400px; max-width: calc(100vw - 40px);
+  text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.login-card h1 {
+  font-size: 26px; margin-bottom: 28px;
+  color: var(--pink);
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+}
+.login-label { display: block; text-align: left; font-size: 13px; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
+.login-input {
+  width: 100%; padding: 14px 16px;
+  background: rgba(11,18,32,0.8); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); font-size: 15px; font-family: inherit;
+  margin-bottom: 22px;
+}
+.login-input:focus { outline: none; border-color: var(--sky); }
+.login-btn {
+  width: 100%; padding: 14px; border-radius: 10px; border: none;
+  background: linear-gradient(135deg, #0284c7, #0ea5e9);
+  color: white; font-size: 15px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: all .25s ease;
+}
+.login-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(14,165,233,0.4); }
+.login-error { color: var(--danger); font-size: 13px; margin-top: 12px; min-height: 18px; }
+
+/* HEADER */
 .admin-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  position: sticky; top: 0; z-index: 100;
+  display: flex; justify-content: space-between; align-items: center;
   padding: 16px 32px;
-  background: rgba(11,18,32,0.85);
-  backdrop-filter: blur(14px);
+  background: rgba(11,18,32,0.85); backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
 }
-.admin-logo {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--sunset);
-}
-.admin-logo span {
-  color: var(--muted);
-  font-weight: 400;
-  margin-left: 8px;
-  font-size: 13px;
-}
-.admin-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
+.admin-logo { font-size: 16px; font-weight: 700; color: var(--sunset); letter-spacing: 1px; }
+.admin-logo span { color: var(--muted); font-weight: 400; margin-left: 8px; font-size: 13px; }
+.admin-actions { display: flex; gap: 10px; align-items: center; }
 
-/* ============ BUTTONS ============ */
 .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 20px;
-  border-radius: 999px;
-  font-weight: 600;
-  font-size: 13px;
-  text-decoration: none;
-  border: none;
-  cursor: pointer;
-  transition: all .25s ease;
-  font-family: inherit;
-  white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 20px; border-radius: 999px;
+  font-weight: 600; font-size: 13px; text-decoration: none;
+  border: none; cursor: pointer; font-family: inherit;
+  transition: all .25s ease; white-space: nowrap;
 }
-.btn-primary {
-  background: linear-gradient(135deg, var(--amber), var(--amber-dark));
-  color: #1a1207;
-}
+.btn-primary { background: linear-gradient(135deg, var(--amber), var(--amber-dark)); color: #1a1207; }
 .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(245,158,11,0.35); }
-.btn-ghost {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
-}
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .btn-ghost:hover { border-color: var(--sky); color: var(--sky); }
-.btn-danger {
-  background: transparent;
-  border: 1px solid rgba(239,68,68,0.3);
-  color: var(--danger);
-}
+.btn-danger { background: transparent; border: 1px solid rgba(239,68,68,0.3); color: var(--danger); }
 .btn-danger:hover { background: rgba(239,68,68,0.1); }
 .btn-small { padding: 7px 14px; font-size: 12px; }
-.btn-icon {
-  padding: 6px 10px;
-  font-size: 12px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  color: var(--muted);
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: inherit;
-}
-.btn-icon:hover { color: var(--danger); border-color: rgba(239,68,68,0.4); }
 
-/* ============ LAYOUT ============ */
-.container {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 32px 24px 80px;
-}
+/* LAYOUT */
+.container { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; }
 
-/* ============ TABS ============ */
 .tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 28px;
-  flex-wrap: wrap;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 2px;
+  display: flex; gap: 8px; margin-bottom: 28px;
+  border-bottom: 1px solid var(--border); padding-bottom: 2px;
 }
 .tab {
-  padding: 12px 22px;
-  border-radius: 12px 12px 0 0;
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
+  padding: 12px 22px; border-radius: 12px 12px 0 0;
+  background: transparent; border: none; color: var(--muted);
+  font-weight: 600; font-size: 14px; cursor: pointer;
+  font-family: inherit; border-bottom: 2px solid transparent;
   transition: all .25s ease;
-  font-family: inherit;
-  border-bottom: 2px solid transparent;
 }
 .tab:hover { color: var(--text); }
-.tab.active {
-  color: var(--sunset);
-  border-bottom-color: var(--sunset);
-  background: rgba(251,191,36,0.05);
-}
+.tab.active { color: var(--sunset); border-bottom-color: var(--sunset); background: rgba(251,191,36,0.05); }
 
-/* ============ PANELS ============ */
 .panel { display: none; }
-.panel.active { display: block; animation: fadeIn .3s ease; }
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+.panel.active { display: block; }
+.panel-header { margin-bottom: 24px; }
+.panel-header h2 { font-size: 24px; margin-bottom: 6px; }
+.panel-header p { color: var(--muted); font-size: 14px; }
 
-.panel-header {
-  margin-bottom: 24px;
-}
-.panel-header h2 {
-  font-size: 24px;
-  margin-bottom: 6px;
-  letter-spacing: -0.3px;
-}
-.panel-header p {
-  color: var(--muted);
-  font-size: 14px;
-}
-
-/* ============ SECTION ============ */
 .section {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 24px;
-  margin-bottom: 20px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 18px; padding: 24px; margin-bottom: 20px;
 }
 .section-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 18px;
-  padding-bottom: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 18px; padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
 }
-.section-title h3 {
-  font-size: 16px;
-  letter-spacing: -0.2px;
+.section-title h3 { font-size: 16px; }
+
+/* СЛОТЫ */
+.slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.slot {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.slot-header {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.slot-id {
+  font-size: 13px; font-weight: 700; color: var(--sky);
+  letter-spacing: 1px;
+  background: rgba(56,189,248,0.1);
+  padding: 3px 10px; border-radius: 6px;
+}
+.slot-fill {
+  font-size: 11px; color: var(--muted);
+  padding: 3px 8px; border-radius: 6px;
+  background: rgba(148,163,184,0.1);
+}
+.slot-fill.ok { color: var(--success); background: rgba(16,185,129,0.1); }
+
+.slot-preview {
+  aspect-ratio: 16 / 10;
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1e3a5f, #7c3aed 50%, #f59e0b);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; position: relative;
+}
+.slot-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.slot-preview .slot-error {
+  font-size: 11px; color: #fca5a5;
+  padding: 8px; text-align: center;
+  background: rgba(0,0,0,0.5);
+  border-radius: 6px;
 }
 
-/* ============ FORMS ============ */
-.field {
-  margin-bottom: 16px;
-}
+.field { display: flex; flex-direction: column; gap: 5px; }
 .field label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  margin-bottom: 6px;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  letter-spacing: 0.3px; text-transform: uppercase;
 }
 .field input[type="text"],
 .field input[type="url"],
 .field textarea {
-  width: 100%;
-  padding: 11px 14px;
-  background: rgba(15,23,42,0.7);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--text);
-  font-size: 14px;
+  width: 100%; padding: 9px 11px;
+  background: rgba(15,23,42,0.7); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 13px;
   font-family: inherit;
-  transition: border-color .25s ease, background .25s ease;
 }
-.field input:focus,
-.field textarea:focus {
-  outline: none;
-  border-color: var(--sky);
-  background: rgba(15,23,42,0.9);
+.field input:focus, .field textarea:focus {
+  outline: none; border-color: var(--sky);
 }
-.field textarea {
-  resize: vertical;
-  min-height: 80px;
-  line-height: 1.5;
-}
-.field-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-.field-hint {
-  font-size: 11px;
-  color: #64748b;
-  margin-top: 5px;
-  font-style: italic;
-}
+.field textarea { resize: vertical; min-height: 60px; line-height: 1.4; }
+.field-hint { font-size: 10px; color: #64748b; font-style: italic; }
 
-/* ============ ITEM CARD ============ */
-.item-card {
+/* ЖУРНАЛ (для историй) */
+.story-slot {
   background: rgba(0,0,0,0.2);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 18px;
-  margin-bottom: 14px;
-  position: relative;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.story-slot-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px;
+}
+.story-grid {
   display: grid;
-  grid-template-columns: 140px 1fr;
+  grid-template-columns: 220px 1fr;
   gap: 18px;
 }
-.item-card-preview {
-  aspect-ratio: 1 / 1;
-  border-radius: 12px;
-  overflow: hidden;
-  background: linear-gradient(135deg, #1e3a5f, #7c3aed 50%, #f59e0b);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.story-preview {
+  aspect-ratio: 16 / 10;
+  border-radius: 10px; overflow: hidden;
+  background: linear-gradient(135deg, #0c4a6e, #f59e0b);
+  display: flex; align-items: center; justify-content: center;
   font-size: 48px;
-  position: relative;
 }
-.item-card-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.item-card-body { min-width: 0; }
-.item-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-.item-card-header .num {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--sky);
-  letter-spacing: 1px;
-}
+.story-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* ============ STATUS BAR ============ */
+/* STATUS BAR */
 .status-bar {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
+  position: fixed; bottom: 24px; left: 50%;
   transform: translateX(-50%);
   background: rgba(15,23,42,0.95);
   backdrop-filter: blur(14px);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 10px 20px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 10px 20px; font-size: 13px; font-weight: 600;
   box-shadow: 0 12px 40px rgba(0,0,0,0.5);
-  opacity: 0;
-  transition: opacity .3s ease;
-  pointer-events: none;
-  z-index: 200;
+  opacity: 0; transition: opacity .3s ease;
+  pointer-events: none; z-index: 200;
 }
 .status-bar.show { opacity: 1; }
 .status-bar.success { border-color: rgba(16,185,129,0.4); color: var(--success); }
 .status-bar.error { border-color: rgba(239,68,68,0.4); color: var(--danger); }
 
-/* ============ EMPTY STATE ============ */
-.empty {
-  text-align: center;
-  padding: 30px;
-  color: var(--muted);
-  font-size: 13px;
-  font-style: italic;
+@media (max-width: 900px) {
+  .story-grid { grid-template-columns: 1fr; }
+  .story-preview { aspect-ratio: 16 / 9; }
 }
-
-/* ============ RESPONSIVE ============ */
 @media (max-width: 768px) {
   .admin-header { padding: 12px 16px; }
   .admin-logo span { display: none; }
   .container { padding: 20px 16px 60px; }
-  .field-row { grid-template-columns: 1fr; }
-  .tab { padding: 10px 14px; font-size: 13px; }
-  .section { padding: 18px; }
-  .item-card {
-    grid-template-columns: 1fr;
-  }
-  .item-card-preview {
-    aspect-ratio: 16 / 9;
-  }
+  .slots-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 <body>
 
-<!-- ============ HEADER ============ -->
-<header class="admin-header">
-  <div class="admin-logo">
-    🎈 AEROSTAR <span>· Content Manager</span>
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1><span>🔒</span> Admin Access</h1>
+    <label class="login-label" for="admin-key">Admin Key</label>
+    <input type="password" id="admin-key" class="login-input" placeholder="Enter admin key" autocomplete="off">
+    <button class="login-btn" id="login-btn">Login</button>
+    <div class="login-error" id="login-error"></div>
   </div>
-  <div class="admin-actions">
-    <button class="btn btn-ghost btn-small" id="export-btn">📤 Экспорт JSON</button>
-    <button class="btn btn-ghost btn-small" id="import-btn">📥 Импорт JSON</button>
-    <button class="btn btn-primary btn-small" id="save-btn">💾 Сохранить</button>
-  </div>
-</header>
-
-<!-- ============ MAIN ============ -->
-<div class="container">
-
-  <!-- TABS -->
-  <div class="tabs">
-    <button class="tab active" data-tab="gallery">🖼 Галерея</button>
-    <button class="tab" data-tab="travel">✈️ Истории</button>
-  </div>
-
-  <!-- ============ GALLERY ============ -->
-  <div class="panel active" data-panel="gallery">
-    <div class="panel-header">
-      <h2>🖼 Фото и арт-галерея</h2>
-      <p>Добавляй изображения в раздел «Галерея» на странице lab.html. Каждое изображение можно подписать.</p>
-    </div>
-
-    <div class="section">
-      <div class="section-title">
-        <h3>Изображения</h3>
-        <button class="btn btn-ghost btn-small" id="add-gallery-item">+ Добавить изображение</button>
-      </div>
-      <div id="gallery-items"></div>
-    </div>
-  </div>
-
-  <!-- ============ TRAVEL ============ -->
-  <div class="panel" data-panel="travel">
-    <div class="panel-header">
-      <h2>✈️ Истории путешествий</h2>
-      <p>Истории для раздела «Путешествия» на lab.html — с картинкой, мета-описанием и текстом.</p>
-    </div>
-
-    <div class="section">
-      <div class="section-title">
-        <h3>Истории</h3>
-        <button class="btn btn-ghost btn-small" id="add-travel-item">+ Добавить историю</button>
-      </div>
-      <div id="travel-items"></div>
-    </div>
-  </div>
-
 </div>
 
-<!-- ============ STATUS BAR ============ -->
-<div class="status-bar" id="status-bar"></div>
+<!-- PANEL -->
+<div id="admin-panel" style="display: none;">
 
-<!-- ============ HIDDEN IMPORT INPUT ============ -->
-<input type="file" id="import-file" accept=".json" style="display: none;">
+  <header class="admin-header">
+    <div class="admin-logo">🎈 AEROSTAR <span>· Lab Content</span></div>
+    <div class="admin-actions">
+      <button class="btn btn-ghost btn-small" id="export-btn">📤 Экспорт JSON</button>
+      <button class="btn btn-ghost btn-small" id="import-btn">📥 Импорт JSON</button>
+      <button class="btn btn-primary btn-small" id="save-btn">💾 Сохранить</button>
+      <button class="btn btn-danger btn-small" id="logout-btn">🚪 Выйти</button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <div class="tabs">
+      <button class="tab active" data-tab="gallery">🖼 Галерея (8)</button>
+      <button class="tab" data-tab="travel">✈️ Истории (3)</button>
+    </div>
+
+    <!-- GALLERY -->
+    <div class="panel active" data-panel="gallery">
+      <div class="panel-header">
+        <h2>🖼 Фото и арт-галерея</h2>
+        <p>Восемь фиксированных слотов F1–F8. Картинки кладёшь в <code>images/lab/</code>, в поле «Файл» пишешь полное имя (например <code>F1.jpg</code>).</p>
+      </div>
+      <div class="section">
+        <div class="slots-grid" id="gallery-slots"></div>
+      </div>
+    </div>
+
+    <!-- TRAVEL -->
+    <div class="panel" data-panel="travel">
+      <div class="panel-header">
+        <h2>✈️ Истории путешествий</h2>
+        <p>Три фиксированных слота S1–S3. HTML в поле «Полный текст» — можно <code>&lt;h3&gt;</code>, <code>&lt;p&gt;</code>, <code>&lt;b&gt;</code>, <code>&lt;img&gt;</code>. Доп. фото — до 3, имена файлов через запятую.</p>
+      </div>
+      <div class="section" id="travel-slots"></div>
+    </div>
+
+  </div>
+
+  <div class="status-bar" id="status-bar"></div>
+  <input type="file" id="import-file" accept=".json" style="display: none;">
+</div>
 
 <script>
 // ============================================
-// КОНСТАНТЫ
-// ============================================
-const STORAGE_KEY = 'aerostar_lab_content_v1';
+const ADMIN_KEY = 'aerostar2024';
+const AUTH_STORAGE = 'aerostar_lab_admin_ok';
+const STORAGE_KEY = 'aerostar_lab_content_v2';
+const IMG_BASE = 'images/lab/';
 
 // ============================================
-// ДЕФОЛТНЫЕ ДАННЫЕ
-// ============================================
+const GALLERY_IDS = ['F1','F2','F3','F4','F5','F6','F7','F8'];
+const TRAVEL_IDS  = ['S1','S2','S3'];
+
 const DEFAULT_DATA = {
-  gallery: [],
-  travel: []
+  gallery: Object.fromEntries(GALLERY_IDS.map(id => [id, { img: '', title: '', meta: '', desc: '' }])),
+  travel:  Object.fromEntries(TRAVEL_IDS.map(id => [id, { img: '', emoji: '✈️', meta: '', title: '', short: '', html: '', extraPhotos: [] }]))
 };
 
-// ============================================
-// СОСТОЯНИЕ
-// ============================================
 let data = JSON.parse(JSON.stringify(DEFAULT_DATA));
 
 // ============================================
-// УТИЛИТЫ
-// ============================================
-function esc(str) {
-  if (str == null) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-
 function showStatus(msg, type = '') {
   const bar = document.getElementById('status-bar');
   bar.textContent = msg;
   bar.className = 'status-bar show ' + type;
   clearTimeout(showStatus._t);
-  showStatus._t = setTimeout(() => {
-    bar.classList.remove('show');
-  }, 2600);
-}
-
-function uid() {
-  return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  showStatus._t = setTimeout(() => bar.classList.remove('show'), 2600);
 }
 
 // ============================================
-// ГАЛЕРЕЯ
+// LOGIN
+// ============================================
+function checkAuth() { return sessionStorage.getItem(AUTH_STORAGE) === '1'; }
+function doLogin() {
+  const key = document.getElementById('admin-key').value.trim();
+  const err = document.getElementById('login-error');
+  if (key === ADMIN_KEY) {
+    sessionStorage.setItem(AUTH_STORAGE, '1');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-panel').style.display = 'block';
+    load(); renderAll();
+  } else {
+    err.textContent = 'Неверный ключ.';
+    document.getElementById('admin-key').value = '';
+  }
+}
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('admin-key').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('logout-btn').addEventListener('click', () => {
+  sessionStorage.removeItem(AUTH_STORAGE);
+  location.reload();
+});
+
+// ============================================
+// РЕНДЕР ГАЛЕРЕИ
 // ============================================
 function renderGallery() {
-  const container = document.getElementById('gallery-items');
-  if (!data.gallery.length) {
-    container.innerHTML = '<div class="empty">Изображений пока нет. Нажми «+ Добавить изображение».</div>';
-    return;
-  }
-  container.innerHTML = data.gallery.map((item, i) => {
-    const preview = item.img
-      ? `<img src="${esc(item.img)}" alt="" onerror="this.style.display='none'; this.parentNode.textContent='🖼';">`
-      : '🖼';
+  const c = document.getElementById('gallery-slots');
+  c.innerHTML = GALLERY_IDS.map(id => {
+    const item = data.gallery[id] || {};
+    const hasImg = !!item.img;
+    const preview = hasImg
+      ? `<img src="${IMG_BASE}${esc(item.img)}" onerror="this.parentNode.innerHTML='<span class=\\'slot-error\\'>❌ Не найдено: ${esc(item.img)}</span>';">`
+      : '<span style="opacity:.4">🖼</span>';
     return `
-    <div class="item-card" data-index="${i}" data-id="${esc(item.id)}">
-      <div class="item-card-preview">${preview}</div>
-      <div class="item-card-body">
-        <div class="item-card-header">
-          <span class="num">ИЗОБРАЖЕНИЕ #${i + 1}</span>
-          <button class="btn-icon" data-remove="gallery" data-index="${i}" title="Удалить">✕ Удалить</button>
-        </div>
-        <div class="field">
-          <label>URL изображения *</label>
-          <input type="url" data-field="gallery.${i}.img" value="${esc(item.img || '')}" placeholder="https://example.com/photo.jpg">
-          <div class="field-hint">Прямая ссылка на картинку (jpg, png, webp, gif)</div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Название</label>
-            <input type="text" data-field="gallery.${i}.title" value="${esc(item.title || '')}" placeholder="Рассвет над Альпами">
-          </div>
-          <div class="field">
-            <label>Подпись (маленькая)</label>
-            <input type="text" data-field="gallery.${i}.meta" value="${esc(item.meta || '')}" placeholder="Монблан, 3800 м">
-          </div>
-        </div>
+    <div class="slot" data-slot="gallery" data-id="${id}">
+      <div class="slot-header">
+        <span class="slot-id">${id}</span>
+        <span class="slot-fill ${hasImg ? 'ok' : ''}">${hasImg ? '✓ заполнено' : 'пусто'}</span>
       </div>
-    </div>
-    `;
+      <div class="slot-preview" data-preview>${preview}</div>
+      <div class="field">
+        <label>Файл *</label>
+        <input type="text" data-field="gallery.${id}.img" value="${esc(item.img || '')}" placeholder="${id}.jpg">
+        <div class="field-hint">Имя файла в images/lab/</div>
+      </div>
+      <div class="field">
+        <label>Название</label>
+        <input type="text" data-field="gallery.${id}.title" value="${esc(item.title || '')}" placeholder="Рассвет над Альпами">
+      </div>
+      <div class="field">
+        <label>Подпись</label>
+        <input type="text" data-field="gallery.${id}.meta" value="${esc(item.meta || '')}" placeholder="Монблан, 3800 м">
+      </div>
+      <div class="field">
+        <label>Описание (для fullsize)</label>
+        <textarea data-field="gallery.${id}.desc" placeholder="Необязательно">${esc(item.desc || '')}</textarea>
+      </div>
+    </div>`;
   }).join('');
 }
 
 // ============================================
-// ПУТЕШЕСТВИЯ
+// РЕНДЕР ИСТОРИЙ
 // ============================================
 function renderTravel() {
-  const container = document.getElementById('travel-items');
-  if (!data.travel.length) {
-    container.innerHTML = '<div class="empty">Историй пока нет. Нажми «+ Добавить историю».</div>';
-    return;
-  }
-  container.innerHTML = data.travel.map((item, i) => {
-    const preview = item.img
-      ? `<img src="${esc(item.img)}" alt="" onerror="this.style.display='none'; this.parentNode.textContent='${esc(item.emoji || '✈️')}';">`
+  const c = document.getElementById('travel-slots');
+  c.innerHTML = TRAVEL_IDS.map(id => {
+    const item = data.travel[id] || {};
+    const hasImg = !!item.img;
+    const preview = hasImg
+      ? `<img src="${IMG_BASE}${esc(item.img)}" onerror="this.parentNode.innerHTML='<span class=\\'slot-error\\'>❌ ${esc(item.img)}</span>';">`
       : esc(item.emoji || '✈️');
+    const extra = Array.isArray(item.extraPhotos) ? item.extraPhotos.join(', ') : '';
     return `
-    <div class="item-card" data-index="${i}" data-id="${esc(item.id)}">
-      <div class="item-card-preview">${preview}</div>
-      <div class="item-card-body">
-        <div class="item-card-header">
-          <span class="num">ИСТОРИЯ #${i + 1}</span>
-          <button class="btn-icon" data-remove="travel" data-index="${i}" title="Удалить">✕ Удалить</button>
-        </div>
-        <div class="field">
-          <label>URL обложки</label>
-          <input type="url" data-field="travel.${i}.img" value="${esc(item.img || '')}" placeholder="https://example.com/cover.jpg">
-          <div class="field-hint">Если пусто — покажется эмодзи-заглушка из поля ниже</div>
-        </div>
-        <div class="field-row">
+    <div class="story-slot" data-slot="travel" data-id="${id}">
+      <div class="story-slot-header">
+        <span class="slot-id">${id}</span>
+        <span class="slot-fill ${hasImg ? 'ok' : ''}">${hasImg ? '✓ обложка есть' : 'нет обложки'}</span>
+      </div>
+      <div class="story-grid">
+        <div class="story-preview" data-preview>${preview}</div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div class="field">
+            <label>Файл обложки</label>
+            <input type="text" data-field="travel.${id}.img" value="${esc(item.img || '')}" placeholder="${id}.jpg">
+            <div class="field-hint">Если пусто — покажется эмодзи</div>
+          </div>
           <div class="field">
             <label>Эмодзи-заглушка</label>
-            <input type="text" data-field="travel.${i}.emoji" value="${esc(item.emoji || '')}" placeholder="🌊" maxlength="4">
+            <input type="text" data-field="travel.${id}.emoji" value="${esc(item.emoji || '')}" maxlength="4" placeholder="🌊">
           </div>
           <div class="field">
             <label>Мета (маршрут/регион)</label>
-            <input type="text" data-field="travel.${i}.meta" value="${esc(item.meta || '')}" placeholder="Маршрут · 480 км">
-          </div>
-        </div>
-        <div class="field">
-          <label>Заголовок *</label>
-          <input type="text" data-field="travel.${i}.title" value="${esc(item.title || '')}" placeholder="Через Ла-Манш">
-        </div>
-        <div class="field">
-          <label>Описание *</label>
-          <textarea data-field="travel.${i}.desc" placeholder="Как мы пересекли пролив на воздушном шаре...">${esc(item.desc || '')}</textarea>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Текст ссылки</label>
-            <input type="text" data-field="travel.${i}.linkText" value="${esc(item.linkText || 'Читать историю')}" placeholder="Читать историю">
+            <input type="text" data-field="travel.${id}.meta" value="${esc(item.meta || '')}" placeholder="Маршрут · 480 км">
           </div>
           <div class="field">
-            <label>URL ссылки</label>
-            <input type="text" data-field="travel.${i}.linkHref" value="${esc(item.linkHref || '#')}" placeholder="#">
+            <label>Заголовок *</label>
+            <input type="text" data-field="travel.${id}.title" value="${esc(item.title || '')}" placeholder="Через Ла-Манш">
+          </div>
+          <div class="field">
+            <label>Краткое описание (для карточки на lab) *</label>
+            <textarea data-field="travel.${id}.short" placeholder="Как мы пересекли пролив...">${esc(item.short || '')}</textarea>
+          </div>
+          <div class="field">
+            <label>Полный текст истории (HTML) *</label>
+            <textarea data-field="travel.${id}.html" style="min-height:180px; font-family:Consolas,monospace; font-size:12px;" placeholder="<p>Первый абзац...</p>&#10;<h3>День первый</h3>&#10;<p>...</p>">${esc(item.html || '')}</textarea>
+            <div class="field-hint">Разрешено: &lt;p&gt; &lt;h2&gt; &lt;h3&gt; &lt;b&gt; &lt;i&gt; &lt;img&gt; &lt;a&gt; &lt;br&gt; &lt;blockquote&gt; &lt;ul&gt; &lt;ol&gt; &lt;li&gt;</div>
+          </div>
+          <div class="field">
+            <label>Доп. фото (до 3, через запятую)</label>
+            <input type="text" data-field="travel.${id}.extraPhotos" value="${esc(extra)}" placeholder="S1_1.jpg, S1_2.jpg">
           </div>
         </div>
       </div>
-    </div>
-    `;
+    </div>`;
   }).join('');
 }
 
 // ============================================
-// ПРИВЯЗКА ИЗМЕНЕНИЙ
+// ПРИВЯЗКА
 // ============================================
 function bindInputs() {
   document.querySelectorAll('[data-field]').forEach(el => {
     if (el._bound) return;
     el._bound = true;
-
     const handler = () => {
       const path = el.dataset.field.split('.');
-      let obj = data;
-      for (let i = 0; i < path.length - 1; i++) obj = obj[path[i]];
-      obj[path[path.length - 1]] = el.value;
+      const [root, id, key] = path;
 
-      // Обновляем превью картинки, если менялся URL
-      if (path[path.length - 1] === 'img') {
-        const card = el.closest('.item-card');
-        const preview = card?.querySelector('.item-card-preview');
-        if (preview) {
-          if (el.value) {
-            preview.innerHTML = `<img src="${esc(el.value)}" onerror="this.style.display='none'; this.parentNode.textContent='🖼';">`;
-          } else {
-            const fallback = card.querySelector('[data-field$=".emoji"]')?.value || '🖼';
-            preview.textContent = fallback;
-          }
+      if (key === 'extraPhotos') {
+        data[root][id][key] = el.value.split(',').map(s => s.trim()).filter(Boolean);
+      } else {
+        data[root][id][key] = el.value;
+      }
+
+      // Обновление превью
+      const slot = el.closest('[data-slot]');
+      if (slot && (key === 'img' || key === 'emoji')) {
+        const preview = slot.querySelector('[data-preview]');
+        const imgVal = data[root][id].img;
+        if (imgVal) {
+          preview.innerHTML = `<img src="${IMG_BASE}${esc(imgVal)}" onerror="this.parentNode.innerHTML='<span class=\\'slot-error\\'>❌ ${esc(imgVal)}</span>';">`;
+        } else {
+          preview.textContent = data[root][id].emoji || '✈️';
         }
       }
-      if (path[path.length - 1] === 'emoji') {
-        const card = el.closest('.item-card');
-        const preview = card?.querySelector('.item-card-preview');
-        const imgField = card?.querySelector('[data-field$=".img"]');
-        if (preview && (!imgField || !imgField.value)) {
-          preview.textContent = el.value || '✈️';
+
+      // Индикатор заполнения
+      const slotEl = el.closest('.slot, .story-slot');
+      if (slotEl) {
+        const fill = slotEl.querySelector('.slot-fill');
+        if (fill) {
+          const hasImg = !!data[root][id].img;
+          fill.textContent = hasImg ? '✓ заполнено' : 'пусто';
+          fill.classList.toggle('ok', hasImg);
         }
       }
+
+      scheduleAutosave();
     };
-
     el.addEventListener('input', handler);
     el.addEventListener('change', handler);
   });
 }
 
 // ============================================
-// УДАЛЕНИЕ
+// СОХРАНЕНИЕ / ЗАГРУЗКА
 // ============================================
-document.addEventListener('click', (e) => {
-  const removeBtn = e.target.closest('[data-remove]');
-  if (removeBtn) {
-    const type = removeBtn.dataset.remove;
-    const index = parseInt(removeBtn.dataset.index, 10);
-    if (confirm(`Удалить элемент #${index + 1}?`)) {
-      data[type].splice(index, 1);
-      renderAll();
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    showStatus('✅ Сохранено', 'success');
+  } catch (e) { showStatus('❌ ' + e.message, 'error'); }
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Мердж с дефолтами, чтобы структура всегда была полной
+      GALLERY_IDS.forEach(id => {
+        data.gallery[id] = Object.assign({ img:'', title:'', meta:'', desc:'' }, parsed.gallery?.[id] || {});
+      });
+      TRAVEL_IDS.forEach(id => {
+        data.travel[id] = Object.assign({ img:'', emoji:'✈️', meta:'', title:'', short:'', html:'', extraPhotos:[] }, parsed.travel?.[id] || {});
+        if (!Array.isArray(data.travel[id].extraPhotos)) data.travel[id].extraPhotos = [];
+      });
     }
-  }
-});
+  } catch (e) { console.error(e); }
+}
+let autosaveT;
+function scheduleAutosave() {
+  clearTimeout(autosaveT);
+  autosaveT = setTimeout(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e){}
+  }, 800);
+}
+document.getElementById('save-btn').addEventListener('click', save);
 
 // ============================================
-// ДОБАВЛЕНИЕ
+// ЭКСПОРТ / ИМПОРТ
 // ============================================
-document.getElementById('add-gallery-item').addEventListener('click', () => {
-  data.gallery.push({
-    id: uid(),
-    img: '',
-    title: '',
-    meta: ''
-  });
-  renderAll();
-  // Скроллим к новой карточке
-  setTimeout(() => {
-    const cards = document.querySelectorAll('#gallery-items .item-card');
-    cards[cards.length - 1]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    cards[cards.length - 1]?.querySelector('input')?.focus();
-  }, 50);
+document.getElementById('export-btn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'lab-content.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showStatus('📤 Скачано: lab-content.json', 'success');
 });
-
-document.getElementById('add-travel-item').addEventListener('click', () => {
-  data.travel.push({
-    id: uid(),
-    img: '',
-    emoji: '✈️',
-    meta: '',
-    title: '',
-    desc: '',
-    linkText: 'Читать историю',
-    linkHref: '#'
-  });
-  renderAll();
-  setTimeout(() => {
-    const cards = document.querySelectorAll('#travel-items .item-card');
-    cards[cards.length - 1]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    cards[cards.length - 1]?.querySelector('input')?.focus();
-  }, 50);
+document.getElementById('import-btn').addEventListener('click', () => {
+  document.getElementById('import-file').click();
+});
+document.getElementById('import-file').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const parsed = JSON.parse(ev.target.result);
+      GALLERY_IDS.forEach(id => {
+        data.gallery[id] = Object.assign({ img:'', title:'', meta:'', desc:'' }, parsed.gallery?.[id] || {});
+      });
+      TRAVEL_IDS.forEach(id => {
+        data.travel[id] = Object.assign({ img:'', emoji:'✈️', meta:'', title:'', short:'', html:'', extraPhotos:[] }, parsed.travel?.[id] || {});
+        if (!Array.isArray(data.travel[id].extraPhotos)) data.travel[id].extraPhotos = [];
+      });
+      renderAll(); save();
+      showStatus('📥 Загружено', 'success');
+    } catch (err) { showStatus('❌ ' + err.message, 'error'); }
+  };
+  r.readAsText(file);
+  e.target.value = '';
 });
 
 // ============================================
@@ -648,102 +580,18 @@ document.querySelectorAll('.tab').forEach(tab => {
 });
 
 // ============================================
-// СОХРАНЕНИЕ / ЗАГРУЗКА
-// ============================================
-function save() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    showStatus('✅ Сохранено', 'success');
-  } catch (err) {
-    showStatus('❌ Ошибка: ' + err.message, 'error');
-  }
-}
-
-function load() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      data = {
-        gallery: Array.isArray(parsed.gallery) ? parsed.gallery : [],
-        travel: Array.isArray(parsed.travel) ? parsed.travel : []
-      };
-    }
-  } catch (err) {
-    console.error('Load error:', err);
-  }
-}
-
-document.getElementById('save-btn').addEventListener('click', save);
-
-// Автосохранение при изменениях с задержкой
-let autosaveTimer;
-document.addEventListener('input', () => {
-  clearTimeout(autosaveTimer);
-  autosaveTimer = setTimeout(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
-  }, 800);
-});
-
-// ============================================
-// ЭКСПОРТ
-// ============================================
-document.getElementById('export-btn').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `aerostar-lab-content-${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showStatus('📤 JSON скачан', 'success');
-});
-
-// ============================================
-// ИМПОРТ
-// ============================================
-document.getElementById('import-btn').addEventListener('click', () => {
-  document.getElementById('import-file').click();
-});
-
-document.getElementById('import-file').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    try {
-      const parsed = JSON.parse(ev.target.result);
-      data = {
-        gallery: Array.isArray(parsed.gallery) ? parsed.gallery : [],
-        travel: Array.isArray(parsed.travel) ? parsed.travel : []
-      };
-      renderAll();
-      save();
-      showStatus('📥 JSON загружен', 'success');
-    } catch (err) {
-      showStatus('❌ Неверный JSON: ' + err.message, 'error');
-    }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
-});
-
-// ============================================
-// РЕНДЕР
-// ============================================
 function renderAll() {
   renderGallery();
   renderTravel();
   bindInputs();
 }
 
-// ============================================
-// СТАРТ
-// ============================================
 window.addEventListener('load', () => {
-  load();
-  renderAll();
-  console.log('✅ Admin ready');
+  if (checkAuth()) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-panel').style.display = 'block';
+    load(); renderAll();
+  }
 });
 </script>
 </body>
