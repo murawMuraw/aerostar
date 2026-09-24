@@ -20,62 +20,62 @@
     },
     "F3": {
       "img": "",
-      "title_ru": "",
-      "title_en": "",
-      "meta_ru": "",
-      "meta_en": "",
+      "title_ru": "Будем рады показать ваши фото",
+      "title_en": " We would be happy to show your photos",
+      "meta_ru": "aerostar@aerost.art",
+      "meta_en": "aerostar@aerost.art",
       "desc_ru": "",
       "desc_en": ""
     },
     "F4": {
       "img": "",
-      "title_ru": "",
-      "title_en": "",
-      "meta_ru": "",
-      "meta_en": "",
+      "title_ru": "Будем рады показать ваши фото",
+      "title_en": " We would be happy to show your photos",
+      "meta_ru": "aerostar@aerost.art",
+      "meta_en": "aerostar@aerost.art",
       "desc_ru": "",
       "desc_en": ""
     },
     "F5": {
       "img": "",
-      "title_ru": "",
-      "title_en": "",
-      "meta_ru": "",
-      "meta_en": "",
+      "title_ru": "Будем рады показать ваши фото",
+      "title_en": " We would be happy to show your photos",
+      "meta_ru": "aerostar@aerost.art",
+      "meta_en": "aerostar@aerost.art",
       "desc_ru": "",
       "desc_en": ""
     },
     "F6": {
       "img": "",
-      "title_ru": "",
-      "title_en": "",
-      "meta_ru": "",
-      "meta_en": "",
+      "title_ru": "Будем рады показать ваши фото",
+      "title_en": " We would be happy to show your photos",
+      "meta_ru": "aerostar@aerost.art",
+      "meta_en": "aerostar@aerost.art",
       "desc_ru": "",
       "desc_en": ""
     },
     "F7": {
       "img": "",
-      "title_ru": "",
-      "title_en": "",
-      "meta_ru": "",
-      "meta_en": "",
+      "title_ru": "Будем рады показать ваши фото",
+      "title_en": " We would be happy to show your photos",
+      "meta_ru": "aerostar@aerost.art",
+      "meta_en": "aerostar@aerost.art",
       "desc_ru": "",
       "desc_en": ""
     },
     "F8": {
       "img": "",
-      "title_ru": "",
-      "title_en": "",
-      "meta_ru": "",
-      "meta_en": "",
+      "title_ru": "Будем рады показать ваши фото",
+      "title_en": " We would be happy to show your photos",
+      "meta_ru": "aerostar@aerost.art",
+      "meta_en": "aerostar@aerost.art",
       "desc_ru": "",
       "desc_en": ""
     }
   },
   "travel": {
     "S1": {
-      "img": "",
+      "img": "maps_africa.png",
       "emoji": "✈️",
       "meta_ru": "",
       "meta_en": "",
@@ -85,7 +85,10 @@
       "short_en": "",
       "html_ru": "",
       "html_en": "",
-      "extraPhotos": []
+      "extraPhotos": [
+        "afr1.png",
+        "afr2.png"
+      ]
     },
     "S2": {
       "img": "",
