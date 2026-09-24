@@ -91,7 +91,7 @@
       ]
     },
     "S2": {
-      "img": "",
+      "img": "plakat.png",
       "emoji": "✈️",
       "meta_ru": "",
       "meta_en": "",
@@ -104,16 +104,16 @@
       "extraPhotos": []
     },
     "S3": {
-      "img": "",
+      "img": "morog.png",
       "emoji": "✈️",
-      "meta_ru": "",
-      "meta_en": "",
-      "title_ru": "",
-      "title_en": "",
-      "short_ru": "",
-      "short_en": "",
-      "html_ru": "",
-      "html_en": "",
+      "meta_ru": "Идея",
+      "meta_en": " Idea",
+      "title_ru": "Как появился этот проект",
+      "title_en": "How this project came about",
+      "short_ru": "Как мусор и прогноз погоды разбудили фантазию",
+      "short_en": "How trash and the weather forecast sparked the imagination",
+      "html_ru": "<p>Порыв ветра вырвал у меня из рук  тонкую обертку, которую я намеревался выбросить в урну, и неожиданно закружив  завихрениях  полиэтиленовый мусор взмыл выше пятого этажа и скрылся из глаз.  </p>\n<p> – Ого! - подумал я, -  интересно, куда ее занесет, пока она коснется земли?  И вообще: где будет «тот ветер», который только что здесь хулиганил через неделю или месяц.  </p>\n<p> Этот незначительный случай, естественно быстро выветрился из памяти. А вспомнил я о нем, когда смотрел на компе прогноз погоды и открыл вкладку со стрелками направления ветра.  И размечтался – вот взлетаю я со своего двора и по направлению этой стрелки со скоростью 3-5 метров в секунду отправляюсь по воле ветра. А что летит по воле ветра? Конечно воздушный шар! Да! Да! Я уже хотел лететь на воздушном шаре вместе с Незнайкой в Солнечный город! Но увы, сейчас я уже даже слишком «знайка» и понимаю, что это не реально.  Более реально обычный надувной шарик с камерой и передатчиком, кстати – метеорологи давно уже такие зонды запускают. Нет! Скучно. Хочу лететь сам.  </p>\n<p>Но если сложно полететь физически, то гораздо легче летать виртуально. Всего-то делов, начальные навыки в программировании и помощь ИИ.   </p>",
+      "html_en": "<p>A gust of wind snatched a thin wrapper from my hand just as I was about to throw it into a bin. Caught in a sudden swirl, the piece of plastic rubbish rose above the fifth floor and disappeared from sight.</p>\n\n<p>“Wow!” I thought. “I wonder where it will end up before it finally touches the ground? And, for that matter, where will <em>that wind</em> that was just fooling around here be a week or a month from now?”</p>\n\n<p>Naturally, this little incident soon faded from my memory. I remembered it only much later, while looking at a weather forecast on my computer and opening the map showing the arrows of the wind.</p>\n\n<p>And then I started dreaming.</p>\n\n<p>What if I could take off from my own backyard and simply follow the direction of one of those arrows, drifting wherever the wind chose to carry me at three to five metres per second?</p>\n\n<p>And what travels wherever the wind takes it?</p>\n\n<p>Of course — a hot-air balloon!</p>\n\n<p>Yes! I had already wanted to fly in a balloon with Dunno to the Sunny City. But alas, I am now a little too much of a “know-it-all” to believe that such a journey could actually happen.</p>\n\n<p>A more realistic idea would be an ordinary weather balloon carrying a camera and a transmitter. Meteorologists have been launching such probes for a very long time.</p>\n\n<p>No! That’s boring.</p>\n\n<p>I want to fly myself.</p>\n\n<p>And if flying physically is difficult, flying virtually is much easier.</p>\n\n<p>All it takes is some basic programming skills — and a little help from AI.</p>\n",
       "extraPhotos": []
     }
   }
