@@ -699,21 +699,63 @@ body {
   <img id="photo-modal-img" src="" alt="">
   <div class="photo-modal-caption" id="photo-modal-caption"></div>
 </div>
- <script>
+<script>
 const IMG_BASE = 'images/lab/';
 const CONTENT_URL = 'lab-content.json';
 
-function escHtml(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// ============================================
+// ОПРЕДЕЛЕНИЕ ЯЗЫКА
+// ============================================
+function detectLang() {
+  // 1. Приоритет — параметр в URL (?lang=ru или ?lang=en)
+  const urlLang = new URLSearchParams(location.search).get('lang');
+  if (urlLang === 'ru' || urlLang === 'en') {
+    console.log('[i18n] Lang from URL:', urlLang);
+    return urlLang;
+  }
+
+  // 2. Язык браузера — берём все предпочтительные языки
+  const browserLangs = navigator.languages || [navigator.language || 'en'];
+  console.log('[i18n] Browser languages:', browserLangs);
+
+  // 3. Если хоть один начинается с ru/uk/be/kk — показываем русский
+  const CIS_LANG_PREFIXES = ['ru', 'uk', 'be', 'kk', 'ky', 'uz', 'tg', 'hy', 'az', 'mo', 'ro', 'tk'];
+  const isCIS = browserLangs.some(lang => {
+    const prefix = (lang || '').toLowerCase().split('-')[0];
+    return CIS_LANG_PREFIXES.includes(prefix);
+  });
+
+  const detected = isCIS ? 'ru' : 'en';
+  console.log('[i18n] Detected lang:', detected);
+  return detected;
 }
 
+const LANG = detectLang();
+
+// Устанавливаем атрибут lang на <html>
+document.documentElement.lang = LANG;
+
+// ============================================
+// ХЕЛПЕР: получить поле с fallback
+// ============================================
+function pick(obj, key) {
+  // Сначала ищем нужный язык, потом fallback на en, потом на ru
+  return obj[`${key}_${LANG}`]
+      || obj[`${key}_en`]
+      || obj[`${key}_ru`]
+      || '';
+}
+
+// ============================================
+// ЗАГРУЗКА КОНТЕНТА
+// ============================================
 async function loadLabContent() {
   let content;
   try {
     const res = await fetch(CONTENT_URL + '?t=' + Date.now());
     content = await res.json();
   } catch (e) {
-    console.warn('lab-content.json не найден — используются заглушки', e);
+    console.warn('lab-content.json not found', e);
     return;
   }
 
@@ -738,8 +780,10 @@ async function loadLabContent() {
     if (figcaption) {
       const strong = figcaption.querySelector('strong');
       const small = figcaption.querySelector('small');
-      if (strong && item.title) strong.textContent = item.title;
-      if (small && item.meta) small.textContent = item.meta;
+      const title = pick(item, 'title');
+      const meta = pick(item, 'meta');
+      if (strong && title) strong.textContent = title;
+      if (small && meta) small.textContent = meta;
     }
   });
 
@@ -761,40 +805,65 @@ async function loadLabContent() {
       cover.removeAttribute('data-emoji');
     }
 
-    if (meta && item.meta) meta.textContent = item.meta;
-    if (h3 && item.title) h3.textContent = item.title;
-    if (p && item.short) p.textContent = item.short;
+    const metaText = pick(item, 'meta');
+    const titleText = pick(item, 'title');
+    const shortText = pick(item, 'short');
 
-    // Вся карточка кликабельна
+    if (meta && metaText) meta.textContent = metaText;
+    if (h3 && titleText) h3.textContent = titleText;
+    if (p && shortText) p.textContent = shortText;
+
+    // Вся карточка кликабельна → ведёт на страницу истории с тем же языком
     el.addEventListener('click', () => {
-      location.href = `lab-story.html?id=${id}`;
+      location.href = `lab-story.html?id=${id}&lang=${LANG}`;
     });
+  });
+
+  // === ЗАГОЛОВКИ ИНТЕРФЕЙСА (опционально) ===
+  // Если у тебя в lab.html есть статические подписи, которые надо переводить,
+  // их можно хранить в самом lab.html и переключать через data-атрибуты:
+  applyInterfaceLang();
+}
+
+// ============================================
+// ПЕРЕВОД ИНТЕРФЕЙСА
+// ============================================
+function applyInterfaceLang() {
+  // Элементы с data-en и data-ru атрибутами
+  document.querySelectorAll('[data-en][data-ru]').forEach(el => {
+    el.textContent = el.dataset[LANG] || el.dataset.en;
   });
 }
 
+// ============================================
+// МОДАЛКА ФОТО
+// ============================================
 function openPhoto(item) {
   const modal = document.getElementById('photo-modal');
   const img = document.getElementById('photo-modal-img');
   const cap = document.getElementById('photo-modal-caption');
   img.src = IMG_BASE + item.img;
-  cap.textContent = [item.title, item.meta, item.desc].filter(Boolean).join(' · ');
+  cap.textContent = [
+    pick(item, 'title'),
+    pick(item, 'meta'),
+    pick(item, 'desc')
+  ].filter(Boolean).join(' · ');
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
-
 function closePhoto() {
   document.getElementById('photo-modal').classList.remove('open');
   document.body.style.overflow = '';
 }
-
 document.getElementById('photo-modal-close').addEventListener('click', closePhoto);
 document.getElementById('photo-modal').addEventListener('click', e => {
   if (e.target.id === 'photo-modal') closePhoto();
 });
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closePhoto();
-});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePhoto(); });
 
+// ============================================
+// СТАРТ
+// ============================================
 loadLabContent();
 </script> 
 </body>
