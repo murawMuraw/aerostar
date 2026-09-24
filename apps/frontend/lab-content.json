@@ -77,14 +77,14 @@
     "S1": {
       "img": "maps_africa.png",
       "emoji": "✈️",
-      "meta_ru": "",
-      "meta_en": "",
-      "title_ru": "",
-      "title_en": "",
-      "short_ru": "",
-      "short_en": "",
-      "html_ru": "",
-      "html_en": "",
+      "meta_ru": "Африка",
+      "meta_en": "Africa",
+      "title_ru": "По следам героев Жюль Верна",
+      "title_en": "In the Footsteps of Jules Verne's Heroes",
+      "short_ru": "Попытка повторить маршрут из книги \"Пять недель на воздушном шаре\"",
+      "short_en": "An attempt to retrace the route from the book *Five Weeks in a Balloon*",
+      "html_ru": "Это карта из книги Жюля Верна «Пять недель на воздушном шаре». Жюль Верн, основываясь на данных девятнадцатого века решил, что именно таким маршрутом африканские пассаты понесут шар наполненный водородом над Африкой. Основываясь на современных данных о погодных условиях,  я решил это проверить.  \nНо что-то пошло не так. И это что-то   - ветер.  Вначале маршрут  был интересен и даже почти совпадал с картой 19-го века. Но затем  за горами над экватором шар начал кружить над одним местом. Возможно, это из-за того, что   в книге шар стартовал в апреле, а у меня в августе. Повторю эксперимент в апреле 2027 года.",
+      "html_en": "This is a map from Jules Verne's book \"Five Weeks in a Balloon.\" Based on nineteenth-century data, Jules Verne decided that this was the route along which the African trade winds would carry a hydrogen-filled balloon across Africa. Based on modern weather data, I decided to test this.\n\nBut something went wrong. And that something is the wind. At first, the route was interesting and even almost matched the nineteenth-century map. But then, beyond the mountains over the equator, the balloon began circling over one spot. This may be because in the book the balloon launched in April, while mine launched in August. I will repeat the experiment in April 2027.",
       "extraPhotos": [
         "afr1.png",
         "afr2.png"
