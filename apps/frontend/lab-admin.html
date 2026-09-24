@@ -14,6 +14,8 @@
   --sky: #38bdf8; --sunset: #fbbf24;
   --danger: #ef4444; --success: #10b981;
   --pink: #f472b6;
+  --ru: #38bdf8;
+  --en: #a78bfa;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -113,17 +115,11 @@ body {
   background: var(--card); border: 1px solid var(--border);
   border-radius: 18px; padding: 24px; margin-bottom: 20px;
 }
-.section-title {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 18px; padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-.section-title h3 { font-size: 16px; }
 
-/* СЛОТЫ */
+/* СЛОТЫ ГАЛЕРЕИ */
 .slots-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 16px;
 }
 .slot {
@@ -165,6 +161,7 @@ body {
   border-radius: 6px;
 }
 
+/* ДВУЯЗЫЧНЫЕ ПОЛЯ */
 .field { display: flex; flex-direction: column; gap: 5px; }
 .field label {
   font-size: 11px; font-weight: 600; color: var(--muted);
@@ -184,7 +181,29 @@ body {
 .field textarea { resize: vertical; min-height: 60px; line-height: 1.4; }
 .field-hint { font-size: 10px; color: #64748b; font-style: italic; }
 
-/* ЖУРНАЛ (для историй) */
+/* Двуязычная пара */
+.bi-field {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.bi-field .lang-ru input,
+.bi-field .lang-ru textarea {
+  border-left: 3px solid var(--ru);
+}
+.bi-field .lang-en input,
+.bi-field .lang-en textarea {
+  border-left: 3px solid var(--en);
+}
+.lang-tag {
+  font-size: 9px; font-weight: 700; letter-spacing: 1px;
+  padding: 1px 5px; border-radius: 3px;
+  margin-left: 4px;
+}
+.lang-tag.ru { background: rgba(56,189,248,0.2); color: var(--ru); }
+.lang-tag.en { background: rgba(167,139,250,0.2); color: var(--en); }
+
+/* ЖУРНАЛ (истории) */
 .story-slot {
   background: rgba(0,0,0,0.2);
   border: 1px solid var(--border);
@@ -196,10 +215,11 @@ body {
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 16px;
 }
-.story-grid {
+.story-top {
   display: grid;
   grid-template-columns: 220px 1fr;
   gap: 18px;
+  margin-bottom: 16px;
 }
 .story-preview {
   aspect-ratio: 16 / 10;
@@ -227,11 +247,11 @@ body {
 .status-bar.error { border-color: rgba(239,68,68,0.4); color: var(--danger); }
 
 @media (max-width: 900px) {
-  .story-grid { grid-template-columns: 1fr; }
-  .story-preview { aspect-ratio: 16 / 9; }
+  .story-top { grid-template-columns: 1fr; }
+  .bi-field { grid-template-columns: 1fr; }
 }
 @media (max-width: 768px) {
-  .admin-header { padding: 12px 16px; }
+  .admin-header { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
   .admin-logo span { display: none; }
   .container { padding: 20px 16px 60px; }
   .slots-grid { grid-template-columns: 1fr; }
@@ -275,7 +295,7 @@ body {
     <div class="panel active" data-panel="gallery">
       <div class="panel-header">
         <h2>🖼 Фото и арт-галерея</h2>
-        <p>Восемь фиксированных слотов F1–F8. Картинки кладёшь в <code>images/lab/</code>, в поле «Файл» пишешь полное имя (например <code>F1.jpg</code>).</p>
+        <p>Восемь слотов F1–F8. Для каждого — поля на русском и английском. Картинки в <code>images/lab/</code>.</p>
       </div>
       <div class="section">
         <div class="slots-grid" id="gallery-slots"></div>
@@ -286,7 +306,7 @@ body {
     <div class="panel" data-panel="travel">
       <div class="panel-header">
         <h2>✈️ Истории путешествий</h2>
-        <p>Три фиксированных слота S1–S3. HTML в поле «Полный текст» — можно <code>&lt;h3&gt;</code>, <code>&lt;p&gt;</code>, <code>&lt;b&gt;</code>, <code>&lt;img&gt;</code>. Доп. фото — до 3, имена файлов через запятую.</p>
+        <p>Три слота S1–S3. HTML в поле «Полный текст» — можно <code>&lt;h3&gt;</code>, <code>&lt;p&gt;</code>, <code>&lt;b&gt;</code>, <code>&lt;img&gt;</code>. Доп. фото — до 3.</p>
       </div>
       <div class="section" id="travel-slots"></div>
     </div>
@@ -301,16 +321,24 @@ body {
 // ============================================
 const ADMIN_KEY = 'aerostar2024';
 const AUTH_STORAGE = 'aerostar_lab_admin_ok';
-const STORAGE_KEY = 'aerostar_lab_content_v2';
+const STORAGE_KEY = 'aerostar_lab_content_v3';
 const IMG_BASE = 'images/lab/';
 
-// ============================================
 const GALLERY_IDS = ['F1','F2','F3','F4','F5','F6','F7','F8'];
 const TRAVEL_IDS  = ['S1','S2','S3'];
 
 const DEFAULT_DATA = {
-  gallery: Object.fromEntries(GALLERY_IDS.map(id => [id, { img: '', title: '', meta: '', desc: '' }])),
-  travel:  Object.fromEntries(TRAVEL_IDS.map(id => [id, { img: '', emoji: '✈️', meta: '', title: '', short: '', html: '', extraPhotos: [] }]))
+  gallery: Object.fromEntries(GALLERY_IDS.map(id => [id, {
+    img: '', title_ru: '', title_en: '', meta_ru: '', meta_en: '', desc_ru: '', desc_en: ''
+  }])),
+  travel: Object.fromEntries(TRAVEL_IDS.map(id => [id, {
+    img: '', emoji: '✈️',
+    meta_ru: '', meta_en: '',
+    title_ru: '', title_en: '',
+    short_ru: '', short_en: '',
+    html_ru: '', html_en: '',
+    extraPhotos: []
+  }]))
 };
 
 let data = JSON.parse(JSON.stringify(DEFAULT_DATA));
@@ -353,6 +381,28 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 });
 
 // ============================================
+// ХЕЛПЕР: двуязычная пара полей
+// ============================================
+function biField(label, path, ruValue, enValue, multiline = false, placeholderRu = '', placeholderEn = '') {
+  const tag = multiline ? 'textarea' : 'input';
+  const common = multiline ? '' : 'type="text"';
+  return `
+    <div class="field">
+      <label>${label}</label>
+      <div class="bi-field">
+        <div class="lang-ru">
+          <${tag} ${common} data-field="${path}_ru" placeholder="${esc(placeholderRu)}">${multiline ? esc(ruValue) : ''}</${tag}>
+        </div>
+        <div class="lang-en">
+          <${tag} ${common} data-field="${path}_en" placeholder="${esc(placeholderEn)}">${multiline ? esc(enValue) : ''}</${tag}>
+        </div>
+      </div>
+    </div>
+  `;
+  // Для input'ов — значение вставим через JS после рендера
+}
+
+// ============================================
 // РЕНДЕР ГАЛЕРЕИ
 // ============================================
 function renderGallery() {
@@ -367,28 +417,32 @@ function renderGallery() {
     <div class="slot" data-slot="gallery" data-id="${id}">
       <div class="slot-header">
         <span class="slot-id">${id}</span>
-        <span class="slot-fill ${hasImg ? 'ok' : ''}">${hasImg ? '✓ заполнено' : 'пусто'}</span>
+        <span class="slot-fill ${hasImg ? 'ok' : ''}">${hasImg ? '✓' : 'пусто'}</span>
       </div>
       <div class="slot-preview" data-preview>${preview}</div>
+
       <div class="field">
         <label>Файл *</label>
         <input type="text" data-field="gallery.${id}.img" value="${esc(item.img || '')}" placeholder="${id}.jpg">
         <div class="field-hint">Имя файла в images/lab/</div>
       </div>
-      <div class="field">
-        <label>Название</label>
-        <input type="text" data-field="gallery.${id}.title" value="${esc(item.title || '')}" placeholder="Рассвет над Альпами">
-      </div>
-      <div class="field">
-        <label>Подпись</label>
-        <input type="text" data-field="gallery.${id}.meta" value="${esc(item.meta || '')}" placeholder="Монблан, 3800 м">
-      </div>
-      <div class="field">
-        <label>Описание (для fullsize)</label>
-        <textarea data-field="gallery.${id}.desc" placeholder="Необязательно">${esc(item.desc || '')}</textarea>
-      </div>
+
+      ${biField('Название', `gallery.${id}.title`, item.title_ru, item.title_en, false, 'Рассвет над Альпами', 'Sunrise over the Alps')}
+      ${biField('Подпись', `gallery.${id}.meta`, item.meta_ru, item.meta_en, false, 'Монблан, 3800 м', 'Mont Blanc, 3800 m')}
+      ${biField('Описание (для fullsize)', `gallery.${id}.desc`, item.desc_ru, item.desc_en, true, '', '')}
     </div>`;
   }).join('');
+
+  // Вставляем значения в input'ы (biField не вставляет value для input)
+  GALLERY_IDS.forEach(id => {
+    const item = data.gallery[id];
+    ['title','meta'].forEach(k => {
+      const ru = c.querySelector(`[data-field="gallery.${id}.${k}_ru"]`);
+      const en = c.querySelector(`[data-field="gallery.${id}.${k}_en"]`);
+      if (ru) ru.value = item[`${k}_ru`] || '';
+      if (en) en.value = item[`${k}_en`] || '';
+    });
+  });
 }
 
 // ============================================
@@ -409,34 +463,17 @@ function renderTravel() {
         <span class="slot-id">${id}</span>
         <span class="slot-fill ${hasImg ? 'ok' : ''}">${hasImg ? '✓ обложка есть' : 'нет обложки'}</span>
       </div>
-      <div class="story-grid">
+
+      <div class="story-top">
         <div class="story-preview" data-preview>${preview}</div>
         <div style="display:flex; flex-direction:column; gap:12px;">
           <div class="field">
             <label>Файл обложки</label>
             <input type="text" data-field="travel.${id}.img" value="${esc(item.img || '')}" placeholder="${id}.jpg">
-            <div class="field-hint">Если пусто — покажется эмодзи</div>
           </div>
           <div class="field">
             <label>Эмодзи-заглушка</label>
             <input type="text" data-field="travel.${id}.emoji" value="${esc(item.emoji || '')}" maxlength="4" placeholder="🌊">
-          </div>
-          <div class="field">
-            <label>Мета (маршрут/регион)</label>
-            <input type="text" data-field="travel.${id}.meta" value="${esc(item.meta || '')}" placeholder="Маршрут · 480 км">
-          </div>
-          <div class="field">
-            <label>Заголовок *</label>
-            <input type="text" data-field="travel.${id}.title" value="${esc(item.title || '')}" placeholder="Через Ла-Манш">
-          </div>
-          <div class="field">
-            <label>Краткое описание (для карточки на lab) *</label>
-            <textarea data-field="travel.${id}.short" placeholder="Как мы пересекли пролив...">${esc(item.short || '')}</textarea>
-          </div>
-          <div class="field">
-            <label>Полный текст истории (HTML) *</label>
-            <textarea data-field="travel.${id}.html" style="min-height:180px; font-family:Consolas,monospace; font-size:12px;" placeholder="<p>Первый абзац...</p>&#10;<h3>День первый</h3>&#10;<p>...</p>">${esc(item.html || '')}</textarea>
-            <div class="field-hint">Разрешено: &lt;p&gt; &lt;h2&gt; &lt;h3&gt; &lt;b&gt; &lt;i&gt; &lt;img&gt; &lt;a&gt; &lt;br&gt; &lt;blockquote&gt; &lt;ul&gt; &lt;ol&gt; &lt;li&gt;</div>
           </div>
           <div class="field">
             <label>Доп. фото (до 3, через запятую)</label>
@@ -444,8 +481,24 @@ function renderTravel() {
           </div>
         </div>
       </div>
+
+      ${biField('Мета (маршрут/регион)', `travel.${id}.meta`, item.meta_ru, item.meta_en, false, 'Маршрут · 480 км', 'Route · 480 km')}
+      ${biField('Заголовок *', `travel.${id}.title`, item.title_ru, item.title_en, false, 'Через Ла-Манш', 'Across the Channel')}
+      ${biField('Краткое описание (для карточки) *', `travel.${id}.short`, item.short_ru, item.short_en, true, '', '')}
+      ${biField('Полный текст истории (HTML) *', `travel.${id}.html`, item.html_ru, item.html_en, true, '<p>Первый абзац...</p>', '<p>First paragraph...</p>')}
     </div>`;
   }).join('');
+
+  // Вставляем значения в input'ы
+  TRAVEL_IDS.forEach(id => {
+    const item = data.travel[id];
+    ['meta','title'].forEach(k => {
+      const ru = c.querySelector(`[data-field="travel.${id}.${k}_ru"]`);
+      const en = c.querySelector(`[data-field="travel.${id}.${k}_en"]`);
+      if (ru) ru.value = item[`${k}_ru`] || '';
+      if (en) en.value = item[`${k}_en`] || '';
+    });
+  });
 }
 
 // ============================================
@@ -477,7 +530,7 @@ function bindInputs() {
         }
       }
 
-      // Индикатор заполнения
+      // Индикатор
       const slotEl = el.closest('.slot, .story-slot');
       if (slotEl) {
         const fill = slotEl.querySelector('.slot-fill');
@@ -509,12 +562,16 @@ function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // Мердж с дефолтами, чтобы структура всегда была полной
       GALLERY_IDS.forEach(id => {
-        data.gallery[id] = Object.assign({ img:'', title:'', meta:'', desc:'' }, parsed.gallery?.[id] || {});
+        data.gallery[id] = Object.assign({
+          img:'', title_ru:'', title_en:'', meta_ru:'', meta_en:'', desc_ru:'', desc_en:''
+        }, parsed.gallery?.[id] || {});
       });
       TRAVEL_IDS.forEach(id => {
-        data.travel[id] = Object.assign({ img:'', emoji:'✈️', meta:'', title:'', short:'', html:'', extraPhotos:[] }, parsed.travel?.[id] || {});
+        data.travel[id] = Object.assign({
+          img:'', emoji:'✈️', meta_ru:'', meta_en:'', title_ru:'', title_en:'',
+          short_ru:'', short_en:'', html_ru:'', html_en:'', extraPhotos:[]
+        }, parsed.travel?.[id] || {});
         if (!Array.isArray(data.travel[id].extraPhotos)) data.travel[id].extraPhotos = [];
       });
     }
@@ -553,10 +610,15 @@ document.getElementById('import-file').addEventListener('change', e => {
     try {
       const parsed = JSON.parse(ev.target.result);
       GALLERY_IDS.forEach(id => {
-        data.gallery[id] = Object.assign({ img:'', title:'', meta:'', desc:'' }, parsed.gallery?.[id] || {});
+        data.gallery[id] = Object.assign({
+          img:'', title_ru:'', title_en:'', meta_ru:'', meta_en:'', desc_ru:'', desc_en:''
+        }, parsed.gallery?.[id] || {});
       });
       TRAVEL_IDS.forEach(id => {
-        data.travel[id] = Object.assign({ img:'', emoji:'✈️', meta:'', title:'', short:'', html:'', extraPhotos:[] }, parsed.travel?.[id] || {});
+        data.travel[id] = Object.assign({
+          img:'', emoji:'✈️', meta_ru:'', meta_en:'', title_ru:'', title_en:'',
+          short_ru:'', short_en:'', html_ru:'', html_en:'', extraPhotos:[]
+        }, parsed.travel?.[id] || {});
         if (!Array.isArray(data.travel[id].extraPhotos)) data.travel[id].extraPhotos = [];
       });
       renderAll(); save();
