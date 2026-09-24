@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aerostar — Отдохни в небе</title>
+<title>Aerostar — Relax in the Sky</title>
 <style>
 :root {
   --bg-1: #0b1220;
@@ -79,6 +79,33 @@ body {
 .nav-links a.nav-back:hover {
   background: rgba(251,191,36,0.1);
   color: var(--sunset);
+}
+
+/* Переключатель языка */
+.lang-switcher {
+  display: flex;
+  gap: 3px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+}
+.lang-switcher button {
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .2s ease;
+}
+.lang-switcher button.active {
+  background: linear-gradient(135deg, var(--amber), var(--amber-dark));
+  color: #1a1207;
 }
 
 /* ============ HERO ============ */
@@ -362,6 +389,7 @@ body {
   transition: transform .4s ease, border-color .4s ease, box-shadow .4s ease;
   display: flex;
   flex-direction: column;
+  cursor: pointer;
 }
 .story:hover {
   transform: translateY(-6px);
@@ -467,7 +495,8 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 12px 32px rgba(245,158,11,0.4);
 }
-/* Photo modal для fullsize */
+
+/* ============ PHOTO MODAL ============ */
 .photo-modal {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.92);
@@ -501,8 +530,6 @@ body {
 }
 .photo-modal-close:hover { background: rgba(255,255,255,0.2); }
 
-/* Карточка истории — вся кликабельна */
-.story { cursor: pointer; }
 /* ============ RESPONSIVE ============ */
 @media (max-width: 768px) {
   .nav { padding: 14px 20px; }
@@ -530,79 +557,92 @@ body {
 <nav class="nav">
   <a href="https://aerost.art/" class="nav-logo">🎈 AEROSTAR</a>
   <div class="nav-links">
-    <a href="#gallery">Галерея</a>
-    <a href="#games">Игры</a>
-    <a href="#travel">Путешествия</a>
-    <a href="https://aerost.art/" class="nav-back">← На главную</a>
+    <a href="#gallery" data-en="Gallery" data-ru="Галерея">Gallery</a>
+    <a href="#games" data-en="Games" data-ru="Игры">Games</a>
+    <a href="#travel" data-en="Travel" data-ru="Путешествия">Travel</a>
+    <div class="lang-switcher" id="lang-switcher">
+      <button data-lang="ru">RU</button>
+      <button data-lang="en" class="active">EN</button>
+    </div>
+    <a href="https://aerost.art/" class="nav-back" data-en="← Home" data-ru="← На главную">← Home</a>
   </div>
 </nav>
 
 <!-- ============ HERO ============ -->
 <header class="hero">
   <div class="hero-emoji">🎈</div>
-  <h1>Почувствуй ветер.<br><span>Отдохни в небе.</span></h1>
-  <p>Медленные путешествия над облаками, красивые виды сверху и неспешные игры в потоках воздуха. Добро пожаловать в Aerostar.</p>
+  <h1>
+    <span data-en="Feel the wind." data-ru="Почувствуй ветер.">Feel the wind.</span><br>
+    <span data-en="Relax in the sky." data-ru="Отдохни в небе.">Relax in the sky.</span>
+  </h1>
+  <p data-en="Slow journeys above the clouds, beautiful views from above and unhurried games in the air streams. Welcome to Aerostar."
+     data-ru="Медленные путешествия над облаками, красивые виды сверху и неспешные игры в потоках воздуха. Добро пожаловать в Aerostar.">
+    Slow journeys above the clouds, beautiful views from above and unhurried games in the air streams. Welcome to Aerostar.
+  </p>
   <div class="hero-actions">
-    <a href="#games" class="btn btn-primary">🎮 Начать приключение</a>
-    <a href="#gallery" class="btn btn-ghost">🖼 Смотреть галерею</a>
+    <a href="#games" class="btn btn-primary" data-en="🎮 Start the adventure" data-ru="🎮 Начать приключение">🎮 Start the adventure</a>
+    <a href="#gallery" class="btn btn-ghost" data-en="🖼 View gallery" data-ru="🖼 Смотреть галерею">🖼 View gallery</a>
   </div>
 </header>
 
 <!-- ============ ZONE 1: GALLERY ============ -->
 <section class="zone" id="gallery">
   <div class="zone-header">
-    <div class="zone-tag">Зона 01</div>
-    <h2>🖼 Фото и арт-галерея</h2>
-    <p>Взгляд на мир с высоты птичьего полёта — рассветы над Альпами, облака над океаном и картины, рождённые ветром.</p>
+    <div class="zone-tag" data-en="Zone 01" data-ru="Зона 01">Zone 01</div>
+    <h2 data-en="🖼 Photo & art gallery" data-ru="🖼 Фото и арт-галерея">🖼 Photo &amp; art gallery</h2>
+    <p data-en="A bird's-eye view of the world — sunrises over the Alps, clouds over the ocean and paintings born from the wind."
+       data-ru="Взгляд на мир с высоты птичьего полёта — рассветы над Альпами, облака над океаном и картины, рождённые ветром.">
+      A bird's-eye view of the world — sunrises over the Alps, clouds over the ocean and paintings born from the wind.
+    </p>
   </div>
 
   <div class="masonry">
     <figure class="tile">
       <div class="tile-visual" data-emoji="🌅"></div>
       <figcaption>
-        <div><strong>Рассвет над Альпами</strong><small>Монблан, 3800 м</small></div>
+        <div><strong>—</strong><small>—</small></div>
       </figcaption>
     </figure>
     <figure class="tile">
       <div class="tile-visual" data-emoji="☁️"></div>
       <figcaption>
-        <div><strong>Море облаков</strong><small>Пиренейские горы</small></div>
+        <div><strong>—</strong><small>—</small></div>
       </figcaption>
     </figure>
     <figure class="tile">
       <div class="tile-visual" data-emoji="🏙"></div>
       <figcaption>
-        <div><strong>Город сверху</strong><small>Полёт над Прагой</small></div>
+        <div><strong>—</strong><small>—</small></div>
       </figcaption>
     </figure>
     <figure class="tile">
       <div class="tile-visual" data-emoji="🌊"></div>
       <figcaption>
-        <div><strong>Тихий океан</strong><small>Бискайский залив</small></div>
+        <div><strong>—</strong><small>—</small></div>
       </figcaption>
     </figure>
     <figure class="tile">
       <div class="tile-visual" data-emoji="🎨"></div>
       <figcaption>
-        <div><strong>Ветер в красках</strong><small>Арт-серия «Слои атмосферы»</small></div>
+        <div><strong>—</strong><small>—</small></div>
       </figcaption>
     </figure>
     <figure class="tile">
       <div class="tile-visual" data-emoji="🦅"></div>
       <figcaption>
-        <div><strong>На одной высоте</strong><small>Встреча с орлом</small></div>
+        <div><strong>—</strong><small>—</small></div>
       </figcaption>
     </figure>
     <figure class="tile">
       <div class="tile-visual" data-emoji="🌸"></div>
       <figcaption>
-        <div><strong>Весна в долине</strong><small>Полёт над Ла-Маншем</small></div>
+        <div><strong>—</strong><small>—</small></div>
       </figcaption>
     </figure>
     <figure class="tile">
       <div class="tile-visual" data-emoji="🌌"></div>
       <figcaption>
-        <div><strong>Ночное небо</strong><small>Высота 4000 м</small></div>
+        <div><strong>—</strong><small>—</small></div>
       </figcaption>
     </figure>
   </div>
@@ -611,9 +651,12 @@ body {
 <!-- ============ ZONE 2: GAMES ============ -->
 <section class="zone" id="games">
   <div class="zone-header">
-    <div class="zone-tag">Зона 02</div>
-    <h2>🎮 Игры</h2>
-    <p>Неспешные приключения в потоках ветра. Никакой спешки — только ты, шар и бесконечное небо.</p>
+    <div class="zone-tag" data-en="Zone 02" data-ru="Зона 02">Zone 02</div>
+    <h2 data-en="🎮 Games" data-ru="🎮 Игры">🎮 Games</h2>
+    <p data-en="Unhurried adventures in the wind streams. No rush — just you, the balloon and the endless sky."
+       data-ru="Неспешные приключения в потоках ветра. Никакой спешки — только ты, шар и бесконечное небо.">
+      Unhurried adventures in the wind streams. No rush — just you, the balloon and the endless sky.
+    </p>
   </div>
 
   <div class="cards">
@@ -621,24 +664,33 @@ body {
       <div class="card-badge">● LIVE</div>
       <div class="card-emoji">🎈</div>
       <h3>Fiesta Balloon Race</h3>
-      <p>Поймай нужный слой ветра и обгони соперников в гонке через континенты. Финиш — в Гринвиче, на нулевом меридиане.</p>
-      <a href="http://91.149.179.79:3001/fiesta.html" class="btn btn-primary btn-small">Играть →</a>
+      <p data-en="Catch the right wind layer and outrun your rivals in a race across continents. The finish is in Greenwich, on the prime meridian."
+         data-ru="Поймай нужный слой ветра и обгони соперников в гонке через континенты. Финиш — в Гринвиче, на нулевом меридиане.">
+        Catch the right wind layer and outrun your rivals in a race across continents. The finish is in Greenwich, on the prime meridian.
+      </p>
+      <a href="http://91.149.179.79:3001/fiesta.html" class="btn btn-primary btn-small" data-en="Play →" data-ru="Играть →">Play →</a>
     </article>
 
     <article class="card">
-      <div class="card-badge badge-soon">○ В РАЗРАБОТКЕ</div>
+      <div class="card-badge badge-soon" data-en="○ IN DEVELOPMENT" data-ru="○ В РАЗРАБОТКЕ">○ IN DEVELOPMENT</div>
       <div class="card-emoji">⛵</div>
-      <h3>Океанский ветер</h3>
-      <p>Управление парусной лодкой в открытом океане. Те же ветра, что несут шары — теперь и для парусов.</p>
-      <a href="http://91.149.179.79:3002/index.html" class="btn btn-ghost btn-small">Скоро →</a>
+      <h3 data-en="Ocean Wind" data-ru="Океанский ветер">Ocean Wind</h3>
+      <p data-en="Sailing a boat in the open ocean. The same winds that carry balloons — now for sails."
+         data-ru="Управление парусной лодкой в открытом океане. Те же ветра, что несут шары — теперь и для парусов.">
+        Sailing a boat in the open ocean. The same winds that carry balloons — now for sails.
+      </p>
+      <a href="http://91.149.179.79:3002/index.html" class="btn btn-ghost btn-small" data-en="Soon →" data-ru="Скоро →">Soon →</a>
     </article>
 
     <article class="card">
       <div class="card-badge">● LIVE</div>
       <div class="card-emoji">🎨</div>
-      <h3>Художественный полёт</h3>
-      <p>Свободный режим без цели и таймера. Просто поднимайся выше, слушай ветер и смотри, как меняется земля под тобой.</p>
-      <a href="https://aerost.art/" class="btn btn-primary btn-small">Открыть →</a>
+      <h3 data-en="Artistic Flight" data-ru="Художественный полёт">Artistic Flight</h3>
+      <p data-en="Free mode with no goals and no timer. Just climb higher, listen to the wind and watch the earth change beneath you."
+         data-ru="Свободный режим без цели и таймера. Просто поднимайся выше, слушай ветер и смотри, как меняется земля под тобой.">
+        Free mode with no goals and no timer. Just climb higher, listen to the wind and watch the earth change beneath you.
+      </p>
+      <a href="https://aerost.art/" class="btn btn-primary btn-small" data-en="Open →" data-ru="Открыть →">Open →</a>
     </article>
   </div>
 </section>
@@ -646,39 +698,51 @@ body {
 <!-- ============ ZONE 3: TRAVEL ============ -->
 <section class="zone" id="travel">
   <div class="zone-header">
-    <div class="zone-tag">Зона 03</div>
-    <h2>✈️ Путешествия</h2>
-    <p>Истории из воздуха — маршруты, дневники пилотов и идеи для следующего полёта.</p>
+    <div class="zone-tag" data-en="Zone 03" data-ru="Зона 03">Zone 03</div>
+    <h2 data-en="✈️ Travel" data-ru="✈️ Путешествия">✈️ Travel</h2>
+    <p data-en="Stories from the air — routes, pilot diaries and ideas for your next flight."
+       data-ru="Истории из воздуха — маршруты, дневники пилотов и идеи для следующего полёта.">
+      Stories from the air — routes, pilot diaries and ideas for your next flight.
+    </p>
   </div>
 
   <div class="travel-grid">
-    <article class="story">
+    <article class="story" data-story="S1">
       <div class="story-cover" data-emoji="🌊"></div>
       <div class="story-body">
-        <div class="story-meta">Маршрут · 480 км</div>
-        <h3>Через Ла-Манш</h3>
-        <p>Как мы пересекли пролив на воздушном шаре — 6 часов над водой, встреча с чайками и мягкая посадка во Франции.</p>
-        <a href="#" class="story-link">Читать историю <span>→</span></a>
+        <div class="story-meta">—</div>
+        <h3>—</h3>
+        <p>—</p>
+        <span class="story-link">
+          <span data-en="Read the story" data-ru="Читать историю">Read the story</span>
+          <span>→</span>
+        </span>
       </div>
     </article>
 
-    <article class="story">
+    <article class="story" data-story="S2">
       <div class="story-cover" data-emoji="🏔"></div>
       <div class="story-body">
-        <div class="story-meta">Монголия · 12 дней</div>
-        <h3>Наследие Монгольфье</h3>
-        <p>Полёт над Пиренеями в память о первом пилотируемом полёте 1783 года. Тишина, которую помнят только пилоты шаров.</p>
-        <a href="#" class="story-link">Читать историю <span>→</span></a>
+        <div class="story-meta">—</div>
+        <h3>—</h3>
+        <p>—</p>
+        <span class="story-link">
+          <span data-en="Read the story" data-ru="Читать историю">Read the story</span>
+          <span>→</span>
+        </span>
       </div>
     </article>
 
-    <article class="story">
+    <article class="story" data-story="S3">
       <div class="story-cover" data-emoji="🎈"></div>
       <div class="story-body">
-        <div class="story-meta">Дневник · Гринвич</div>
-        <h3>Финиш на нулевом</h3>
-        <p>Виртуальный праздник с настоящим ветром. Как финишная прямая гонки Fiesta проходит точно через нулевой меридиан.</p>
-        <a href="#" class="story-link">Читать историю <span>→</span></a>
+        <div class="story-meta">—</div>
+        <h3>—</h3>
+        <p>—</p>
+        <span class="story-link">
+          <span data-en="Read the story" data-ru="Читать историю">Read the story</span>
+          <span>→</span>
+        </span>
       </div>
     </article>
   </div>
@@ -687,26 +751,33 @@ body {
 <!-- ============ FOOTER ============ -->
 <footer class="footer">
   <div class="footer-links">
-    <a href="#gallery">Галерея</a>
-    <a href="#games">Игры</a>
-    <a href="#travel">Путешествия</a>
+    <a href="#gallery" data-en="Gallery" data-ru="Галерея">Gallery</a>
+    <a href="#games" data-en="Games" data-ru="Игры">Games</a>
+    <a href="#travel" data-en="Travel" data-ru="Путешествия">Travel</a>
   </div>
-  <div>© 2026 Aerostar · Отдохни в небе 🎈</div>
-  <a href="https://aerost.art/" class="footer-back">← Вернуться на aerost.art</a>
+  <div data-en="© 2026 Aerostar · Relax in the sky 🎈" data-ru="© 2026 Aerostar · Отдохни в небе 🎈">
+    © 2026 Aerostar · Relax in the sky 🎈
+  </div>
+  <a href="https://aerost.art/" class="footer-back" data-en="← Back to aerost.art" data-ru="← Вернуться на aerost.art">← Back to aerost.art</a>
 </footer>
+
+<!-- ============ PHOTO MODAL ============ -->
 <div class="photo-modal" id="photo-modal">
   <button class="photo-modal-close" id="photo-modal-close">✕</button>
   <img id="photo-modal-img" src="" alt="">
   <div class="photo-modal-caption" id="photo-modal-caption"></div>
 </div>
+
 <script>
 const IMG_BASE = 'images/lab/';
 const CONTENT_URL = 'lab-content.json';
 
 // ============================================
-// ОПРЕДЕЛЕНИЕ ЯЗЫКА
+// ОПРЕДЕЛЕНИЕ ЯЗЫКА (async, по IP с fallback на браузер)
 // ============================================
-function detectLang() {
+let LANG = 'en';
+
+async function detectLang() {
   // 1. Приоритет — параметр в URL (?lang=ru или ?lang=en)
   const urlLang = new URLSearchParams(location.search).get('lang');
   if (urlLang === 'ru' || urlLang === 'en') {
@@ -714,36 +785,57 @@ function detectLang() {
     return urlLang;
   }
 
-  // 2. Язык браузера — берём все предпочтительные языки
-  const browserLangs = navigator.languages || [navigator.language || 'en'];
-  console.log('[i18n] Browser languages:', browserLangs);
+  // 2. Страна по IP
+  try {
+    const res = await fetch('https://api.country.is/', { cache: 'no-store' });
+    const data = await res.json();
+    const country = (data.country || '').toUpperCase();
+    console.log('[i18n] Country by IP:', country);
 
-  // 3. Если хоть один начинается с ru/uk/be/kk — показываем русский
-  const CIS_LANG_PREFIXES = ['ru', 'uk', 'be', 'kk', 'ky', 'uz', 'tg', 'hy', 'az', 'mo', 'ro', 'tk'];
+    const CIS_COUNTRIES = ['RU','BY','KZ','UA','UZ','KG','TJ','AM','AZ','MD','TM'];
+    return CIS_COUNTRIES.includes(country) ? 'ru' : 'en';
+  } catch (e) {
+    console.warn('[i18n] IP detection failed:', e);
+  }
+
+  // 3. Fallback — язык браузера
+  const browserLangs = navigator.languages || [navigator.language || 'en'];
+  console.log('[i18n] Fallback browser languages:', browserLangs);
+  const CIS_LANG_PREFIXES = ['ru','uk','be','kk','ky','uz','tg','hy','az','mo','ro','tk'];
   const isCIS = browserLangs.some(lang => {
     const prefix = (lang || '').toLowerCase().split('-')[0];
     return CIS_LANG_PREFIXES.includes(prefix);
   });
-
-  const detected = isCIS ? 'ru' : 'en';
-  console.log('[i18n] Detected lang:', detected);
-  return detected;
+  return isCIS ? 'ru' : 'en';
 }
-
-const LANG = detectLang();
-
-// Устанавливаем атрибут lang на <html>
-document.documentElement.lang = LANG;
 
 // ============================================
 // ХЕЛПЕР: получить поле с fallback
 // ============================================
 function pick(obj, key) {
-  // Сначала ищем нужный язык, потом fallback на en, потом на ru
   return obj[`${key}_${LANG}`]
       || obj[`${key}_en`]
       || obj[`${key}_ru`]
       || '';
+}
+
+// ============================================
+// ПЕРЕВОД ИНТЕРФЕЙСА
+// ============================================
+function applyInterfaceLang() {
+  document.querySelectorAll('[data-en][data-ru]').forEach(el => {
+    el.textContent = el.dataset[LANG] || el.dataset.en;
+  });
+  // Кнопки переключателя
+  document.querySelectorAll('.lang-switcher button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === LANG);
+  });
+  // Title вкладки
+  document.title = LANG === 'ru'
+    ? 'Aerostar — Отдохни в небе'
+    : 'Aerostar — Relax in the Sky';
+  // <html lang>
+  document.documentElement.lang = LANG;
 }
 
 // ============================================
@@ -774,7 +866,8 @@ async function loadLabContent() {
       visual.innerHTML = `<img src="${IMG_BASE + item.img}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">`;
       visual.removeAttribute('data-emoji');
       visual.style.cursor = 'zoom-in';
-      visual.addEventListener('click', () => openPhoto(item));
+      // Перезаписываем обработчик (на случай переключения языка)
+      visual.onclick = () => openPhoto(item);
     }
 
     if (figcaption) {
@@ -813,25 +906,10 @@ async function loadLabContent() {
     if (h3 && titleText) h3.textContent = titleText;
     if (p && shortText) p.textContent = shortText;
 
-    // Вся карточка кликабельна → ведёт на страницу истории с тем же языком
-    el.addEventListener('click', () => {
+    // Обработчик клика — перезаписываем, чтобы всегда брал актуальный LANG
+    el.onclick = () => {
       location.href = `lab-story.html?id=${id}&lang=${LANG}`;
-    });
-  });
-
-  // === ЗАГОЛОВКИ ИНТЕРФЕЙСА (опционально) ===
-  // Если у тебя в lab.html есть статические подписи, которые надо переводить,
-  // их можно хранить в самом lab.html и переключать через data-атрибуты:
-  applyInterfaceLang();
-}
-
-// ============================================
-// ПЕРЕВОД ИНТЕРФЕЙСА
-// ============================================
-function applyInterfaceLang() {
-  // Элементы с data-en и data-ru атрибутами
-  document.querySelectorAll('[data-en][data-ru]').forEach(el => {
-    el.textContent = el.dataset[LANG] || el.dataset.en;
+    };
   });
 }
 
@@ -862,9 +940,27 @@ document.getElementById('photo-modal').addEventListener('click', e => {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closePhoto(); });
 
 // ============================================
+// ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА
+// ============================================
+document.querySelectorAll('.lang-switcher button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const newLang = btn.dataset.lang;
+    if (newLang === LANG) return;
+    LANG = newLang;
+    applyInterfaceLang();
+    loadLabContent(); // перезагружаем контент на новом языке
+  });
+});
+
+// ============================================
 // СТАРТ
 // ============================================
-loadLabContent();
-</script> 
+(async () => {
+  LANG = await detectLang();
+  console.log('[i18n] Final lang:', LANG);
+  applyInterfaceLang();
+  await loadLabContent();
+})();
+</script>
 </body>
 </html>
