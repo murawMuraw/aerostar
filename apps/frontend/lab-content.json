@@ -91,17 +91,19 @@
       ]
     },
     "S2": {
-      "img": "plakat.png",
+      "img": "ball_Europ.png",
       "emoji": "✈️",
-      "meta_ru": "",
-      "meta_en": "",
-      "title_ru": "",
-      "title_en": "",
-      "short_ru": "",
-      "short_en": "",
-      "html_ru": "",
-      "html_en": "",
-      "extraPhotos": []
+      "meta_ru": "Europe",
+      "meta_en": "Europe",
+      "title_ru": "Изучаем ветры Европы",
+      "title_en": "Exploring the winds of Europe",
+      "short_ru": "Приземной ветер не может вырваться из плена гор ",
+      "short_en": "Surface winds cannot break free from the grip of the mountains.",
+      "html_ru": "<p> Стартовав в середине Восточной Европы на шаре, может оказаться так, что вы не сможете перелететь горы и шар будет метаться между Альпами и Карпатами </p>",
+      "html_en": "If you take off in a balloon from somewhere in Central-Eastern Europe, you might find yourself unable to cross the mountains, leaving the balloon to drift back and forth between the Alps and the Carpathians.",
+      "extraPhotos": [
+        "Europ.png"
+      ]
     },
     "S3": {
       "img": "morog.png",
