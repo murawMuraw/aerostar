@@ -198,10 +198,7 @@
 
 <div class="hint" id="hint">👆 Click on the map to set a start location</div>
 <div class="loading" id="loading">
-    <!-- Оставляем ваш индикатор, но оборачиваем для стиля -->
     <div class="loading-status">Loading Map... 🗺️</div>
-    
-    <!-- Добавляем описание проекта -->
     <div class="loading-description">
         <h2>Launch a virtual hot air balloon anywhere on Earth</h2>
         <p>and watch it drift using real weather forecasts</p>
@@ -363,26 +360,24 @@
 /* Настройки для самого контейнера загрузки */
 #loading {
     display: flex;
-    flex-direction: column; /* Выстраивает элементы вертикально */
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 20px;             /* Расстояние между лоадером и текстом */
+    gap: 20px;
     text-align: center;
-    background: #1a1a1a;   /* Или ваш текущий цвет фона */
+    background: #1a1a1a;
     color: #ffffff;
 }
 
-/* Стиль для вашей текущей надписи "Loading Map..." */
 .loading-status {
     font-size: 1.2rem;
     font-weight: bold;
 }
 
-/* Блок с новой фразой */
 .loading-description {
-    max-width: 500px;      /* Чтобы текст красиво разбивался на строки */
+    max-width: 500px;
     padding: 0 20px;
-    animation: fadeIn 1s ease-in-out; /* Плавное появление текста */
+    animation: fadeIn 1s ease-in-out;
 }
 
 .loading-description h2 {
@@ -395,11 +390,10 @@
 
 .loading-description p {
     font-size: 0.95rem;
-    color: #b3b3b3;        /* Чуть более мягкий цвет для подзаголовка */
+    color: #b3b3b3;
     margin: 0;
 }
 
-/* Анимация плавного проявления */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -435,34 +429,18 @@
 }
 
 @keyframes liveStrongPulse {
-    0%,100% {
-        transform: scale(1);
-        filter: brightness(1);
-    }
-    50% {
-        transform: scale(1.08);
-        filter: brightness(1.4);
-    }
+    0%,100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.08); filter: brightness(1.4); }
 }
 
 @keyframes liveRing {
-    0% {
-        opacity: 0.8;
-        transform: scale(0.95);
-    }
-    100% {
-        opacity: 0;
-        transform: scale(1.25);
-    }
+    0% { opacity: 0.8; transform: scale(0.95); }
+    100% { opacity: 0; transform: scale(1.25); }
 }
 
 @keyframes liveDot {
-    0%,100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.2;
-    }
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.2; }
 }
 
 /* NEW: стиль иконки маркера шара */
@@ -504,7 +482,6 @@
     (function() {
         const WELCOME_KEY = 'welcome_shown';
         
-        // Проверка: если язык браузера русский — меняем текст в модальном окне
         const userLang = navigator.language || navigator.userLanguage;
         if (userLang.startsWith('ru')) {
             const title = document.querySelector('.welcome-title');
@@ -532,34 +509,27 @@
             if (dontShow) dontShow.innerHTML = '<input type="checkbox" id="dontShowCheckbox"> Не показывать снова';
         }
 
-        // Показ окна, если не было отмечено "Не показывать снова"
         if (!localStorage.getItem(WELCOME_KEY)) {
             setTimeout(() => {
                 const modal = document.getElementById('welcomeModal');
-                if (modal) {
-                    modal.style.display = 'flex';
-                }
+                if (modal) modal.style.display = 'flex';
             }, 500);
         }
 
-        // Обработка закрытия (используем делегирование, чтобы кнопка точно работала)
         document.addEventListener('click', function(e) {
             if (e.target && e.target.id === 'closeWelcomeBtn') {
                 const modal = document.getElementById('welcomeModal');
                 const dontShowCheckbox = document.getElementById('dontShowCheckbox');
-                
                 if (dontShowCheckbox && dontShowCheckbox.checked) {
                     localStorage.setItem(WELCOME_KEY, 'true');
                 }
-                
-                if (modal) {
-                    modal.style.display = 'none';
-                }
+                if (modal) modal.style.display = 'none';
             }
         });
     })();
 </script>
-    <script>
+
+<script>
     // Обработка клика по кнопке "How it Works" с определением языка
     document.addEventListener('DOMContentLoaded', function() {
         const howItWorksBtn = document.getElementById('howItWorksBtn');
@@ -567,14 +537,9 @@
         if (howItWorksBtn) {
             howItWorksBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                
-                // Используем уже определённый язык из модального окна
                 const userLang = navigator.language || navigator.userLanguage;
-                
-                // Проверяем, начинается ли язык с 'ru' (русский)
                 const isRussian = userLang.startsWith('ru');
                 
-                // Перенаправляем на соответствующую страницу
                 if (isRussian) {
                     window.location.href = 'howorks.html';
                 } else {
@@ -590,7 +555,6 @@
 (function() {
     'use strict';
 
-    // Получаем экземпляр карты (создается в main.js)
     function getMapInstance() {
         if (typeof window.map !== 'undefined' && window.map instanceof L.Map) {
             return window.map;
@@ -634,25 +598,26 @@
         });
     }
 
-    // Определение гостя на основе данных из API
     function isGuest(balloon) {
-        // Если email соответствует гостевому шаблону
         if (balloon.email === 'guest@aerost.art') return true;
-        // Если ID или user_id начинаются с guest_
         if (balloon.id && balloon.id.startsWith('guest_')) return true;
         if (balloon.user_id && balloon.user_id.startsWith('guest_')) return true;
-        
-        // Запасной вариант
         if (!balloon.email || balloon.email.toLowerCase().includes('guest')) return true;
-        
         return false;
+    }
+
+    function maskEmail(email) {
+        if (!email || !email.includes('@')) return 'Pilot';
+        const [name, domain] = email.split('@');
+        if (name.length <= 2) return name + '***@' + domain;
+        return name.substring(0, 2) + '***@' + domain;
     }
 
     async function loadBalloons() {
         const map = getMapInstance();
         if (!map) {
-            console.warn('[Aerostar] Карта ещё не готова, повторная попытка...');
-            setStatus('Карта ещё загружается...', true);
+            console.warn('[Aerostar] Map is not ready yet');
+            setStatus('Map is still loading...', true);
             setTimeout(loadBalloons, 500);
             return;
         }
@@ -660,7 +625,7 @@
         lastClickTime = Date.now();
 
         showButtons('loading');
-        setStatus('Загрузка шаров...', true);
+        setStatus('Loading balloons...', true);
 
         try {
             const response = await fetch('https://aerost.art/api/balloons', { cache: 'no-store' });
@@ -676,7 +641,7 @@
             balloonLayer = L.layerGroup();
 
             if (!Array.isArray(balloons) || balloons.length === 0) {
-                setStatus('Нет активных шаров', true);
+                setStatus('No active balloons found', true);
                 showButtons('idle');
                 return;
             }
@@ -685,11 +650,11 @@
                 if (typeof b.current_lat !== 'number' || typeof b.current_lng !== 'number') return;
 
                 const guestStatus = isGuest(b);
-                const displayName = guestStatus ? 'Гость' : b.email;
-                
+                const displayName = guestStatus ? 'Guest' : maskEmail(b.email);
+
                 const marker = L.marker([b.current_lat, b.current_lng], {
                     icon: balloonIcon(),
-                    title: displayName
+                    title: displayName 
                 });
 
                 marker.bindPopup(
@@ -711,13 +676,13 @@
                 }
             } catch (e) { /* ignore */ }
 
-            const snapTime = new Date(lastClickTime).toLocaleTimeString();
-            setStatus('Показано шаров: ' + balloons.length + ' (снимок ' + snapTime + ')', true);
+            const snapTime = new Date(lastClickTime).toLocaleTimeString('en-US');
+            setStatus('Shown: ' + balloons.length + ' balloons (snapshot at ' + snapTime + ')', true);
             showButtons('loaded');
 
         } catch (err) {
-            console.error('[Aerostar] Ошибка загрузки шаров:', err);
-            setStatus('Ошибка загрузки шаров', true);
+            console.error('[Aerostar] Error loading balloons:', err);
+            setStatus('Failed to load balloons', true);
             showButtons('idle');
         }
     }
@@ -735,7 +700,6 @@
     if (showBtn) showBtn.addEventListener('click', loadBalloons);
     if (hideBtn) hideBtn.addEventListener('click', hideBalloons);
 
-    // Экспортируем на всякий случай
     window.AerostarBalloons = { load: loadBalloons, hide: hideBalloons };
 })();
 </script>
