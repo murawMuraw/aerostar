@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=1200">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real Wind Hot Air Balloon Flight Simulator | Live Wind Data</title>
     <meta name="description" content="Fly a virtual hot air balloon with real-time wind data. Choose any location on Earth and drift with live wind speed and direction. Free, no ads, no signup.">
     <meta name="keywords" content="hot air balloon, flight simulator, real wind, live wind data, virtual balloon, wind simulator, interactive map, live wind map, balloon tracking">
@@ -22,7 +22,7 @@
     <!-- Leaflet connection -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/styles.css?v=20261106-2" />
 
     <!-- Canonical URL -->
     <link rel="canonical" href="https://aerost.art/">
@@ -215,21 +215,41 @@
     }
     body { overflow-y: auto; }
 
+    /* Убираем возможные остатки старой двухпанельной сцены,
+       если сервер/старый фрагмент разметки ещё содержит её. */
+    #scenePanel, #scene-panel, .scene-panel, .scene-container, .scene-panel-container {
+        display: none !important;
+    }
+
     /* Рабочая область карты занимает всё окно браузера. */
     .app {
-        position: relative; width: 100%; height: 100vh;
-        min-height: 420px; overflow: hidden;
+        position: relative;
+        display: block;
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        min-height: 420px;
+        overflow: hidden;
     }
     .map-panel {
-        position: absolute; inset: 0; overflow: hidden;
-        background: #111; isolation: isolate;
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #111;
+        isolation: isolate;
     }
 
     /* Важно: pointer-events должны оставаться включёнными —
        main.js ловит здесь клики для выбора места запуска. */
     #map {
-        position: absolute; inset: 0; width: 100%; height: 100%;
-        z-index: 1; background: #111;
+        position: absolute !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 1;
+        background: #111;
     }
 
     /* Прозрачный canvas рисует атмосферную зону и не перехватывает мышь. */
