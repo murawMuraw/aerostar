@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,7 +8,7 @@
     <meta name="keywords" content="hot air balloon, flight simulator, real wind, live wind data, virtual balloon, wind simulator, interactive map, live wind map, balloon tracking">
     <meta name="author" content="Aerostar">
     <meta name="robots" content="index, follow">
-    
+
     <!-- Open Graph / Social Media -->
     <meta property="og:title" content="Real Wind Hot Air Balloon Flight Simulator">
     <meta property="og:description" content="Fly a virtual balloon with live wind data anywhere on Earth. Free, no ads.">
@@ -19,23 +18,22 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Real Wind Hot Air Balloon Flight Simulator">
     <meta name="twitter:description" content="Fly with live wind data. Free. No ads.">
-    
+
     <!-- Leaflet connection -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="css/styles.css" />
-    
+
     <!-- Canonical URL -->
     <link rel="canonical" href="https://aerost.art/">
     <script defer src="https://cloud.umami.is/script.js" data-website-id="059675cf-3a0e-433a-9b94-bff4ab226452"></script>
-    
 </head>
 <body>
 
 <!-- SEO H1 (visually hidden) -->
 <h1 class="seo-h1">Real-Time Hot Air Balloon Flight Simulator with Live Wind Data</h1>
 
-<!-- Welcome Modal -->
+<!-- Welcome Modal (оставлено как было) -->
 <div id="welcomeModal" class="welcome-modal" style="display: none;">
     <div class="welcome-container">
         <div class="welcome-content">
@@ -65,9 +63,44 @@
     </div>
 </div>
 
-<div id="map"></div>
+<!-- ═══════════════════════════════════════════════════════
+     ОСНОВНОЙ ДВУХКОЛОНОЧНЫЙ LAYOUT
+     ═══════════════════════════════════════════════════════ -->
+<div class="app">
 
-<!-- Support Banner -->
+    <!-- ═══ ЛЕВАЯ КОЛОНКА: карта-навигация (зум 2, статичная) ═══ -->
+    <div class="map-panel">
+        <div id="map"></div>
+        <div class="map-caption" id="mapCaption">широта —, долгота —</div>
+    </div>
+
+    <!-- ═══ ПРАВАЯ КОЛОНКА: сцена полёта ═══ -->
+    <div class="scene-panel" id="scenePanel">
+
+        <!-- Атмосферная дымка (canvas, управляется js/main.js если он его использует) -->
+        <canvas id="haze-canvas"></canvas>
+
+        <!-- OVERLAY СУЩЕСТВА -->
+        <div class="creature-overlay" id="creatureOverlay">
+            <img id="creatureImg" src="" alt="Мифическое существо">
+            <button class="release-btn" id="releaseBtn" title="Отпустить">✕</button>
+            <div class="creature-name" id="creatureName"></div>
+        </div>
+
+        <!-- Кнопки управления (перенесены из старого .left-controls) -->
+        <div class="scene-controls">
+            <button class="custom-button" id="startBtn" disabled>▶ START</button>
+            <button class="custom-button" id="resetBtn">🗑️ Reset</button>
+        </div>
+
+        <!-- Подсказка (перенесена из глобального слоя) -->
+        <div class="hint scene-hint" id="hint">👆 Click on the map to set a start location</div>
+    </div>
+
+</div>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<!-- Support Banner (оставлено как было) -->
 <div id="support-banner">
     <div class="support-content">
         <span class="support-icon">🎈</span>
@@ -84,8 +117,6 @@
         <button id="close-ad" class="close-button">✕</button>
     </div>
 </div>
-
-<canvas id="haze-canvas"></canvas>
 
 <!-- Profile Button -->
 <div id="profileButton" class="profile-btn">
@@ -118,86 +149,6 @@
     </div>
 </div>
 
-<div class="left-controls">
-    <button class="custom-button" id="startBtn" disabled>▶ START</button>
-    <button class="custom-button" id="resetBtn">🗑️ Reset</button>
-</div>
-
-<div class="info-panel">
-    <h3 style="margin: 0 0 10px 0;">🎈 Balloon Info</h3>
-    <div class="coord-display" id="coordinates"> --<br> --</div>
-    <div class="wind-info" id="windInfo">
-        <div>🌬️ Wind --</div>
-        <div>🧭 Direction --</div>
-        <div>📏 Speed -- m/s</div>
-        <div>🌡️ Temp: -- °C</div>
-        <div>☔ Precip: -- mm/h</div>
-    </div>
-    <div class="flight-status status-ready" id="flightStatus">⏸️ Waiting for start</div>
-    <div id="placeInfo" style="margin-top: 15px; padding: 10px; background: #f9f9f9; border-radius: 8px; display: none; border-left: 3px solid #ff9800;">
-        <div id="placeName" style="font-weight: bold; color: #333; margin-bottom: 8px;"></div>
-        <div id="placeLink" style="margin-top: 5px;"></div>
-    </div>
-</div>
-
-<div style="position: fixed; bottom: 30px; right: 30px; z-index: 9999; display: flex; flex-direction: column; gap: 15px; width: 260px;">
-    <!-- КНОПКА: Как это работает (с определением языка) -->
-    <a href="#" id="howItWorksBtn" 
-       style="background: linear-gradient(135deg, #00b4d8 0%, #0077b6 100%); color: white; padding: 14px 24px; text-decoration: none; border-radius: 50px; font-size: 16px; font-weight: bold; text-align: center; display: block; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;"
-       onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 6px 20px rgba(0,180,216,0.4)';"
-       onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.2)';">
-        📖 How it Works
-    </a>
-    
-    <a href="/watch.html"         
-   class="live-balloon-btn"
-   style="color: white; padding: 14px 24px 14px 35px; text-decoration: none; border-radius: 50px; font-size: 16px; font-weight: bold; text-align: center; display: block; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
-    Live Balloon
-</a>
-    <a href="/lab.html"
-   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-   color: white;
-   padding: 14px 24px;
-   text-decoration: none;
-   border-radius: 50px;
-   font-size: 16px;
-   font-weight: bold;
-   text-align: center;
-   display: block;
-   box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-   cursor: pointer;">
-    🧪 Atmosphere Lab
-</a>
-
-    <!-- NEW: кнопки управления шарами -->
-    <button id="showBalloonsBtn"
-        style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-        color: white;
-        padding: 14px 24px;
-        border: none;
-        border-radius: 50px;
-        font-size: 16px;
-        font-weight: bold;
-        text-align: center;
-        display: block;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;"
-        onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 6px 20px rgba(22,163,74,0.4)';"
-        onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.2)';">
-        🌍 Show All Balloons
-    </button>
-
-    <button id="hideBalloonsBtn" style="display: none; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; padding: 14px 24px; border: none; border-radius: 50px; font-size: 16px; font-weight: bold; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 6px 20px rgba(220,38,38,0.4)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.2)';">
-        ❌ Hide Foreign Balloons
-    </button>
-
-    <div id="balloonsStatus" style="font-size: 12px; color: #666; text-align: center; background: rgba(255,255,255,0.9); border-radius: 20px; padding: 6px 12px; display: none;"></div>
-    <!-- /NEW -->
-</div>
-
-
-<div class="hint" id="hint">👆 Click on the map to set a start location</div>
 <div class="loading" id="loading">
     <div class="loading-status">Loading Map... 🗺️</div>
     <div class="loading-description">
@@ -206,27 +157,26 @@
     </div>
 </div>
 
-
-<!-- SEO Footer (visible content for search engines) -->
+<!-- SEO Footer (оставлено как было) -->
 <footer class="seo-footer">
     <div class="seo-footer-content">
         <h2>How the Virtual Balloon Works with Live Wind</h2>
         <p><strong>Aerostar</strong> is a free virtual hot air balloon flight simulator powered by <strong>real-time wind data</strong>. Click anywhere on the map, press START, and watch your balloon drift according to actual meteorological conditions — wind speed, direction, and gusts — at that exact location anywhere on Earth.</p>
-        
+
         <h3>Real Wind Simulation Technology</h3>
         <p>The balloon responds to live wind data including speed (measured in meters per second), direction in degrees, and local gusts. Unlike most simulators that use random or pre-programmed wind patterns, Aerostar fetches current weather conditions from global meteorological sources. The simulation covers the entire planet — from mountain thermals in the Swiss Alps to consistent ocean breezes across the Pacific.</p>
-        
+
         <h3>Free and No Registration Required</h3>
         <p>You can fly as a guest immediately — the balloon will drift until you close your browser. For longer flights that persist across browser sessions and days of drifting, you can <a href="#" id="registerLinkFooter">create a free account</a>. No credit card required. No hidden fees. No ads. No trackers.</p>
-        
+
         <h3>Why Real Wind Matters</h3>
         <p>Traditional balloon simulators use fake or predictable wind. Real wind creates <strong>authentic, unpredictable journeys</strong>. A launch over the Rocky Mountains behaves differently than a launch above the Amazon rainforest. You might drift into unexpected weather patterns, experience calm mornings with gentle breezes, or get carried by stronger afternoon gusts. Every flight is unique.</p>
-        
+
         <h3>Technical Details</h3>
         <p>Wind data updates regularly from real-time meteorological APIs. The balloon's altitude is simulated at approximately 500 meters above ground level — where wind patterns differ significantly from surface conditions. Coordinates update every few seconds as the balloon drifts. The simulation is purely for relaxation and exploration — no competitive elements, no scores, no timers.</p>
-        
+
         <h2 style="text-align: center; margin-top: 2rem;">🎈 Let's see where the wind takes us! 🎈</h2>
-        
+
         <div class="support-footer-box">
             <h3>Support Independent Web Projects</h3>
             <p>Aerostar is entirely funded by voluntary donations. Server costs for live wind data APIs and cloud hosting are the only expenses. If you enjoy watching the balloon drift over Patagonia, the Norwegian fjords, or the Sahara Desert, please consider a small contribution to keep the wind blowing.</p>
@@ -235,24 +185,21 @@
                 <a href="https://patreon.com/aerostart" target="_blank" rel="noopener noreferrer" class="patreon-footer-button">Become a Patreon</a>
             </div>
         </div>
-        
+
         <div class="seo-footer-links">
             <a href="/about.html">About</a> |
             <a href="/support.html">Support the Project</a> |
             <a href="/privacy.html">Privacy Policy</a>
         </div>
-        
+
         <p class="seo-footer-copy">&copy; 2025 Aerostar — Real wind. Real flight. No ads. No trackers.</p>
     </div>
 </footer>
 
-<script src="js/config.js"></script>
-<script src="js/api.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/balloon.js"></script>
-<script src="js/main.js"></script>
-
+<!-- ═══════════════════════════════════════════════════════
+     СТИЛИ ДВУХКОЛОНОЧНОГО LAYOUT + OVERLAY
+     (переопределяют/дополняют css/styles.css)
+     ═══════════════════════════════════════════════════════ -->
 <style>
     /* SEO hidden H1 */
     .seo-h1 {
@@ -265,57 +212,239 @@
         clip: rect(0, 0, 0, 0);
         border: 0;
     }
-    
-    /* SEO Footer styles */
+
+    /* ── Базовый layout ── */
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #0b0f14;
+        overflow-x: hidden;
+    }
+
+    body {
+        /* Разрешаем вертикальный скролл, чтобы футер был доступен */
+        overflow-y: auto;
+    }
+
+    .app {
+        display: grid;
+        grid-template-columns: 30% 70%;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    /* ── ЛЕВАЯ КОЛОНКА: карта ── */
+    .map-panel {
+        position: relative;
+        background: #111;
+        border-right: 1px solid rgba(255,255,255,0.08);
+        z-index: 2;
+        overflow: hidden;
+    }
+
+    #map {
+        width: 100%;
+        height: 100%;
+        /* Карта статична: пользователь её не двигает */
+        pointer-events: none;
+    }
+
+    .map-caption {
+        position: absolute;
+        bottom: 10px;
+        left: 12px;
+        font-size: 11px;
+        color: rgba(255,255,255,0.6);
+        background: rgba(0,0,0,0.5);
+        padding: 4px 8px;
+        border-radius: 6px;
+        z-index: 500;
+        backdrop-filter: blur(4px);
+    }
+
+    /* ── ПРАВАЯ КОЛОНКА: сцена полёта ── */
+    .scene-panel {
+        position: relative;
+        overflow: hidden;
+        /* Стилизованный «низкий полёт»: небо → горизонт → земля */
+        background:
+            linear-gradient(
+                to bottom,
+                #7fb4e0 0%,
+                #a9cbe8 30%,
+                #d6e6f2 52%,
+                #b8c9a8 55%,
+                #7e9464 70%,
+                #4f6340 100%
+            );
+    }
+
+    /* Атмосферная дымка */
+    #haze-canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        opacity: 0.4;
+        z-index: 1;
+    }
+
+    /* ── OVERLAY СУЩЕСТВА ── */
+    .creature-overlay {
+        position: absolute;
+        left: 60%;
+        top: 52%;
+        width: 15%;
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        pointer-events: none;
+        transition:
+            left 2s cubic-bezier(.22,.61,.36,1),
+            top 2s cubic-bezier(.22,.61,.36,1),
+            width 2s cubic-bezier(.22,.61,.36,1),
+            opacity 0.6s ease;
+        z-index: 10;
+    }
+
+    .creature-overlay img {
+        width: 100%;
+        height: auto;
+        display: block;
+        filter: drop-shadow(0 12px 24px rgba(0,0,0,0.45));
+    }
+
+    .creature-overlay.is-appearing { opacity: 1; }
+
+    .creature-overlay.is-large {
+        left: 50%;
+        top: 50%;
+        width: 50%;
+        pointer-events: auto;
+    }
+
+    .creature-overlay.is-leaving {
+        opacity: 0;
+        width: 10%;
+        left: 65%;
+        top: 55%;
+    }
+
+    .release-btn {
+        position: absolute;
+        top: -14px;
+        right: -14px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(0,0,0,0.65);
+        color: #fff;
+        font-size: 16px;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+        transition: background 0.2s;
+    }
+    .release-btn:hover { background: rgba(200,40,40,0.85); }
+    .creature-overlay.is-large .release-btn { display: flex; }
+
+    .creature-name {
+        position: absolute;
+        bottom: -26px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 13px;
+        color: #fff;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.4s ease 0.4s;
+    }
+    .creature-overlay.is-large .creature-name { opacity: 1; }
+
+    /* ── Кнопки в сцене ── */
+    .scene-controls {
+        position: absolute;
+        bottom: 18px;
+        left: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 20;
+    }
+
+    .scene-controls .custom-button {
+        background: rgba(255,255,255,0.92);
+        color: #111;
+        border: none;
+        border-radius: 24px;
+        padding: 10px 22px;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.4px;
+        cursor: pointer;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        transition: transform 0.15s, background 0.2s;
+    }
+    .scene-controls .custom-button:hover { transform: translateY(-2px); background: #fff; }
+    .scene-controls .custom-button:active { transform: translateY(0); }
+    .scene-controls .custom-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* Подсказка внутри сцены */
+    .scene-hint {
+        position: absolute;
+        bottom: 18px;
+        right: 18px;
+        z-index: 20;
+        background: rgba(0,0,0,0.55);
+        color: #fff;
+        padding: 8px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        backdrop-filter: blur(4px);
+        pointer-events: none;
+        transition: opacity 0.4s;
+    }
+
+    /* ── Адаптив: на узких экранах — вертикальный стек ── */
+    @media (max-width: 720px) {
+        .app {
+            grid-template-columns: 1fr;
+            grid-template-rows: 35% 65%;
+        }
+        .map-panel {
+            border-right: none;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .scene-hint { display: none; }
+    }
+
+    /* ── SEO Footer styles (как было) ── */
     .seo-footer {
         background: #1a1a2e;
         color: #ccc;
         padding: 2rem 1rem;
-        margin-top: 2rem;
+        margin-top: 0;
         font-family: system-ui, -apple-system, sans-serif;
         line-height: 1.6;
         border-top: 1px solid #333;
+        position: relative;
+        z-index: 1;
     }
-    .seo-footer-content {
-        max-width: 900px;
-        margin: 0 auto;
-    }
-    .seo-footer h2 {
-        color: #ff9800;
-        font-size: 1.5rem;
-        margin-bottom: 1rem;
-    }
-    .seo-footer h3 {
-        color: #ffb74d;
-        font-size: 1.2rem;
-        margin-top: 1.5rem;
-        margin-bottom: 0.75rem;
-    }
-    .seo-footer a {
-        color: #ff9800;
-        text-decoration: none;
-    }
-    .seo-footer a:hover {
-        text-decoration: underline;
-    }
-    .seo-footer-links {
-        margin: 1.5rem 0;
-        text-align: center;
-        font-size: 0.9rem;
-    }
-    .seo-footer-copy {
-        text-align: center;
-        font-size: 0.8rem;
-        color: #888;
-        margin-top: 1rem;
-    }
-    .support-footer-box {
-        background: #0f3460;
-        border-radius: 16px;
-        padding: 1.5rem;
-        margin: 2rem 0;
-        text-align: center;
-    }
+    .seo-footer-content { max-width: 900px; margin: 0 auto; }
+    .seo-footer h2 { color: #ff9800; font-size: 1.5rem; margin-bottom: 1rem; }
+    .seo-footer h3 { color: #ffb74d; font-size: 1.2rem; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+    .seo-footer a { color: #ff9800; text-decoration: none; }
+    .seo-footer a:hover { text-decoration: underline; }
+    .seo-footer-links { margin: 1.5rem 0; text-align: center; font-size: 0.9rem; }
+    .seo-footer-copy { text-align: center; font-size: 0.8rem; color: #888; margin-top: 1rem; }
+    .support-footer-box { background: #0f3460; border-radius: 16px; padding: 1.5rem; margin: 2rem 0; text-align: center; }
     .support-footer-button, .patreon-footer-button {
         display: inline-block;
         background: #ff9800;
@@ -326,138 +455,52 @@
         margin: 0.5rem;
         transition: transform 0.2s, background 0.2s;
     }
-    .patreon-footer-button {
-        background: #f96854;
-        color: white;
-    }
-    .support-footer-button:hover, .patreon-footer-button:hover {
-        transform: scale(1.05);
-        text-decoration: none;
-    }
-    .support-footer-button:hover {
-        background: #ffb74d;
-    }
-    .patreon-footer-button:hover {
-        background: #ff7a66;
-    }
+    .patreon-footer-button { background: #f96854; color: white; }
+    .support-footer-button:hover, .patreon-footer-button:hover { transform: scale(1.05); text-decoration: none; }
+    .support-footer-button:hover { background: #ffb74d; }
+    .patreon-footer-button:hover { background: #ff7a66; }
     @media (max-width: 768px) {
-        .seo-footer {
-            padding: 1rem;
-            font-size: 0.9rem;
-        }
-        .seo-footer h2 {
-            font-size: 1.3rem;
-        }
-        .seo-footer h3 {
-            font-size: 1.1rem;
-        }
-        .support-footer-button, .patreon-footer-button {
-            display: block;
-            margin: 0.5rem auto;
-            text-align: center;
-        }
+        .seo-footer { padding: 1rem; font-size: 0.9rem; }
+        .seo-footer h2 { font-size: 1.3rem; }
+        .seo-footer h3 { font-size: 1.1rem; }
+        .support-footer-button, .patreon-footer-button { display: block; margin: 0.5rem auto; text-align: center; }
     }
 
-/* Настройки для самого контейнера загрузки */
-#loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    text-align: center;
-    background: #1a1a1a;
-    color: #ffffff;
-}
+    /* Loading (как было) */
+    #loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        text-align: center;
+        background: #1a1a1a;
+        color: #ffffff;
+    }
+    .loading-status { font-size: 1.2rem; font-weight: bold; }
+    .loading-description { max-width: 500px; padding: 0 20px; animation: fadeIn 1s ease-in-out; }
+    .loading-description h2 { font-size: 1.3rem; font-weight: 600; margin: 0 0 8px 0; line-height: 1.4; color: #ffffff; }
+    .loading-description p { font-size: 0.95rem; color: #b3b3b3; margin: 0; }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 
-.loading-status {
-    font-size: 1.2rem;
-    font-weight: bold;
-}
-
-.loading-description {
-    max-width: 500px;
-    padding: 0 20px;
-    animation: fadeIn 1s ease-in-out;
-}
-
-.loading-description h2 {
-    font-size: 1.3rem;
-    font-weight: 600;
-    margin: 0 0 8px 0;
-    line-height: 1.4;
-    color: #ffffff;
-}
-
-.loading-description p {
-    font-size: 0.95rem;
-    color: #b3b3b3;
-    margin: 0;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Мигающая кнопка Live Balloon */
-.live-balloon-btn {
-    position: relative;
-    animation: liveStrongPulse 0.9s infinite;
-    background: linear-gradient(135deg, #ff0000 0%, #ff6a00 100%) !important;
-    box-shadow: 0 0 25px rgba(255,0,0,0.8) !important;
-}
-
-.live-balloon-btn::before {
-    content: "";
-    position: absolute;
-    inset: -6px;
-    border-radius: 50px;
-    background: rgba(255,0,0,0.35);
-    animation: liveRing 0.9s infinite;
-    z-index: -1;
-}
-
-.live-balloon-btn::after {
-    content: '●';
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: white;
-    font-size: 14px;
-    animation: liveDot 0.5s infinite;
-}
-
-@keyframes liveStrongPulse {
-    0%,100% { transform: scale(1); filter: brightness(1); }
-    50% { transform: scale(1.08); filter: brightness(1.4); }
-}
-
-@keyframes liveRing {
-    0% { opacity: 0.8; transform: scale(0.95); }
-    100% { opacity: 0; transform: scale(1.25); }
-}
-
-@keyframes liveDot {
-    0%,100% { opacity: 1; }
-    50% { opacity: 0.2; }
-}
-
-/* NEW: стиль иконки маркера шара */
-.balloon-div-icon {
-    background: none;
-    border: none;
-    font-size: 24px;
-    line-height: 24px;
-    text-align: center;
-    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
-}
-
-/* NEW: выделяем popup шаров */
-.balloon-popup b { color: #16a34a; }
+    /* Маркер шара на карте */
+    .balloon-div-icon {
+        background: none;
+        border: none;
+        font-size: 24px;
+        line-height: 24px;
+        text-align: center;
+        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+    }
+    .balloon-popup b { color: #16a34a; }
 </style>
 
+<!-- ═══════════════════════════════════════════════════════
+     ОРИГИНАЛЬНЫЕ INLINE-СКРИПТЫ (логика UI, шаров, welcome)
+     ═══════════════════════════════════════════════════════ -->
 <script>
     // Регистрация ссылки в футере для открытия модалки авторизации
     document.addEventListener('DOMContentLoaded', function() {
@@ -482,7 +525,7 @@
     // 2. Логика приветственного окна с проверкой языка
     (function() {
         const WELCOME_KEY = 'welcome_shown';
-        
+
         const userLang = navigator.language || navigator.userLanguage;
         if (userLang.startsWith('ru')) {
             const title = document.querySelector('.welcome-title');
@@ -530,28 +573,7 @@
     })();
 </script>
 
-<script>
-    // Обработка клика по кнопке "How it Works" с определением языка
-    document.addEventListener('DOMContentLoaded', function() {
-        const howItWorksBtn = document.getElementById('howItWorksBtn');
-        
-        if (howItWorksBtn) {
-            howItWorksBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const userLang = navigator.language || navigator.userLanguage;
-                const isRussian = userLang.startsWith('ru');
-                
-                if (isRussian) {
-                    window.location.href = 'howorks.html';
-                } else {
-                    window.location.href = 'howorks_en.html';
-                }
-            });
-        }
-    });
-</script>
-
-<!-- NEW: скрипт отображения всех шаров -->
+<!-- NEW: скрипт отображения всех шаров (оставлен как был, но кнопки удалены из UI) -->
 <script>
 (function() {
     'use strict';
@@ -566,29 +588,10 @@
     let balloonLayer = null;
     let lastClickTime = 0;
 
-    const showBtn  = document.getElementById('showBalloonsBtn');
-    const hideBtn  = document.getElementById('hideBalloonsBtn');
-    const statusEl = document.getElementById('balloonsStatus');
-
-    function setStatus(text, visible) {
-        if (!statusEl) return;
-        statusEl.textContent = text || '';
-        statusEl.style.display = visible ? 'block' : 'none';
-    }
-
-    function showButtons(state) {
-        if (state === 'loaded') {
-            if (showBtn) showBtn.style.display = 'none';
-            if (hideBtn) hideBtn.style.display = 'block';
-        } else if (state === 'loading') {
-            if (showBtn) { showBtn.disabled = true; showBtn.textContent = '⏳ Loading...'; }
-            if (hideBtn) hideBtn.style.display = 'none';
-        } else {
-            if (showBtn) { showBtn.disabled = false; showBtn.textContent = '🌍 Show All Balloons'; showBtn.style.display = 'block'; }
-            if (hideBtn) hideBtn.style.display = 'none';
-        }
-    }
-
+    // Кнопки showBalloonsBtn / hideBalloonsBtn удалены из HTML.
+    // Оставляем функции доступными через window.AerostarBalloons на случай вызова из консоли.
+    function setStatus(text, visible) { /* no-op: UI статуса удалён */ }
+    function showButtons(state) { /* no-op */ }
     function balloonIcon() {
         return L.divIcon({
             className: 'balloon-div-icon',
@@ -617,16 +620,11 @@
     async function loadBalloons() {
         const map = getMapInstance();
         if (!map) {
-            console.warn('[Aerostar] Map is not ready yet');
-            setStatus('Map is still loading...', true);
             setTimeout(loadBalloons, 500);
             return;
         }
 
         lastClickTime = Date.now();
-
-        showButtons('loading');
-        setStatus('Loading balloons...', true);
 
         try {
             const response = await fetch('https://aerost.art/api/balloons', { cache: 'no-store' });
@@ -640,51 +638,29 @@
             }
 
             balloonLayer = L.layerGroup();
-
-            if (!Array.isArray(balloons) || balloons.length === 0) {
-                setStatus('No active balloons found', true);
-                showButtons('idle');
-                return;
-            }
+            if (!Array.isArray(balloons) || balloons.length === 0) return;
 
             balloons.forEach(function(b) {
                 if (typeof b.current_lat !== 'number' || typeof b.current_lng !== 'number') return;
-
                 const guestStatus = isGuest(b);
                 const displayName = guestStatus ? 'Guest' : maskEmail(b.email);
-
                 const marker = L.marker([b.current_lat, b.current_lng], {
                     icon: balloonIcon(),
-                    title: displayName 
+                    title: displayName
                 });
-
                 marker.bindPopup(
                     '<div style="font-family: system-ui, sans-serif; font-size: 14px; text-align: center;">' +
                         '<div style="font-size: 20px; margin-bottom: 4px;">🎈</div>' +
                         '<div><b>' + displayName + '</b></div>' +
                     '</div>'
                 );
-
                 balloonLayer.addLayer(marker);
             });
 
             balloonLayer.addTo(map);
 
-            try {
-                const group = new L.featureGroup(balloonLayer.getLayers());
-                if (group.getLayers().length > 0) {
-                    map.fitBounds(group.getBounds().pad(0.15), { animate: true, duration: 0.8 });
-                }
-            } catch (e) { /* ignore */ }
-
-            const snapTime = new Date(lastClickTime).toLocaleTimeString('en-US');
-            setStatus('Shown: ' + balloons.length + ' balloons (snapshot at ' + snapTime + ')', true);
-            showButtons('loaded');
-
         } catch (err) {
             console.error('[Aerostar] Error loading balloons:', err);
-            setStatus('Failed to load balloons', true);
-            showButtons('idle');
         }
     }
 
@@ -694,16 +670,26 @@
             map.removeLayer(balloonLayer);
             balloonLayer = null;
         }
-        setStatus('', false);
-        showButtons('idle');
     }
-
-    if (showBtn) showBtn.addEventListener('click', loadBalloons);
-    if (hideBtn) hideBtn.addEventListener('click', hideBalloons);
 
     window.AerostarBalloons = { load: loadBalloons, hide: hideBalloons };
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════
+     ОРИГИНАЛЬНЫЕ СКРИПТЫ ПРОЕКТА
+     ═══════════════════════════════════════════════════════ -->
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/balloon.js"></script>
+<script src="js/main.js"></script>
+
+<!-- ═══════════════════════════════════════════════════════
+     СКРИПТ СУЩЕСТВ (триггер по координатам шара)
+     ═══════════════════════════════════════════════════════ -->
+<script src="js/creatures.js"></script>
 
 </body>
 </html>
