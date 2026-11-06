@@ -1,148 +1,307 @@
-/* js/creatures.js — триггер мифических существ по координатам шара */
+/*
+ * js/creatures.js
+ *
+ * Географические встречи с мифическими существами.
+ *
+ * Модуль НЕ запускает демонстрационное движение и НЕ задаёт стартовые
+ * координаты шара. Он реагирует только на координаты, которые передаёт
+ * основной модуль полёта через AerostarCreatures.update(lat, lon).
+ *
+ * Запись существа:
+ * {
+ *   id: "cmok",
+ *   name: "Цмок",
+ *   lat: 52.1,
+ *   lon: 23.7,
+ *   radiusKm: 10,
+ *   img: "images/creatures/cmok.webp"
+ * }
+ */
 
 (function () {
-  'use strict';
+    'use strict';
 
-  /* ── База существ ──
-     В реальном проекте — загрузка из JSON (fetch).
-     radiusKm — радиус действия вокруг координаты.
-     img — путь к PNG/WebP с прозрачным фоном. */
-  const creatures = [
-    {
-      id: 'cmok',
-      name: 'Цмок',
-      lat: 52.1,
-      lon: 23.7,
-      radiusKm: 10,
-      img: 'images/creatures/cmok.webp'
-    },
-    {
-      id: 'zhezhik',
-      name: 'Жевжик',
-      lat: 52.15,
-      lon: 23.75,
-      radiusKm: 8,
-      img: 'images/creatures/zhezhik.webp'
-    }
-  ];
+    // ---------------------------------------------------------------------
+    // 1. База существ.
+    // Пока это тестовые записи. Позже их можно вынести в JSON/API.
+    // ---------------------------------------------------------------------
+    const creatures = [
+        {
+            id: 'cmok',
+            name: 'Цмок',
+            lat: 52.1,
+            lon: 23.7,
+            radiusKm: 10,
+            img: 'images/creatures/cmok.webp'
+        },
+        {
+            id: 'zhezhik',
+            name: 'Жевжик',
+            lat: 52.15,
+            lon: 23.75,
+            radiusKm: 8,
+            img: 'images/creatures/zhezhik.webp'
+        }
+    ];
 
-  /* ── DOM ── */
-  const overlay   = document.getElementById('creatureOverlay');
-  const imgEl     = document.getElementById('creatureImg');
-  const nameEl    = document.getElementById('creatureName');
-  const releaseBtn= document.getElementById('releaseBtn');
-  const caption   = document.getElementById('mapCaption');
+    // ---------------------------------------------------------------------
+    // 2. DOM-элементы. Если блоки не добавлены в HTML, модуль не падает.
+    // ---------------------------------------------------------------------
+    const overlay = document.getElementById('creatureOverlay');
+    const imgEl = document.getElementById('creatureImg');
+    const nameEl = document.getElementById('creatureName');
+    const releaseBtn = document.getElementById('releaseBtn');
+    const caption = document.getElementById('mapCaption');
 
-  if (!overlay) {
-    console.warn('[creatures] overlay не найден в DOM');
-    return;
-  }
-
-  let activeCreature = null;
-  let isAnimating = false;
-
-  /* ── Утилита: расстояние между координатами (км) ── */
-  function distanceKm(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2 +
-              Math.cos(lat1 * Math.PI / 180) *
-              Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }
-
-  /* ── Поиск существа рядом с координатой ── */
-  function findNearby(lat, lon) {
-    return creatures.find(c =>
-      distanceKm(lat, lon, c.lat, c.lon) <= c.radiusKm
-    ) || null;
-  }
-
-  /* ── Показать существо ── */
-  function showCreature(c) {
-    if (isAnimating || (activeCreature && activeCreature.id === c.id)) return;
-    isAnimating = true;
-    activeCreature = c;
-
-    imgEl.src = c.img;
-    nameEl.textContent = c.name;
-
-    overlay.classList.remove('is-large', 'is-leaving');
-
-    requestAnimationFrame(function () {
-      overlay.classList.add('is-appearing');
-      setTimeout(function () {
-        overlay.classList.add('is-large');
-        isAnimating = false;
-      }, 400);
-    });
-  }
-
-  /* ── Скрыть существо ── */
-  function hideCreature() {
-    if (!activeCreature) return;
-    overlay.classList.add('is-leaving');
-    overlay.classList.remove('is-large');
-
-    setTimeout(function () {
-      overlay.classList.remove('is-appearing', 'is-leaving');
-      activeCreature = null;
-      isAnimating = false;
-    }, 1000);
-  }
-
-  /* ── Кнопка «Отпустить» ── */
-  if (releaseBtn) {
-    releaseBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      hideCreature();
-    });
-  }
-
-  /* ── Проверка координат шара ──
-     Публичная функция: вызывайте её из js/balloon.js / main.js
-     каждый раз, когда обновляются координаты шара. */
-  function updateCreatures(lat, lon) {
-    // Подпись координат под картой
-    if (caption) {
-      caption.textContent =
-        'широта ' + lat.toFixed(3) + ', долгота ' + lon.toFixed(3);
+    if (!overlay || !imgEl || !nameEl) {
+        console.warn('[creatures] Не найдены creatureOverlay / creatureImg / creatureName');
+        return;
     }
 
-    const nearby = findNearby(lat, lon);
+    // ---------------------------------------------------------------------
+    // 3. Состояние модуля.
+    // lastPosition становится известна только после первого реального
+    // вызова update() из логики полёта.
+    // dismissedIds не позволяет снова показывать отпущенное существо,
+    // пока шар не покинет его географическую зону.
+    // ---------------------------------------------------------------------
+    let activeCreature = null;
+    let lastPosition = null;
+    let transitionTimer = null;
+    let transitionToken = 0;
+    let isLeaving = false;
 
-    if (nearby && (!activeCreature || activeCreature.id !== nearby.id)) {
-      showCreature(nearby);
-    } else if (!nearby && activeCreature && !isAnimating) {
-      hideCreature();
+    const dismissedIds = new Set();
+
+    // ---------------------------------------------------------------------
+    // 4. Расстояние по дуге большого круга (формула гаверсинусов).
+    // Возвращает расстояние в километрах.
+    // ---------------------------------------------------------------------
+    function distanceKm(lat1, lon1, lat2, lon2) {
+        const toRad = value => value * Math.PI / 180;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+
+        const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) *
+            Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) ** 2;
+
+        // Защита от погрешности округления, при которой a может
+        // незначительно выйти за диапазон [0, 1].
+        const safeA = Math.min(1, Math.max(0, a));
+        return 6371 * 2 * Math.atan2(Math.sqrt(safeA), Math.sqrt(1 - safeA));
     }
-  }
 
-  /* ── Экспорт для других скриптов ── */
-  window.AerostarCreatures = {
-    update: updateCreatures,
-    hide: hideCreature,
-    list: creatures
-  };
+    // Проверка координат на корректность.
+    function validCoordinates(lat, lon) {
+        return Number.isFinite(lat) &&
+            Number.isFinite(lon) &&
+            lat >= -90 && lat <= 90 &&
+            lon >= -180 && lon <= 180;
+    }
 
-  /* ── Демо-режим: если js/balloon.js не вызывает updateCreatures,
-     можно тестировать кликом по сцене (сдвиг на +0.01°). ── */
-  const scenePanel = document.getElementById('scenePanel');
-  let demoLat = 52.1;
-  let demoLon = 23.7;
-  if (scenePanel) {
-    scenePanel.addEventListener('click', function (e) {
-      if (e.target.closest('.creature-overlay')) return;
-      demoLat += 0.01;
-      demoLon += 0.01;
-      updateCreatures(demoLat, demoLon);
-    });
-  }
+    // ---------------------------------------------------------------------
+    // 5. Определение существ в зоне шара.
+    // Если несколько зон перекрываются, выбираем ближайшее существо.
+    // ---------------------------------------------------------------------
+    function findNearby(lat, lon) {
+        let nearest = null;
+        let nearestDistance = Infinity;
 
-  // Начальная инициализация подписи
-  updateCreatures(demoLat, demoLon);
+        for (const creature of creatures) {
+            const distance = distanceKm(lat, lon, creature.lat, creature.lon);
 
-  console.log('[creatures] модуль загружен. Существ в базе:', creatures.length);
+            if (distance <= creature.radiusKm && distance < nearestDistance) {
+                nearest = creature;
+                nearestDistance = distance;
+            }
+        }
+
+        return nearest;
+    }
+
+    function clearTransitionTimer() {
+        if (transitionTimer !== null) {
+            clearTimeout(transitionTimer);
+            transitionTimer = null;
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // 6. Показ существа.
+    // Токен перехода не даёт старому таймеру завершить уже новую анимацию.
+    // ---------------------------------------------------------------------
+    function showCreature(creature) {
+        if (activeCreature && activeCreature.id === creature.id && !isLeaving) {
+            return;
+        }
+
+        clearTransitionTimer();
+        const token = ++transitionToken;
+
+        activeCreature = creature;
+        isLeaving = false;
+
+        imgEl.alt = creature.name;
+        imgEl.onerror = function () {
+            console.error('[creatures] Не удалось загрузить изображение:', creature.img);
+        };
+        imgEl.src = creature.img;
+        nameEl.textContent = creature.name;
+
+        overlay.classList.remove('is-large', 'is-leaving', 'is-appearing');
+
+        // Сначала браузер фиксирует исходное состояние, затем запускает
+        // появление. Это позволяет CSS transition сработать предсказуемо.
+        requestAnimationFrame(function () {
+            if (token !== transitionToken) return;
+
+            overlay.classList.add('is-appearing');
+
+            transitionTimer = setTimeout(function () {
+                if (token !== transitionToken || !activeCreature ||
+                    activeCreature.id !== creature.id) return;
+
+                overlay.classList.add('is-large');
+                transitionTimer = null;
+            }, 80);
+        });
+    }
+
+    // ---------------------------------------------------------------------
+    // 7. Скрытие существа.
+    // immediate=true используется при замене существа или очистке.
+    // ---------------------------------------------------------------------
+    function hideCreature(options) {
+        const settings = options || {};
+        if (!activeCreature) return;
+
+        clearTransitionTimer();
+        const token = ++transitionToken;
+        isLeaving = true;
+
+        overlay.classList.remove('is-large');
+
+        if (settings.immediate) {
+            overlay.classList.remove('is-appearing', 'is-leaving');
+            activeCreature = null;
+            isLeaving = false;
+            return;
+        }
+
+        overlay.classList.add('is-leaving');
+
+        transitionTimer = setTimeout(function () {
+            if (token !== transitionToken) return;
+
+            overlay.classList.remove('is-appearing', 'is-leaving', 'is-large');
+            imgEl.removeAttribute('src');
+            nameEl.textContent = '';
+            activeCreature = null;
+            isLeaving = false;
+            transitionTimer = null;
+        }, 700);
+    }
+
+    // ---------------------------------------------------------------------
+    // 8. Ручное отпускание.
+    // Запоминаем ID существа. Оно не появится снова, пока шар не выйдет
+    // за радиус его зоны. Это исключает повторное всплытие при каждом
+    // очередном обновлении координат.
+    // ---------------------------------------------------------------------
+    function releaseActiveCreature() {
+        if (!activeCreature) return;
+
+        dismissedIds.add(activeCreature.id);
+        hideCreature();
+    }
+
+    if (releaseBtn) {
+        releaseBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            releaseActiveCreature();
+        });
+    }
+
+    // ---------------------------------------------------------------------
+    // 9. Обновление положения шара.
+    // Вызывается только основным кодом полёта:
+    // window.AerostarCreatures.update(currentLat, currentLon)
+    // ---------------------------------------------------------------------
+    function updateCreatures(lat, lon) {
+        lat = Number(lat);
+        lon = Number(lon);
+
+        if (!validCoordinates(lat, lon)) {
+            console.warn('[creatures] Получены некорректные координаты:', lat, lon);
+            return;
+        }
+
+        lastPosition = { lat, lon };
+
+        if (caption) {
+            caption.textContent =
+                'широта ' + lat.toFixed(3) + ', долгота ' + lon.toFixed(3);
+        }
+
+        // Сбрасываем запрет повторного показа только после фактического
+        // выхода шара из радиуса соответствующего существа.
+        for (const creature of creatures) {
+            if (dismissedIds.has(creature.id)) {
+                const distance = distanceKm(lat, lon, creature.lat, creature.lon);
+                if (distance > creature.radiusKm) {
+                    dismissedIds.delete(creature.id);
+                }
+            }
+        }
+
+        const nearby = findNearby(lat, lon);
+
+        // Если активное существо больше не в зоне шара — скрываем.
+        if (activeCreature) {
+            const activeDistance = distanceKm(
+                lat, lon, activeCreature.lat, activeCreature.lon
+            );
+
+            if (activeDistance > activeCreature.radiusKm) {
+                hideCreature();
+            }
+        }
+
+        // Не показываем новое существо, пока предыдущее уходит.
+        if (!nearby || dismissedIds.has(nearby.id) || isLeaving) {
+            return;
+        }
+
+        if (!activeCreature) {
+            showCreature(nearby);
+            return;
+        }
+
+        // Если зоны пересеклись, переключаемся на ближайшее существо.
+        if (activeCreature.id !== nearby.id) {
+            hideCreature({ immediate: true });
+            showCreature(nearby);
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // 10. Публичный API. Никаких демо-кликов и тестового вызова при загрузке.
+    // ---------------------------------------------------------------------
+    window.AerostarCreatures = {
+        update: updateCreatures,
+        hide: function () {
+            if (activeCreature) dismissedIds.add(activeCreature.id);
+            hideCreature();
+        },
+        list: creatures,
+        getPosition: function () {
+            return lastPosition ? { ...lastPosition } : null;
+        }
+    };
+
+    console.log('[creatures] Модуль загружен. Существ в базе:', creatures.length);
 })();
