@@ -121,7 +121,7 @@ body {
 
     background: rgba(0,0,0,0);
 
-    //backdrop-filter: blur(18px);
+    /* backdrop-filter: blur(18px); */
 
     border: 1px solid rgba(255,255,255,0.1);
 
@@ -1030,4 +1030,84 @@ body {
         bottom: 15px;
         right: 15px;
     }
+}
+
+/* =========================================================
+   GAME_2 — FULLSCREEN MAP OVERRIDES
+   The map is the background of the entire game screen.
+   ========================================================= */
+
+html,
+body {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+/* Defensive cleanup for fragments of the previous split-screen layout. */
+#scenePanel,
+#scene-panel,
+.scene-panel,
+.scene-container,
+.scene-panel-container {
+    display: none !important;
+}
+
+#app {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 420px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+#app > .map-panel {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+#app #map {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0;
+    z-index: 1;
+}
+
+/* Canvas and creature are transparent overlays above the map. */
+#app #haze-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 650;
+}
+
+#app .creature-overlay {
+    z-index: 1100;
+}
+
+/* Avoid legacy CSS forcing the map or its parent into a column/grid. */
+#app,
+#app > .map-panel {
+    grid-template-columns: none !important;
+    flex: none !important;
 }
