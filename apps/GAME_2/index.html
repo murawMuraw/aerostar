@@ -1,1 +1,709 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1200">
+    <title>Real Wind Hot Air Balloon Flight Simulator | Live Wind Data</title>
+    <meta name="description" content="Fly a virtual hot air balloon with real-time wind data. Choose any location on Earth and drift with live wind speed and direction. Free, no ads, no signup.">
+    <meta name="keywords" content="hot air balloon, flight simulator, real wind, live wind data, virtual balloon, wind simulator, interactive map, live wind map, balloon tracking">
+    <meta name="author" content="Aerostar">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content="Real Wind Hot Air Balloon Flight Simulator">
+    <meta property="og:description" content="Fly a virtual balloon with live wind data anywhere on Earth. Free, no ads.">
+    <meta property="og:image" content="https://aerost.art/images/preview.jpg">
+    <meta property="og:url" content="https://aerost.art">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Real Wind Hot Air Balloon Flight Simulator">
+    <meta name="twitter:description" content="Fly with live wind data. Free. No ads.">
+    
+    <!-- Leaflet connection -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="css/styles.css" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://aerost.art/">
+    <script defer src="https://cloud.umami.is/script.js" data-website-id="059675cf-3a0e-433a-9b94-bff4ab226452"></script>
+    
+</head>
+<body>
+
+<!-- SEO H1 (visually hidden) -->
+<h1 class="seo-h1">Real-Time Hot Air Balloon Flight Simulator with Live Wind Data</h1>
+
+<!-- Welcome Modal -->
+<div id="welcomeModal" class="welcome-modal" style="display: none;">
+    <div class="welcome-container">
+        <div class="welcome-content">
+            <div class="welcome-icon">🎈</div>
+            <div class="welcome-title">Welcome to Aerostar!</div>
+            <div class="welcome-text">
+                <p>Enjoy a virtual hot air balloon flight.</p>
+                <p>Pick any starting point and your balloon will fly according to <strong>real wind data</strong> in that area.</p>
+            </div>
+            <div class="welcome-features">
+                <h4>📋 How it works:</h4>
+                <ul>
+                    <li>🎯 Click on the map to choose a starting point</li>
+                    <li>🚀 Press "START" to begin the flight</li>
+                    <li>🌬️ The balloon moves based on real-time wind data</li>
+                    <li>👥 You can fly as a Guest (session ends when browser closes)</li>
+                    <li>🔐 <strong>Register</strong> to keep your flight going for days</li>
+                </ul>
+            </div>
+            <div class="welcome-buttons">
+                <button class="welcome-btn welcome-btn-primary" id="closeWelcomeBtn">Let's fly! 🎈</button>
+            </div>
+            <div class="dont-show-again" id="dontShowAgain">
+                <input type="checkbox" id="dontShowCheckbox"> Don't show again
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<!-- Support Banner -->
+<div id="support-banner">
+    <div class="support-content">
+        <span class="support-icon">🎈</span>
+        <div class="support-text">
+            <div class="support-title">Enjoying the flight?</div>
+            <div class="support-subtitle">Support real-time balloon exploration</div>
+        </div>
+        <a href="https://patreon.com/aerostart"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="support-button">
+            Patreon
+        </a>
+        <button id="close-ad" class="close-button">✕</button>
+    </div>
+</div>
+
+<canvas id="haze-canvas"></canvas>
+
+<!-- Profile Button -->
+<div id="profileButton" class="profile-btn">
+    <span>👤</span>
+    <span id="profileStatus">Guest</span>
+</div>
+
+<!-- Auth Modal -->
+<div id="authModal" class="auth-modal hidden">
+    <div class="auth-container">
+        <div class="auth-tabs">
+            <div class="auth-tab active" data-tab="login">Login</div>
+            <div class="auth-tab" data-tab="register">Register</div>
+        </div>
+        <div id="loginForm" class="auth-form">
+            <input type="email" id="loginEmail" placeholder="Email">
+            <input type="password" id="loginPassword" placeholder="Password">
+            <button id="loginBtn">Login</button>
+            <div id="loginError" class="auth-error"></div>
+        </div>
+        <div id="registerForm" class="auth-form hidden">
+            <input type="email" id="regEmail" placeholder="Email">
+            <input type="password" id="regPassword" placeholder="Password (min. 6 chars)">
+            <button id="registerBtn">Create Account</button>
+            <div id="regError" class="auth-error"></div>
+        </div>
+        <div style="text-align: center; margin-top: 15px; font-size: 12px; color: #999;">
+            <button id="continueGuestBtn" style="background: none; border: none; color: #4285f4; cursor: pointer;">Continue as Guest</button>
+        </div>
+    </div>
+</div>
+
+<div class="left-controls">
+    <button class="custom-button" id="startBtn" disabled>▶ START</button>
+    <button class="custom-button" id="resetBtn">🗑️ Reset</button>
+</div>
+
+<div class="info-panel">
+    <h3 style="margin: 0 0 10px 0;">🎈 Balloon Info</h3>
+    <div class="coord-display" id="coordinates"> --<br> --</div>
+    <div class="wind-info" id="windInfo">
+        <div>🌬️ Wind --</div>
+        <div>🧭 Direction --</div>
+        <div>📏 Speed -- m/s</div>
+        <div>🌡️ Temp: -- °C</div>
+        <div>☔ Precip: -- mm/h</div>
+    </div>
+    <div class="flight-status status-ready" id="flightStatus">⏸️ Waiting for start</div>
+    <div id="placeInfo" style="margin-top: 15px; padding: 10px; background: #f9f9f9; border-radius: 8px; display: none; border-left: 3px solid #ff9800;">
+        <div id="placeName" style="font-weight: bold; color: #333; margin-bottom: 8px;"></div>
+        <div id="placeLink" style="margin-top: 5px;"></div>
+    </div>
+</div>
+
+<div style="position: fixed; bottom: 30px; right: 30px; z-index: 9999; display: flex; flex-direction: column; gap: 15px; width: 260px;">
+    <!-- КНОПКА: Как это работает (с определением языка) -->
+    <a href="#" id="howItWorksBtn" 
+       style="background: linear-gradient(135deg, #00b4d8 0%, #0077b6 100%); color: white; padding: 14px 24px; text-decoration: none; border-radius: 50px; font-size: 16px; font-weight: bold; text-align: center; display: block; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;"
+       onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 6px 20px rgba(0,180,216,0.4)';"
+       onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.2)';">
+        📖 How it Works
+    </a>
+    
+    <a href="/watch.html"         
+   class="live-balloon-btn"
+   style="color: white; padding: 14px 24px 14px 35px; text-decoration: none; border-radius: 50px; font-size: 16px; font-weight: bold; text-align: center; display: block; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+    Live Balloon
+</a>
+    <a href="/lab.html"
+   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+   color: white;
+   padding: 14px 24px;
+   text-decoration: none;
+   border-radius: 50px;
+   font-size: 16px;
+   font-weight: bold;
+   text-align: center;
+   display: block;
+   box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+   cursor: pointer;">
+    🧪 Atmosphere Lab
+</a>
+
+    <!-- NEW: кнопки управления шарами -->
+    <button id="showBalloonsBtn"
+        style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+        color: white;
+        padding: 14px 24px;
+        border: none;
+        border-radius: 50px;
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+        display: block;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;"
+        onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 6px 20px rgba(22,163,74,0.4)';"
+        onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.2)';">
+        🌍 Show All Balloons
+    </button>
+
+    <button id="hideBalloonsBtn" style="display: none; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; padding: 14px 24px; border: none; border-radius: 50px; font-size: 16px; font-weight: bold; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 6px 20px rgba(220,38,38,0.4)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.2)';">
+        ❌ Hide Foreign Balloons
+    </button>
+
+    <div id="balloonsStatus" style="font-size: 12px; color: #666; text-align: center; background: rgba(255,255,255,0.9); border-radius: 20px; padding: 6px 12px; display: none;"></div>
+    <!-- /NEW -->
+</div>
+
+
+<div class="hint" id="hint">👆 Click on the map to set a start location</div>
+<div class="loading" id="loading">
+    <div class="loading-status">Loading Map... 🗺️</div>
+    <div class="loading-description">
+        <h2>Launch a virtual hot air balloon anywhere on Earth</h2>
+        <p>and watch it drift using real weather forecasts</p>
+    </div>
+</div>
+
+
+<!-- SEO Footer (visible content for search engines) -->
+<footer class="seo-footer">
+    <div class="seo-footer-content">
+        <h2>How the Virtual Balloon Works with Live Wind</h2>
+        <p><strong>Aerostar</strong> is a free virtual hot air balloon flight simulator powered by <strong>real-time wind data</strong>. Click anywhere on the map, press START, and watch your balloon drift according to actual meteorological conditions — wind speed, direction, and gusts — at that exact location anywhere on Earth.</p>
+        
+        <h3>Real Wind Simulation Technology</h3>
+        <p>The balloon responds to live wind data including speed (measured in meters per second), direction in degrees, and local gusts. Unlike most simulators that use random or pre-programmed wind patterns, Aerostar fetches current weather conditions from global meteorological sources. The simulation covers the entire planet — from mountain thermals in the Swiss Alps to consistent ocean breezes across the Pacific.</p>
+        
+        <h3>Free and No Registration Required</h3>
+        <p>You can fly as a guest immediately — the balloon will drift until you close your browser. For longer flights that persist across browser sessions and days of drifting, you can <a href="#" id="registerLinkFooter">create a free account</a>. No credit card required. No hidden fees. No ads. No trackers.</p>
+        
+        <h3>Why Real Wind Matters</h3>
+        <p>Traditional balloon simulators use fake or predictable wind. Real wind creates <strong>authentic, unpredictable journeys</strong>. A launch over the Rocky Mountains behaves differently than a launch above the Amazon rainforest. You might drift into unexpected weather patterns, experience calm mornings with gentle breezes, or get carried by stronger afternoon gusts. Every flight is unique.</p>
+        
+        <h3>Technical Details</h3>
+        <p>Wind data updates regularly from real-time meteorological APIs. The balloon's altitude is simulated at approximately 500 meters above ground level — where wind patterns differ significantly from surface conditions. Coordinates update every few seconds as the balloon drifts. The simulation is purely for relaxation and exploration — no competitive elements, no scores, no timers.</p>
+        
+        <h2 style="text-align: center; margin-top: 2rem;">🎈 Let's see where the wind takes us! 🎈</h2>
+        
+        <div class="support-footer-box">
+            <h3>Support Independent Web Projects</h3>
+            <p>Aerostar is entirely funded by voluntary donations. Server costs for live wind data APIs and cloud hosting are the only expenses. If you enjoy watching the balloon drift over Patagonia, the Norwegian fjords, or the Sahara Desert, please consider a small contribution to keep the wind blowing.</p>
+            <div style="text-align: center; margin: 1.5rem 0;">
+                <a href="/support.html" class="support-footer-button">🎈 Support Aerostar →</a>
+                <a href="https://patreon.com/aerostart" target="_blank" rel="noopener noreferrer" class="patreon-footer-button">Become a Patreon</a>
+            </div>
+        </div>
+        
+        <div class="seo-footer-links">
+            <a href="/about.html">About</a> |
+            <a href="/support.html">Support the Project</a> |
+            <a href="/privacy.html">Privacy Policy</a>
+        </div>
+        
+        <p class="seo-footer-copy">&copy; 2025 Aerostar — Real wind. Real flight. No ads. No trackers.</p>
+    </div>
+</footer>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/balloon.js"></script>
+<script src="js/main.js"></script>
+
+<style>
+    /* SEO hidden H1 */
+    .seo-h1 {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+    }
+    
+    /* SEO Footer styles */
+    .seo-footer {
+        background: #1a1a2e;
+        color: #ccc;
+        padding: 2rem 1rem;
+        margin-top: 2rem;
+        font-family: system-ui, -apple-system, sans-serif;
+        line-height: 1.6;
+        border-top: 1px solid #333;
+    }
+    .seo-footer-content {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    .seo-footer h2 {
+        color: #ff9800;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .seo-footer h3 {
+        color: #ffb74d;
+        font-size: 1.2rem;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+    .seo-footer a {
+        color: #ff9800;
+        text-decoration: none;
+    }
+    .seo-footer a:hover {
+        text-decoration: underline;
+    }
+    .seo-footer-links {
+        margin: 1.5rem 0;
+        text-align: center;
+        font-size: 0.9rem;
+    }
+    .seo-footer-copy {
+        text-align: center;
+        font-size: 0.8rem;
+        color: #888;
+        margin-top: 1rem;
+    }
+    .support-footer-box {
+        background: #0f3460;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+        text-align: center;
+    }
+    .support-footer-button, .patreon-footer-button {
+        display: inline-block;
+        background: #ff9800;
+        color: #1a1a2e;
+        padding: 0.75rem 1.5rem;
+        border-radius: 40px;
+        font-weight: bold;
+        margin: 0.5rem;
+        transition: transform 0.2s, background 0.2s;
+    }
+    .patreon-footer-button {
+        background: #f96854;
+        color: white;
+    }
+    .support-footer-button:hover, .patreon-footer-button:hover {
+        transform: scale(1.05);
+        text-decoration: none;
+    }
+    .support-footer-button:hover {
+        background: #ffb74d;
+    }
+    .patreon-footer-button:hover {
+        background: #ff7a66;
+    }
+    @media (max-width: 768px) {
+        .seo-footer {
+            padding: 1rem;
+            font-size: 0.9rem;
+        }
+        .seo-footer h2 {
+            font-size: 1.3rem;
+        }
+        .seo-footer h3 {
+            font-size: 1.1rem;
+        }
+        .support-footer-button, .patreon-footer-button {
+            display: block;
+            margin: 0.5rem auto;
+            text-align: center;
+        }
+    }
+
+/* Настройки для самого контейнера загрузки */
+#loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    text-align: center;
+    background: #1a1a1a;
+    color: #ffffff;
+}
+
+.loading-status {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.loading-description {
+    max-width: 500px;
+    padding: 0 20px;
+    animation: fadeIn 1s ease-in-out;
+}
+
+.loading-description h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    line-height: 1.4;
+    color: #ffffff;
+}
+
+.loading-description p {
+    font-size: 0.95rem;
+    color: #b3b3b3;
+    margin: 0;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Мигающая кнопка Live Balloon */
+.live-balloon-btn {
+    position: relative;
+    animation: liveStrongPulse 0.9s infinite;
+    background: linear-gradient(135deg, #ff0000 0%, #ff6a00 100%) !important;
+    box-shadow: 0 0 25px rgba(255,0,0,0.8) !important;
+}
+
+.live-balloon-btn::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 50px;
+    background: rgba(255,0,0,0.35);
+    animation: liveRing 0.9s infinite;
+    z-index: -1;
+}
+
+.live-balloon-btn::after {
+    content: '●';
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    font-size: 14px;
+    animation: liveDot 0.5s infinite;
+}
+
+@keyframes liveStrongPulse {
+    0%,100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.08); filter: brightness(1.4); }
+}
+
+@keyframes liveRing {
+    0% { opacity: 0.8; transform: scale(0.95); }
+    100% { opacity: 0; transform: scale(1.25); }
+}
+
+@keyframes liveDot {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.2; }
+}
+
+/* NEW: стиль иконки маркера шара */
+.balloon-div-icon {
+    background: none;
+    border: none;
+    font-size: 24px;
+    line-height: 24px;
+    text-align: center;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+}
+
+/* NEW: выделяем popup шаров */
+.balloon-popup b { color: #16a34a; }
+</style>
+
+<script>
+    // Регистрация ссылки в футере для открытия модалки авторизации
+    document.addEventListener('DOMContentLoaded', function() {
+        const footerRegLink = document.getElementById('registerLinkFooter');
+        if (footerRegLink) {
+            footerRegLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                const profileBtn = document.getElementById('profileButton');
+                if (profileBtn) profileBtn.click();
+            });
+        }
+    });
+
+    // 1. Логика Patreon баннера (закрытие)
+    const closeAdBtn = document.getElementById('close-ad');
+    if (closeAdBtn) {
+        closeAdBtn.addEventListener('click', () => {
+            document.getElementById('support-banner').style.display = 'none';
+        });
+    }
+
+    // 2. Логика приветственного окна с проверкой языка
+    (function() {
+        const WELCOME_KEY = 'welcome_shown';
+        
+        const userLang = navigator.language || navigator.userLanguage;
+        if (userLang.startsWith('ru')) {
+            const title = document.querySelector('.welcome-title');
+            const text = document.querySelector('.welcome-text');
+            const features = document.querySelector('.welcome-features');
+            const btn = document.getElementById('closeWelcomeBtn');
+            const dontShow = document.getElementById('dontShowAgain');
+
+            if (title) title.textContent = "Добро пожаловать в Aerostar!";
+            if (text) text.innerHTML = `
+                <p>Здесь можно полетать на виртуальном воздушном шаре.</p>
+                <p>Выберите любую точку старта и ваш аэростат полетит в соответствии с <strong>реальным ветром</strong> в этой местности.</p>
+            `;
+            if (features) features.innerHTML = `
+                <h4>📋 Как это работает:</h4>
+                <ul>
+                    <li>🎯 Кликните на карту - выберите точку старта</li>
+                    <li>🚀 Нажмите "СТАРТ" - шар начнет полет</li>
+                    <li>🌬️ Шар движется по реальным данным ветра</li>
+                    <li>👥 Можно летать как гость (шар исчезнет при закрытии браузера)</li>
+                    <li>🔐 Чтобы лететь сутками - <strong>зарегистрируйтесь</strong></li>
+                </ul>
+            `;
+            if (btn) btn.textContent = "Полетели! 🎈";
+            if (dontShow) dontShow.innerHTML = '<input type="checkbox" id="dontShowCheckbox"> Не показывать снова';
+        }
+
+        if (!localStorage.getItem(WELCOME_KEY)) {
+            setTimeout(() => {
+                const modal = document.getElementById('welcomeModal');
+                if (modal) modal.style.display = 'flex';
+            }, 500);
+        }
+
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'closeWelcomeBtn') {
+                const modal = document.getElementById('welcomeModal');
+                const dontShowCheckbox = document.getElementById('dontShowCheckbox');
+                if (dontShowCheckbox && dontShowCheckbox.checked) {
+                    localStorage.setItem(WELCOME_KEY, 'true');
+                }
+                if (modal) modal.style.display = 'none';
+            }
+        });
+    })();
+</script>
+
+<script>
+    // Обработка клика по кнопке "How it Works" с определением языка
+    document.addEventListener('DOMContentLoaded', function() {
+        const howItWorksBtn = document.getElementById('howItWorksBtn');
+        
+        if (howItWorksBtn) {
+            howItWorksBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const userLang = navigator.language || navigator.userLanguage;
+                const isRussian = userLang.startsWith('ru');
+                
+                if (isRussian) {
+                    window.location.href = 'howorks.html';
+                } else {
+                    window.location.href = 'howorks_en.html';
+                }
+            });
+        }
+    });
+</script>
+
+<!-- NEW: скрипт отображения всех шаров -->
+<script>
+(function() {
+    'use strict';
+
+    function getMapInstance() {
+        if (typeof window.map !== 'undefined' && window.map instanceof L.Map) {
+            return window.map;
+        }
+        return window.map || null;
+    }
+
+    let balloonLayer = null;
+    let lastClickTime = 0;
+
+    const showBtn  = document.getElementById('showBalloonsBtn');
+    const hideBtn  = document.getElementById('hideBalloonsBtn');
+    const statusEl = document.getElementById('balloonsStatus');
+
+    function setStatus(text, visible) {
+        if (!statusEl) return;
+        statusEl.textContent = text || '';
+        statusEl.style.display = visible ? 'block' : 'none';
+    }
+
+    function showButtons(state) {
+        if (state === 'loaded') {
+            if (showBtn) showBtn.style.display = 'none';
+            if (hideBtn) hideBtn.style.display = 'block';
+        } else if (state === 'loading') {
+            if (showBtn) { showBtn.disabled = true; showBtn.textContent = '⏳ Loading...'; }
+            if (hideBtn) hideBtn.style.display = 'none';
+        } else {
+            if (showBtn) { showBtn.disabled = false; showBtn.textContent = '🌍 Show All Balloons'; showBtn.style.display = 'block'; }
+            if (hideBtn) hideBtn.style.display = 'none';
+        }
+    }
+
+    function balloonIcon() {
+        return L.divIcon({
+            className: 'balloon-div-icon',
+            html: '🎈',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+            popupAnchor: [0, -12]
+        });
+    }
+
+    function isGuest(balloon) {
+        if (balloon.email === 'guest@aerost.art') return true;
+        if (balloon.id && balloon.id.startsWith('guest_')) return true;
+        if (balloon.user_id && balloon.user_id.startsWith('guest_')) return true;
+        if (!balloon.email || balloon.email.toLowerCase().includes('guest')) return true;
+        return false;
+    }
+
+    function maskEmail(email) {
+        if (!email || !email.includes('@')) return 'Pilot';
+        const [name, domain] = email.split('@');
+        if (name.length <= 2) return name + '***@' + domain;
+        return name.substring(0, 2) + '***@' + domain;
+    }
+
+    async function loadBalloons() {
+        const map = getMapInstance();
+        if (!map) {
+            console.warn('[Aerostar] Map is not ready yet');
+            setStatus('Map is still loading...', true);
+            setTimeout(loadBalloons, 500);
+            return;
+        }
+
+        lastClickTime = Date.now();
+
+        showButtons('loading');
+        setStatus('Loading balloons...', true);
+
+        try {
+            const response = await fetch('https://aerost.art/api/balloons', { cache: 'no-store' });
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+
+            const balloons = await response.json();
+
+            if (balloonLayer) {
+                map.removeLayer(balloonLayer);
+                balloonLayer = null;
+            }
+
+            balloonLayer = L.layerGroup();
+
+            if (!Array.isArray(balloons) || balloons.length === 0) {
+                setStatus('No active balloons found', true);
+                showButtons('idle');
+                return;
+            }
+
+            balloons.forEach(function(b) {
+                if (typeof b.current_lat !== 'number' || typeof b.current_lng !== 'number') return;
+
+                const guestStatus = isGuest(b);
+                const displayName = guestStatus ? 'Guest' : maskEmail(b.email);
+
+                const marker = L.marker([b.current_lat, b.current_lng], {
+                    icon: balloonIcon(),
+                    title: displayName 
+                });
+
+                marker.bindPopup(
+                    '<div style="font-family: system-ui, sans-serif; font-size: 14px; text-align: center;">' +
+                        '<div style="font-size: 20px; margin-bottom: 4px;">🎈</div>' +
+                        '<div><b>' + displayName + '</b></div>' +
+                    '</div>'
+                );
+
+                balloonLayer.addLayer(marker);
+            });
+
+            balloonLayer.addTo(map);
+
+            try {
+                const group = new L.featureGroup(balloonLayer.getLayers());
+                if (group.getLayers().length > 0) {
+                    map.fitBounds(group.getBounds().pad(0.15), { animate: true, duration: 0.8 });
+                }
+            } catch (e) { /* ignore */ }
+
+            const snapTime = new Date(lastClickTime).toLocaleTimeString('en-US');
+            setStatus('Shown: ' + balloons.length + ' balloons (snapshot at ' + snapTime + ')', true);
+            showButtons('loaded');
+
+        } catch (err) {
+            console.error('[Aerostar] Error loading balloons:', err);
+            setStatus('Failed to load balloons', true);
+            showButtons('idle');
+        }
+    }
+
+    function hideBalloons() {
+        const map = getMapInstance();
+        if (map && balloonLayer) {
+            map.removeLayer(balloonLayer);
+            balloonLayer = null;
+        }
+        setStatus('', false);
+        showButtons('idle');
+    }
+
+    if (showBtn) showBtn.addEventListener('click', loadBalloons);
+    if (hideBtn) hideBtn.addEventListener('click', hideBalloons);
+
+    window.AerostarBalloons = { load: loadBalloons, hide: hideBalloons };
+})();
+</script>
+
+</body>
+</html>
