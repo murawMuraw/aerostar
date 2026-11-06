@@ -63,42 +63,46 @@
     </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════
-     ОСНОВНОЙ ДВУХКОЛОНОЧНЫЙ LAYOUT
-     ═══════════════════════════════════════════════════════ -->
-<div class="app">
-
-    <!-- ═══ ЛЕВАЯ КОЛОНКА: карта-навигация (зум 2, статичная) ═══ -->
-    <div class="map-panel">
+<!--
+  GAME_2: основной экран приложения.
+  Одна интерактивная карта Leaflet занимает всю рабочую область.
+  js/main.js добавляет на неё спутниковый слой ESRI, маркеры,
+  прогноз ветра и траекторию. Отдельной искусственной сцены нет.
+-->
+<div class="app" id="app">
+    <main class="map-panel" aria-label="Aerostar flight map">
+        <!-- Главная карта. Не отключать pointer-events:
+             main.js обрабатывает клики по ней для выбора старта. -->
         <div id="map"></div>
-        <div class="map-caption" id="mapCaption">широта —, долгота —</div>
-    </div>
 
-    <!-- ═══ ПРАВАЯ КОЛОНКА: сцена полёта ═══ -->
-    <div class="scene-panel" id="scenePanel">
+        <!-- Атмосферная зона, которую рисует balloon.js.
+             Canvas прозрачен для мыши и не мешает Leaflet. -->
+        <canvas id="haze-canvas" aria-hidden="true"></canvas>
 
-        <!-- Атмосферная дымка (canvas, управляется js/main.js если он его использует) -->
-        <canvas id="haze-canvas"></canvas>
+        <!-- Координаты выбранной точки / текущего положения шара. -->
+        <div class="map-caption" id="mapCaption" aria-live="polite">
+            широта —, долгота —
+        </div>
 
-        <!-- OVERLAY СУЩЕСТВА -->
-        <div class="creature-overlay" id="creatureOverlay">
+        <!-- Изображение мифического существа поверх спутниковой карты.
+             Классы анимации добавляет js/creatures.js. -->
+        <div class="creature-overlay" id="creatureOverlay" aria-live="polite">
             <img id="creatureImg" src="" alt="Мифическое существо">
-            <button class="release-btn" id="releaseBtn" title="Отпустить">✕</button>
+            <button class="release-btn" id="releaseBtn" type="button"
+                    title="Отпустить существо" aria-label="Отпустить существо">✕</button>
             <div class="creature-name" id="creatureName"></div>
         </div>
 
-        <!-- Кнопки управления (перенесены из старого .left-controls) -->
-        <div class="scene-controls">
-            <button class="custom-button" id="startBtn" disabled>▶ START</button>
-            <button class="custom-button" id="resetBtn">🗑️ Reset</button>
+        <!-- Кнопки: их ID используются обработчиками в js/main.js. -->
+        <div class="map-controls">
+            <button class="custom-button" id="startBtn" type="button" disabled>▶ START</button>
+            <button class="custom-button" id="resetBtn" type="button">🗑️ Reset</button>
         </div>
 
-        <!-- Подсказка (перенесена из глобального слоя) -->
-        <div class="hint scene-hint" id="hint">👆 Click on the map to set a start location</div>
-    </div>
-
+        <!-- Подсказка выбора места старта. -->
+        <div class="map-hint" id="hint">👆 Click on the map to set a start location</div>
+    </main>
 </div>
-<!-- ═══════════════════════════════════════════════════════ -->
 
 <!-- Support Banner (оставлено как было) -->
 <div id="support-banner">
@@ -196,311 +200,207 @@
     </div>
 </footer>
 
-<!-- ═══════════════════════════════════════════════════════
-     СТИЛИ ДВУХКОЛОНОЧНОГО LAYOUT + OVERLAY
-     (переопределяют/дополняют css/styles.css)
-     ═══════════════════════════════════════════════════════ -->
+<!-- Стили полноэкранной спутниковой карты и наложенного изображения существа. -->
 <style>
-    /* SEO hidden H1 */
+    /* Скрытый H1 сохраняет SEO-заголовок, не занимая место на экране. */
     .seo-h1 {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        border: 0;
+        position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+        overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
     }
 
-    /* ── Базовый layout ── */
     html, body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
+        margin: 0; padding: 0; width: 100%; min-height: 100%;
         font-family: system-ui, -apple-system, sans-serif;
-        background: #0b0f14;
-        overflow-x: hidden;
+        background: #0b0f14; overflow-x: hidden;
     }
+    body { overflow-y: auto; }
 
-    body {
-        /* Разрешаем вертикальный скролл, чтобы футер был доступен */
-        overflow-y: auto;
-    }
-
+    /* Рабочая область карты занимает всё окно браузера. */
     .app {
-        display: grid;
-        grid-template-columns: 30% 70%;
-        width: 100vw;
-        height: 100vh;
-        overflow: hidden;
+        position: relative; width: 100%; height: 100vh;
+        min-height: 420px; overflow: hidden;
     }
-
-    /* ── ЛЕВАЯ КОЛОНКА: карта ── */
     .map-panel {
-        position: relative;
-        background: #111;
-        border-right: 1px solid rgba(255,255,255,0.08);
-        z-index: 2;
-        overflow: hidden;
+        position: absolute; inset: 0; overflow: hidden;
+        background: #111; isolation: isolate;
     }
 
+    /* Важно: pointer-events должны оставаться включёнными —
+       main.js ловит здесь клики для выбора места запуска. */
     #map {
-        width: 100%;
-        height: 100%;
-        /* Карта статична: пользователь её не двигает */
-        pointer-events: none;
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        z-index: 1; background: #111;
+    }
+
+    /* Прозрачный canvas рисует атмосферную зону и не перехватывает мышь. */
+    #haze-canvas {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        z-index: 650; pointer-events: none; opacity: .4;
     }
 
     .map-caption {
-        position: absolute;
-        bottom: 10px;
-        left: 12px;
-        font-size: 11px;
-        color: rgba(255,255,255,0.6);
-        background: rgba(0,0,0,0.5);
-        padding: 4px 8px;
-        border-radius: 6px;
-        z-index: 500;
-        backdrop-filter: blur(4px);
-    }
-
-    /* ── ПРАВАЯ КОЛОНКА: сцена полёта ── */
-    .scene-panel {
-        position: relative;
-        overflow: hidden;
-        /* Стилизованный «низкий полёт»: небо → горизонт → земля */
-        background:
-            linear-gradient(
-                to bottom,
-                #7fb4e0 0%,
-                #a9cbe8 30%,
-                #d6e6f2 52%,
-                #b8c9a8 55%,
-                #7e9464 70%,
-                #4f6340 100%
-            );
-    }
-
-    /* Атмосферная дымка */
-    #haze-canvas {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
+        position: absolute; left: 14px; bottom: 14px; z-index: 1200;
+        max-width: calc(100% - 28px); padding: 6px 10px;
+        border: 1px solid rgba(255,255,255,.14); border-radius: 8px;
+        color: rgba(255,255,255,.9); background: rgba(0,0,0,.58);
+        backdrop-filter: blur(8px);
+        font: 12px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
         pointer-events: none;
-        opacity: 0.4;
-        z-index: 1;
     }
 
-    /* ── OVERLAY СУЩЕСТВА ── */
+    /* Существо — HTML-слой поверх настоящей карты, не отдельный фон. */
     .creature-overlay {
-        position: absolute;
-        left: 60%;
-        top: 52%;
-        width: 15%;
-        transform: translate(-50%, -50%);
-        opacity: 0;
-        pointer-events: none;
-        transition:
-            left 2s cubic-bezier(.22,.61,.36,1),
-            top 2s cubic-bezier(.22,.61,.36,1),
-            width 2s cubic-bezier(.22,.61,.36,1),
-            opacity 0.6s ease;
-        z-index: 10;
+        position: absolute; left: 60%; top: 52%;
+        width: min(15vw, 220px); transform: translate(-50%, -50%);
+        opacity: 0; visibility: hidden; pointer-events: none; z-index: 1100;
+        transition: left 2s cubic-bezier(.22,.61,.36,1),
+                    top 2s cubic-bezier(.22,.61,.36,1),
+                    width 2s cubic-bezier(.22,.61,.36,1),
+                    opacity .6s ease, visibility 0s linear .6s;
     }
-
+    .creature-overlay.is-appearing {
+        opacity: 1; visibility: visible;
+        transition: left 2s cubic-bezier(.22,.61,.36,1),
+                    top 2s cubic-bezier(.22,.61,.36,1),
+                    width 2s cubic-bezier(.22,.61,.36,1),
+                    opacity .6s ease, visibility 0s;
+    }
     .creature-overlay img {
-        width: 100%;
-        height: auto;
-        display: block;
-        filter: drop-shadow(0 12px 24px rgba(0,0,0,0.45));
+        display: block; width: 100%; height: auto; max-height: 78vh;
+        object-fit: contain; filter: drop-shadow(0 12px 24px rgba(0,0,0,.5));
     }
-
-    .creature-overlay.is-appearing { opacity: 1; }
-
+    /* Существо вырастает примерно до половины ширины экрана. */
     .creature-overlay.is-large {
-        left: 50%;
-        top: 50%;
-        width: 50%;
-        pointer-events: auto;
+        left: 50%; top: 50%; width: min(50vw, 720px); pointer-events: auto;
     }
-
     .creature-overlay.is-leaving {
-        opacity: 0;
-        width: 10%;
-        left: 65%;
-        top: 55%;
+        opacity: 0; visibility: visible; width: min(10vw, 140px);
+        left: 65%; top: 55%; pointer-events: none;
     }
 
     .release-btn {
-        position: absolute;
-        top: -14px;
-        right: -14px;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        border: none;
-        background: rgba(0,0,0,0.65);
-        color: #fff;
-        font-size: 16px;
-        cursor: pointer;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        backdrop-filter: blur(4px);
-        transition: background 0.2s;
+        position: absolute; top: -14px; right: -14px;
+        display: none; align-items: center; justify-content: center;
+        width: 34px; height: 34px; border: 1px solid rgba(255,255,255,.2);
+        border-radius: 50%; color: #fff; background: rgba(0,0,0,.72);
+        font-size: 17px; cursor: pointer; backdrop-filter: blur(6px);
     }
-    .release-btn:hover { background: rgba(200,40,40,0.85); }
+    .release-btn:hover { background: rgba(170,35,35,.92); }
     .creature-overlay.is-large .release-btn { display: flex; }
 
     .creature-name {
-        position: absolute;
-        bottom: -26px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 13px;
-        color: #fff;
-        text-shadow: 0 1px 4px rgba(0,0,0,0.8);
-        white-space: nowrap;
-        opacity: 0;
-        transition: opacity 0.4s ease 0.4s;
+        position: absolute; left: 50%; bottom: -30px;
+        transform: translateX(-50%); color: #fff; font-size: 15px;
+        font-weight: 600; text-shadow: 0 2px 6px #000;
+        white-space: nowrap; opacity: 0; transition: opacity .4s ease .3s;
     }
     .creature-overlay.is-large .creature-name { opacity: 1; }
 
-    /* ── Кнопки в сцене ── */
-    .scene-controls {
-        position: absolute;
-        bottom: 18px;
-        left: 18px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        z-index: 20;
+    /* Управление полётом поверх карты. */
+    .map-controls {
+        position: absolute; left: 18px; top: 18px; z-index: 1600;
+        display: flex; flex-direction: column; gap: 10px;
+    }
+    .map-controls .custom-button {
+        min-width: 130px; padding: 11px 18px;
+        border: 1px solid rgba(255,255,255,.18); border-radius: 24px;
+        color: #fff; background: rgba(8,18,30,.78);
+        backdrop-filter: blur(10px); font-size: 13px;
+        font-weight: 650; letter-spacing: .4px; cursor: pointer;
+        box-shadow: 0 4px 16px rgba(0,0,0,.28);
+        transition: transform .15s, background .2s;
+    }
+    .map-controls .custom-button:hover {
+        transform: translateY(-2px); background: rgba(25,45,65,.94);
+    }
+    .map-controls .custom-button:disabled {
+        opacity: .48; cursor: not-allowed; transform: none;
     }
 
-    .scene-controls .custom-button {
-        background: rgba(255,255,255,0.92);
-        color: #111;
-        border: none;
-        border-radius: 24px;
-        padding: 10px 22px;
-        font-size: 13px;
-        font-weight: 600;
-        letter-spacing: 0.4px;
-        cursor: pointer;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-        transition: transform 0.15s, background 0.2s;
-    }
-    .scene-controls .custom-button:hover { transform: translateY(-2px); background: #fff; }
-    .scene-controls .custom-button:active { transform: translateY(0); }
-    .scene-controls .custom-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-    /* Подсказка внутри сцены */
-    .scene-hint {
-        position: absolute;
-        bottom: 18px;
-        right: 18px;
-        z-index: 20;
-        background: rgba(0,0,0,0.55);
-        color: #fff;
-        padding: 8px 14px;
-        border-radius: 20px;
-        font-size: 12px;
-        backdrop-filter: blur(4px);
-        pointer-events: none;
-        transition: opacity 0.4s;
+    .map-hint {
+        position: absolute; right: 18px; bottom: 18px; z-index: 1600;
+        max-width: min(420px, calc(100% - 36px)); padding: 9px 14px;
+        border: 1px solid rgba(255,255,255,.12); border-radius: 20px;
+        color: #fff; background: rgba(0,0,0,.62);
+        backdrop-filter: blur(8px); font-size: 12px;
+        pointer-events: none; transition: opacity .4s;
     }
 
-    /* ── Адаптив: на узких экранах — вертикальный стек ── */
-    @media (max-width: 720px) {
-        .app {
-            grid-template-columns: 1fr;
-            grid-template-rows: 35% 65%;
-        }
-        .map-panel {
-            border-right: none;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-        }
-        .scene-hint { display: none; }
-    }
-
-    /* ── SEO Footer styles (как было) ── */
+    /* SEO-футер сохранён; он находится ниже полноэкранной карты. */
     .seo-footer {
-        background: #1a1a2e;
-        color: #ccc;
-        padding: 2rem 1rem;
-        margin-top: 0;
-        font-family: system-ui, -apple-system, sans-serif;
-        line-height: 1.6;
-        border-top: 1px solid #333;
-        position: relative;
-        z-index: 1;
+        position: relative; z-index: 1; margin-top: 0; padding: 2rem 1rem;
+        border-top: 1px solid #333; color: #ccc; background: #1a1a2e;
+        font-family: system-ui, -apple-system, sans-serif; line-height: 1.6;
     }
     .seo-footer-content { max-width: 900px; margin: 0 auto; }
     .seo-footer h2 { color: #ff9800; font-size: 1.5rem; margin-bottom: 1rem; }
-    .seo-footer h3 { color: #ffb74d; font-size: 1.2rem; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+    .seo-footer h3 { color: #ffb74d; font-size: 1.2rem; margin: 1.5rem 0 .75rem; }
     .seo-footer a { color: #ff9800; text-decoration: none; }
     .seo-footer a:hover { text-decoration: underline; }
-    .seo-footer-links { margin: 1.5rem 0; text-align: center; font-size: 0.9rem; }
-    .seo-footer-copy { text-align: center; font-size: 0.8rem; color: #888; margin-top: 1rem; }
-    .support-footer-box { background: #0f3460; border-radius: 16px; padding: 1.5rem; margin: 2rem 0; text-align: center; }
-    .support-footer-button, .patreon-footer-button {
-        display: inline-block;
-        background: #ff9800;
-        color: #1a1a2e;
-        padding: 0.75rem 1.5rem;
-        border-radius: 40px;
-        font-weight: bold;
-        margin: 0.5rem;
-        transition: transform 0.2s, background 0.2s;
+    .seo-footer-links { margin: 1.5rem 0; text-align: center; font-size: .9rem; }
+    .seo-footer-copy { margin-top: 1rem; color: #888; text-align: center; font-size: .8rem; }
+    .support-footer-box {
+        margin: 2rem 0; padding: 1.5rem; border-radius: 16px;
+        background: #0f3460; text-align: center;
     }
-    .patreon-footer-button { background: #f96854; color: white; }
-    .support-footer-button:hover, .patreon-footer-button:hover { transform: scale(1.05); text-decoration: none; }
+    .support-footer-button, .patreon-footer-button {
+        display: inline-block; margin: .5rem; padding: .75rem 1.5rem;
+        border-radius: 40px; color: #1a1a2e; background: #ff9800;
+        font-weight: bold; transition: transform .2s, background .2s;
+    }
+    .patreon-footer-button { color: #fff; background: #f96854; }
+    .support-footer-button:hover, .patreon-footer-button:hover {
+        transform: scale(1.05); text-decoration: none;
+    }
     .support-footer-button:hover { background: #ffb74d; }
     .patreon-footer-button:hover { background: #ff7a66; }
-    @media (max-width: 768px) {
-        .seo-footer { padding: 1rem; font-size: 0.9rem; }
-        .seo-footer h2 { font-size: 1.3rem; }
-        .seo-footer h3 { font-size: 1.1rem; }
-        .support-footer-button, .patreon-footer-button { display: block; margin: 0.5rem auto; text-align: center; }
-    }
 
-    /* Loading (как было) */
+    /* Загрузочная заставка поверх карты до завершения инициализации. */
     #loading {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 20px;
-        text-align: center;
-        background: #1a1a1a;
-        color: #ffffff;
+        position: fixed; inset: 0; z-index: 5000;
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 20px; text-align: center;
+        color: #fff; background: #101820;
     }
     .loading-status { font-size: 1.2rem; font-weight: bold; }
-    .loading-description { max-width: 500px; padding: 0 20px; animation: fadeIn 1s ease-in-out; }
-    .loading-description h2 { font-size: 1.3rem; font-weight: 600; margin: 0 0 8px 0; line-height: 1.4; color: #ffffff; }
-    .loading-description p { font-size: 0.95rem; color: #b3b3b3; margin: 0; }
+    .loading-description {
+        max-width: 500px; padding: 0 20px; animation: fadeIn 1s ease-in-out;
+    }
+    .loading-description h2 {
+        margin: 0 0 8px; color: #fff; font-size: 1.3rem;
+        font-weight: 600; line-height: 1.4;
+    }
+    .loading-description p { margin: 0; color: #b3b3b3; font-size: .95rem; }
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Маркер шара на карте */
+    /* Иконка чужих аэростатов, создаваемая inline-скриптом. */
     .balloon-div-icon {
-        background: none;
-        border: none;
-        font-size: 24px;
-        line-height: 24px;
-        text-align: center;
-        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+        border: 0; background: none; font-size: 24px;
+        line-height: 24px; text-align: center;
+        filter: drop-shadow(0 2px 3px rgba(0,0,0,.4));
     }
     .balloon-popup b { color: #16a34a; }
+
+    @media (max-width: 720px) {
+        .map-controls { top: 12px; left: 12px; }
+        .map-controls .custom-button { min-width: 112px; padding: 9px 14px; }
+        .map-caption { left: 10px; bottom: 10px; }
+        .map-hint { right: 10px; bottom: 10px; font-size: 11px; }
+        .creature-overlay { width: 24vw; }
+        .creature-overlay.is-large { width: 78vw; }
+        .seo-footer { padding: 1rem; font-size: .9rem; }
+        .seo-footer h2 { font-size: 1.3rem; }
+        .seo-footer h3 { font-size: 1.1rem; }
+        .support-footer-button, .patreon-footer-button {
+            display: block; margin: .5rem auto; text-align: center;
+        }
+    }
 </style>
 
-<!-- ═══════════════════════════════════════════════════════
-     ОРИГИНАЛЬНЫЕ INLINE-СКРИПТЫ (логика UI, шаров, welcome)
-     ═══════════════════════════════════════════════════════ -->
+<!-- Вспомогательные inline-обработчики баннера, welcome-окна и SEO-ссылки. -->
 <script>
     // Регистрация ссылки в футере для открытия модалки авторизации
     document.addEventListener('DOMContentLoaded', function() {
@@ -573,7 +473,7 @@
     })();
 </script>
 
-<!-- NEW: скрипт отображения всех шаров (оставлен как был, но кнопки удалены из UI) -->
+<!-- Отображение остальных аэростатов на общей карте Leaflet. -->
 <script>
 (function() {
     'use strict';
@@ -690,6 +590,22 @@
      СКРИПТ СУЩЕСТВ (триггер по координатам шара)
      ═══════════════════════════════════════════════════════ -->
 <script src="js/creatures.js"></script>
+
+<!--
+  Адаптер совместимости:
+  balloon.js вызывает checkNearbyPlace(lat, lon), а creatures.js экспортирует
+  window.AerostarCreatures.update(lat, lon). Соединяем эти два интерфейса здесь,
+  не меняя сам модуль полёта.
+-->
+<script>
+    window.checkNearbyPlace = function (lat, lon) {
+        const creatures = window.AerostarCreatures;
+        if (creatures && typeof creatures.update === 'function') {
+            creatures.update(Number(lat), Number(lon));
+        }
+    };
+</script>
+
 
 </body>
 </html>
