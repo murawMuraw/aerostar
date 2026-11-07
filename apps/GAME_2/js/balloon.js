@@ -1,339 +1,196 @@
-// ========== МОДУЛЬ УПРАВЛЕНИЯ ШАРОМ ==========
+/* GAME_2 balloon flight — browser-side movement, no Aerost.art backend routes. */
+(() => {
+  'use strict';
 
-// Расчет следующей точки на основе ветра
-function calculateNextPoint(start, wind, seconds) {
-    const windDirection = (wind.direction + 180) % 360;
-    const distance = wind.speed * seconds;
-    const distanceKm = distance / 1000;
-    const R = 6371; // Радиус Земли в км
-    
+  const OPEN_METEO = 'https://api.open-meteo.com/v1/forecast';
+
+  function validWind(data) {
+    return data && Number.isFinite(Number(data.speed)) &&
+      Number.isFinite(Number(data.direction)) && Number(data.speed) >= 0;
+  }
+
+  // Public Open-Meteo forecast API. Wind speed is requested in m/s.
+  async function getWindData(lat, lon) {
+    const url = new URL(OPEN_METEO);
+    url.search = new URLSearchParams({
+      latitude: String(lat),
+      longitude: String(lon),
+      current: 'wind_speed_10m,wind_direction_10m,temperature_2m,precipitation',
+      wind_speed_unit: 'ms',
+      timezone: 'auto'
+    }).toString();
+
+    try {
+      const response = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error(`Open-Meteo HTTP ${response.status}`);
+      const json = await response.json();
+      const current = json.current || {};
+      const wind = {
+        speed: Number(current.wind_speed_10m),
+        direction: Number(current.wind_direction_10m),
+        gust: Number(current.wind_gusts_10m || 0),
+        temp: current.temperature_2m ?? '--',
+        precip: current.precipitation ?? '--'
+      };
+      if (!validWind(wind)) throw new Error('Wind fields are missing in Open-Meteo response');
+      return wind;
+    } catch (error) {
+      console.error('[GAME_2] Wind request failed:', error);
+      return null;
+    }
+  }
+
+  function calculateNextPoint(start, wind, seconds) {
+    // Meteorological wind direction points FROM; balloon drifts TO the opposite direction.
+    const bearing = ((Number(wind.direction) + 180) % 360) * Math.PI / 180;
+    const distanceKm = (Number(wind.speed) * seconds) / 1000;
+    const R = 6371;
     const lat1 = start.lat * Math.PI / 180;
     const lon1 = start.lng * Math.PI / 180;
-    const bearing = windDirection * Math.PI / 180;
-    
-    const lat2 = Math.asin(Math.sin(lat1) * Math.cos(distanceKm/R) + 
-                   Math.cos(lat1) * Math.sin(distanceKm/R) * Math.cos(bearing));
-    const lon2 = lon1 + Math.atan2(Math.sin(bearing) * Math.sin(distanceKm/R) * Math.cos(lat1), 
-                   Math.cos(distanceKm/R) - Math.sin(lat1) * Math.sin(lat2));
-    
-    return { 
-        lat: lat2 * 180 / Math.PI, 
-        lng: lon2 * 180 / Math.PI 
-    };
-}
+    const angular = distanceKm / R;
+    const lat2 = Math.asin(
+      Math.sin(lat1) * Math.cos(angular) +
+      Math.cos(lat1) * Math.sin(angular) * Math.cos(bearing)
+    );
+    const lon2 = lon1 + Math.atan2(
+      Math.sin(bearing) * Math.sin(angular) * Math.cos(lat1),
+      Math.cos(angular) - Math.sin(lat1) * Math.sin(lat2)
+    );
+    return { lat: lat2 * 180 / Math.PI, lng: ((lon2 * 180 / Math.PI + 540) % 360) - 180 };
+  }
 
-// Обновление прогноза полета (только для внутренней логики, без отрисовки линии на карте)
-async function updateForecast(startPoint) {
-    if (!startPoint) return;
-    
-    const wind = await getWindData(startPoint.lat, startPoint.lng);
-    if (!wind) return;
-    
+  async function updateForecast(point) {
+    if (!point) return null;
+    const wind = await getWindData(point.lat, point.lng);
+    if (!wind) return null;
     window.App.currentWind = wind;
-    updateWindDisplay(wind);
-    
-    // Прогнозные точки можно оставить в памяти, если они понадобятся позже,
-    // но мы больше не рисуем пунктирную линию на карте.
-    window.App.forecastPoints = [startPoint];
-    let currentPoint = startPoint;
-    
-    for (let i = 1; i <= 12; i++) {
-        const nextPoint = calculateNextPoint(currentPoint, wind, 300);
-        window.App.forecastPoints.push(L.latLng(nextPoint.lat, nextPoint.lng));
-        currentPoint = L.latLng(nextPoint.lat, nextPoint.lng);
-    }
-}
+    if (typeof window.updateWindDisplay === 'function') window.updateWindDisplay(wind);
+    return wind;
+  }
 
-// Движение шара
-function moveBalloon() {
-    if (!window.App.isFlying || !window.App.balloonPosition || !window.App.currentWind) return;
-    
-    const nextPoint = calculateNextPoint(window.App.balloonPosition, window.App.currentWind, 1);
-    window.App.balloonPosition = L.latLng(nextPoint.lat, nextPoint.lng);
-    
-    if (window.App.balloonMarker) {
-        window.App.balloonMarker.setLatLng(window.App.balloonPosition);
+  function notifyCreatures(position) {
+    if (typeof window.checkNearbyPlace === 'function') {
+      window.checkNearbyPlace(position.lat, position.lng);
+    } else if (window.AerostarCreatures?.update) {
+      window.AerostarCreatures.update(position.lat, position.lng);
     }
-    
-    updateCoordDisplay(window.App.balloonPosition.lat, window.App.balloonPosition.lng);
-if (typeof syncMaps === 'function') {
-        syncMaps(window.App.balloonPosition.lat, window.App.balloonPosition.lng);
-    }
-    
-    
-    // Связь с мифическими существами
-    checkNearbyPlace(window.App.balloonPosition.lat, window.App.balloonPosition.lng);
-    
-    // Отрисовка красного следа (пути)
-    if (window.App.actualPathPoints.length === 0 || 
-        window.map.distance(window.App.balloonPosition, window.App.actualPathPoints[window.App.actualPathPoints.length - 1]) > 10) {
-        window.App.actualPathPoints.push(window.App.balloonPosition);
-        
-        if (window.App.pathLine) {
-            window.map.removeLayer(window.App.pathLine);
-        }
-        
-        window.App.pathLine = L.polyline(window.App.actualPathPoints, { 
-            color: '#ff4444', 
-            weight: 4, 
-            opacity: 0.8 
-        }).addTo(window.map);
-        
-        shareToPublicBalloon(window.App.balloonPosition, window.App.actualPathPoints);
-    }
-}
+  }
 
-// Старт полета
-async function startFlight() {
-    if (!window.App.balloonPosition) {
-        showError('Select the starting point on the map');
-        return;
+  function moveBalloon() {
+    const app = window.App;
+    if (!app.isFlying || !app.balloonPosition || !app.currentWind) return;
+    const next = calculateNextPoint(app.balloonPosition, app.currentWind, 1);
+    app.balloonPosition = L.latLng(next.lat, next.lng);
+
+    if (typeof window.syncMaps === 'function') window.syncMaps(next.lat, next.lng);
+    if (typeof window.updateCoordDisplay === 'function') window.updateCoordDisplay(next.lat, next.lng);
+    notifyCreatures(app.balloonPosition);
+    if (typeof window.addFlightPathPoint === 'function') {
+      window.addFlightPathPoint(app.balloonPosition);
     }
-    
-    updateFlightStatus('waiting', '⏳ ');
-    
+  }
+
+  async function startFlight() {
+    const app = window.App;
+    if (!app.balloonPosition) {
+      if (typeof window.showError === 'function') window.showError('Select a launch point first.');
+      return;
+    }
+
+    const start = document.getElementById('startBtn');
+    if (start) start.disabled = true;
+
     try {
-        const response = await apiRequest('/api/balloons', {
-            method: 'POST',
-            body: JSON.stringify({ 
-                lat: window.App.balloonPosition.lat, 
-                lng: window.App.balloonPosition.lng, 
-                userId: getUserId(),
-                isGuest: window.App.isGuest 
-            })
-        });
-        
-        const balloon = await response.json();
-        if (balloon.error) throw new Error(balloon.error);
-        
-        window.App.balloonId = balloon.id;
-        
-        window.App.currentWind = { 
-            speed: balloon.wind_speed, 
-            direction: balloon.wind_direction,
-            gust: balloon.wind_gust || 0,
-            temp: balloon.temp !== undefined ? balloon.temp : '--',
-            precip: balloon.precip !== undefined ? balloon.precip : '--'
-        };
-        
-        updateWindDisplay(window.App.currentWind);
-        
-        if (window.App.startMarker) {
-            window.map.removeLayer(window.App.startMarker);
-            window.App.startMarker = null;
-        }
-        
-        const balloonIcon = L.icon({
-            iconUrl: '/images/balloon.png',
-            iconSize: [32, 32],
-            iconAnchor: [16, 16],
-            popupAnchor: [0, -16]
-        });
-        
-        window.App.balloonMarker = L.marker(window.App.balloonPosition, { 
-            icon: balloonIcon, 
-            zIndexOffset: 1000 
-        }).addTo(window.map);
-        
-        window.App.actualPathPoints = [window.App.balloonPosition];
-        
-        shareToPublicBalloon(window.App.balloonPosition, window.App.actualPathPoints);
-        
-        if (window.App.movementInterval) clearInterval(window.App.movementInterval);
-        window.App.movementInterval = setInterval(moveBalloon, 1000);
-        
-        // Интервал обновления погоды
-        if (window.App.windUpdateInterval) clearInterval(window.App.windUpdateInterval);
-        window.App.windUpdateInterval = setInterval(async () => {
-            if (window.App.isFlying && window.App.balloonPosition) {
-                const newWind = await getWindData(window.App.balloonPosition.lat, window.App.balloonPosition.lng);
-                if (newWind) {
-                    window.App.currentWind = newWind;
-                    updateWindDisplay(window.App.currentWind);
-                    updateForecast(window.App.balloonPosition);
-                }
-            }
-        }, 60000);
-        
-        window.App.isFlying = true;
-        setStartButtonEnabled(false);
-        updateFlightStatus('flying', '🎈 FLIGHT');
-        hideHint();
-        showSuccess('The flight has begun! Follow the ball on the map');
-        
-    } catch (error) {
-        console.error('Ошибка старта:', error);
-        showError('Failed to create balloon: ' + error.message);
-        updateFlightStatus('ready', '⏸️ ');
-    }
-}
+      // Always fetch a fresh wind sample at the selected launch point.
+      const wind = await updateForecast(app.balloonPosition);
+      if (!wind) throw new Error('Real wind forecast is unavailable. Please try again.');
 
-// Восстановление полета после перезагрузки
-async function restoreBalloon() {
-    try {
-        const userId = getUserId();
-        const response = await fetch(`${window.App.API_URL}/api/balloons/${userId}`);
-        
-        if (response.status === 404) return false;
-        
-        const balloon = await response.json();
-        if (balloon && balloon.is_flying) {
-            console.log('🔄Restoring the ball:', balloon.id);
-            
-            window.App.balloonPosition = L.latLng(balloon.current_lat, balloon.current_lng);
-            window.App.currentWind = { 
-                speed: balloon.wind_speed, 
-                direction: balloon.wind_direction 
-            };
-            window.App.balloonId = balloon.id;
-            
-            if (balloon.path && balloon.path.length > 0) {
-                window.App.actualPathPoints = balloon.path.map(p => L.latLng(p.lat, p.lng));
-                if (window.App.pathLine) window.map.removeLayer(window.App.pathLine);
-                window.App.pathLine = L.polyline(window.App.actualPathPoints, { 
-                    color: '#ff4444', 
-                    weight: 4, 
-                    opacity: 0.8 
-                }).addTo(window.map);
-            }
-            
-            const balloonIcon = L.icon({
-                iconUrl: '/images/balloon.png',
-                iconSize: [32, 32],
-                iconAnchor: [16, 16],
-                popupAnchor: [0, -16]
-            });
-            
-            window.App.balloonMarker = L.marker(window.App.balloonPosition, { 
-                icon: balloonIcon, 
-                zIndexOffset: 1000 
-            }).addTo(window.map);
-            
-            window.map.setView(window.App.balloonPosition, 10);
-            updateCoordDisplay(window.App.balloonPosition.lat, window.App.balloonPosition.lng);
-            updateWindDisplay(window.App.currentWind);
-            
-            window.App.isFlying = true;
-            setStartButtonEnabled(false);
-            updateFlightStatus('flying', '🎈 FLIGHT');
-            hideHint();
-            
-            if (window.App.movementInterval) clearInterval(window.App.movementInterval);
-            window.App.movementInterval = setInterval(moveBalloon, 1000);
-            
-            if (window.App.windUpdateInterval) clearInterval(window.App.windUpdateInterval);
-            window.App.windUpdateInterval = setInterval(async () => {
-                if (window.App.isFlying && window.App.balloonPosition) {
-                    const newWind = await getWindData(window.App.balloonPosition.lat, window.App.balloonPosition.lng);
-                    if (newWind) {
-                        window.App.currentWind = newWind;
-                        updateWindDisplay(window.App.currentWind);
-                    }
-                }
-            }, 60000);
-            
-            shareToPublicBalloon(window.App.balloonPosition, window.App.actualPathPoints);
-            
-            return true;
-        }
-        return false;
-        
-    } catch (error) {
-        console.error('Restore Error', error);
-        return false;
-    }
-}
+      app.isFlying = true;
+      app.actualPathPoints = [L.latLng(app.balloonPosition.lat, app.balloonPosition.lng)];
 
-// Сброс полета
-function resetFlight() {
-    if (window.App.movementInterval) {
-        clearInterval(window.App.movementInterval);
-        window.App.movementInterval = null;
-    }
-    
-    if (window.App.windUpdateInterval) {
-        clearInterval(window.App.windUpdateInterval);
-        window.App.windUpdateInterval = null;
-    }
-    
-    if (window.App.balloonId) {
-        apiRequest(`/api/balloons/${window.App.balloonId}/stop`, { method: 'POST' }).catch(console.error);
-    }
-    
-    if (window.App.balloonMarker) {
-        window.map.removeLayer(window.App.balloonMarker);
-        window.App.balloonMarker = null;
-    }
-    
-    if (window.App.startMarker) {
-        window.map.removeLayer(window.App.startMarker);
-        window.App.startMarker = null;
-    }
-    
-    // Убираем линию прогноза, если она вдруг осталась
-    if (window.App.forecastLine) {
-        window.map.removeLayer(window.App.forecastLine);
-        window.App.forecastLine = null;
-    }
-    
-    if (window.App.pathLine) {
-        window.map.removeLayer(window.App.pathLine);
-        window.App.pathLine = null;
-    }
-    
-    window.App.forecastPoints = [];
-    window.App.actualPathPoints = [];
-    window.App.isFlying = false;
-    window.App.balloonPosition = null;
-    window.App.currentWind = null;
-    window.App.balloonId = null;
-    
-    updateCoordDisplay(0, 0);
-    updateWindDisplay(null);
-    setStartButtonEnabled(false);
-    updateFlightStatus('ready', '⏸️');
-    updateHint('👆 Select your starting location');
-    hidePlaceInfo();
-    
-    showSuccess('Stop');
-}
+      if (app.startMarker) {
+        window.map.removeLayer(app.startMarker);
+        app.startMarker = null;
+      }
 
-// ========== ПУБЛИЧНАЯ ТРАНСЛЯЦИЯ ДЛЯ AEROSTAR ==========
-async function shareToPublicBalloon(position, path) {
-    if (!window.App.currentUser || window.App.currentUser.email !== 'aerostar@aerost.art') {
-        return;
-    }
-    
-    if (!window.App.token) {
-        console.warn('⚠️ Нет токена для авторизации');
-        return;
-    }
-    
-    if (!position) {
-        console.warn('⚠️ Нет позиции для отправки');
-        return;
-    }
-    
-    try {
-        const response = await fetch('/api/public-aerostar', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${window.App.token}`
-            },
-            body: JSON.stringify({
-                position: { lat: position.lat, lng: position.lng },
-                path: path ? path.map(p => ({ lat: p.lat, lng: p.lng })) : []
-            })
-        });
-        
-        if (response.ok) {
-            console.log(`📡 Публичный шар обновлен: ${position.lat}, ${position.lng}`);
-        } else {
-            const error = await response.json();
-            console.warn('⚠️ Ошибка обновления публичного шара:', error.error);
+      if (typeof window.activateFlightView === 'function') {
+        window.activateFlightView(app.balloonPosition.lat, app.balloonPosition.lng);
+      }
+
+      // Add a simple visible marker to the overview map. The POV map has its own marker.
+      if (app.balloonMarker) window.map.removeLayer(app.balloonMarker);
+      app.balloonMarker = L.circleMarker(app.balloonPosition, {
+        radius: 6, color: '#fff', weight: 2, fillColor: '#e34b3f', fillOpacity: 1
+      }).addTo(window.map);
+
+      notifyCreatures(app.balloonPosition);
+      if (app.movementInterval) clearInterval(app.movementInterval);
+      app.movementInterval = setInterval(moveBalloon, 1000);
+
+      if (app.windUpdateInterval) clearInterval(app.windUpdateInterval);
+      app.windUpdateInterval = setInterval(async () => {
+        if (!app.isFlying || !app.balloonPosition) return;
+        const fresh = await updateForecast(app.balloonPosition);
+        if (fresh) {
+          const el = document.getElementById('wind-status');
+          if (el) el.textContent = `Wind ${fresh.speed.toFixed(1)} m/s · ${Math.round(fresh.direction)}°`;
         }
+      }, 60000);
+
+      if (typeof window.setStartButtonEnabled === 'function') window.setStartButtonEnabled(false);
+      if (typeof window.updateFlightStatus === 'function') window.updateFlightStatus('flying', '🎈 FLIGHT');
+      if (typeof window.hideHint === 'function') window.hideHint();
+      const status = document.getElementById('flight-status');
+      if (status) status.textContent = '🎈 Drifting with the wind';
+      const windStatus = document.getElementById('wind-status');
+      if (windStatus) windStatus.textContent = `Wind ${wind.speed.toFixed(1)} m/s · ${Math.round(wind.direction)}°`;
+      console.log('[GAME_2] Flight started with Open-Meteo wind:', wind);
     } catch (error) {
-        console.error('❌ Ошибка отправки публичного шара:', error);
+      console.error('[GAME_2] Start failed:', error);
+      app.isFlying = false;
+      if (start) start.disabled = false;
+      if (typeof window.showError === 'function') window.showError(error.message);
+      if (typeof window.updateFlightStatus === 'function') window.updateFlightStatus('ready', 'Ready to fly');
     }
-}
+  }
+
+  function resetFlight() {
+    const app = window.App;
+    if (app.movementInterval) clearInterval(app.movementInterval);
+    if (app.windUpdateInterval) clearInterval(app.windUpdateInterval);
+    app.movementInterval = null;
+    app.windUpdateInterval = null;
+
+    app.isFlying = false;
+    app.balloonPosition = null;
+    app.currentWind = null;
+    app.actualPathPoints = [];
+    app.forecastPoints = [];
+    app.balloonId = null;
+
+    if (app.balloonMarker && window.map) window.map.removeLayer(app.balloonMarker);
+    if (app.startMarker && window.map) window.map.removeLayer(app.startMarker);
+    app.balloonMarker = null;
+    app.startMarker = null;
+
+    if (window.AerostarCreatures?.hide) window.AerostarCreatures.hide();
+    if (typeof window.resetFlightView === 'function') window.resetFlightView();
+    if (typeof window.updateCoordDisplay === 'function') window.updateCoordDisplay(0, 0);
+    if (typeof window.updateWindDisplay === 'function') window.updateWindDisplay(null);
+    if (typeof window.setStartButtonEnabled === 'function') window.setStartButtonEnabled(false);
+    if (typeof window.updateFlightStatus === 'function') window.updateFlightStatus('ready', 'Choose a launch point');
+    if (typeof window.updateHint === 'function') window.updateHint('Click anywhere on the map to choose a launch point');
+    const caption = document.getElementById('mapCaption');
+    if (caption) caption.textContent = 'Select a launch point';
+    const hint = document.getElementById('hint');
+    if (hint) hint.style.opacity = '1';
+  }
+
+  // Keep the function names expected by main.js and legacy UI helpers.
+  window.getWindData = getWindData;
+  window.calculateNextPoint = calculateNextPoint;
+  window.updateForecast = updateForecast;
+  window.moveBalloon = moveBalloon;
+  window.startFlight = startFlight;
+  window.resetFlight = resetFlight;
+})();
