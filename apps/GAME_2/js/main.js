@@ -100,10 +100,10 @@ function initPovMap(lat, lon) {
         zoom: 15
     });
 
-    const povLayer = L.tileLayer(
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { maxZoom: 19 }
-    ).addTo(povMap);
+    const povLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    }).addTo(povMap);
 
     // Принудительно обновляем размеры карты после создания
     setTimeout(() => {
