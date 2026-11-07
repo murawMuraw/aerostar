@@ -1,294 +1,83 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real Wind Hot Air Balloon Flight Simulator | Live Wind Data</title>
-    <meta name="description" content="Fly a virtual hot air balloon with real-time wind data. Choose any location on Earth and drift with live wind speed and direction.">
-    
-    <!-- Leaflet connection -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <!-- Ваши стили -->
-    <link rel="stylesheet" href="css/styles.css?v=20261107-1" />
-
-    <!-- Canonical URL -->
-    <link rel="canonical" href="https://aerost.art/">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Aerostar — Balloon Journey</title>
+  <meta name="description" content="A real-wind virtual hot-air-balloon journey.">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/styles.css?v=20261107-flightview">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
+  <h1 class="seo-h1">Aerostar — Real Wind Hot Air Balloon Journey</h1>
 
-<!-- SEO H1 (visually hidden) -->
-<h1 class="seo-h1">Real-Time Hot Air Balloon Flight Simulator with Live Wind Data</h1>
+  <main id="app" class="app">
+    <!-- World map is the launch map before START and the locator inset during flight. -->
+    <section class="world-map-wrap" aria-label="World map">
+      <div id="map"></div>
+      <div id="mapCaption" class="map-caption" aria-live="polite">Select a launch point</div>
+      <div class="world-map-label">WORLD POSITION</div>
+    </section>
 
-<!-- ═══ ОСНОВНОЙ ЭКРАН ═══ -->
-<div class="app" id="app">
-    
-    <!-- ЛЕВАЯ ПАНЕЛЬ: Карта мира (Зум 2) -->
-    <div class="minimap-panel">
-        <div id="map"></div>
-        <div class="map-caption" id="mapCaption" aria-live="polite">широта —, долгота —</div>
+    <!-- Main point-of-view map is revealed after START. -->
+    <section id="pov-panel" class="pov-panel" aria-label="View from the balloon">
+      <div id="pov-map"></div>
+      <div class="pov-vignette" aria-hidden="true"></div>
+      <canvas id="haze-canvas" aria-hidden="true"></canvas>
+
+      <!-- Stylised basket rim / ropes: stays in the foreground and does not cover the map centre. -->
+      <div class="basket-overlay" aria-hidden="true">
+        <div class="basket-rope rope-left"></div>
+        <div class="basket-rope rope-right"></div>
+        <div class="basket-rim"></div>
+        <div class="basket-wicker"></div>
+      </div>
+
+      <div class="view-label">BALLOON · LOW-ALTITUDE VIEW</div>
+    </section>
+
+    <!-- Creature overlay belongs to the POV map, but remains above both maps. -->
+    <div class="creature-overlay" id="creatureOverlay" aria-live="polite">
+      <img id="creatureImg" src="" alt="Mythical creature">
+      <button class="release-btn" id="releaseBtn" type="button" title="Dismiss creature" aria-label="Dismiss creature">×</button>
+      <div class="creature-name" id="creatureName"></div>
     </div>
 
-    <!-- ПРАВАЯ ПАНЕЛЬ: Вид от первого лица -->
-    <div class="first-person-panel">
-        <div id="pov-map"></div>
-        
-        <canvas id="haze-canvas" aria-hidden="true"></canvas>
-
-        <!-- Корзина -->
-        <div class="basket-overlay">
-            <div class="basket-rope left"></div>
-            <div class="basket-rope right"></div>
-            <div class="basket-body">🎈 Вы в корзине</div>
-        </div>
-
-        <!-- Существо -->
-        <div class="creature-overlay" id="creatureOverlay" aria-live="polite">
-            <img id="creatureImg" src="" alt="Мифическое существо">
-            <button class="release-btn" id="releaseBtn" type="button" title="Отпустить">✕</button>
-            <div class="creature-name" id="creatureName"></div>
-        </div>
-
-        <!-- Подсказка -->
-        <div class="map-hint" id="hint">👆 Click on the map to set a start location</div>
-    </div>
-
-    <!-- Кнопки управления (поверх всего) -->
     <div class="map-controls">
-        <button class="custom-button" id="startBtn" type="button" disabled>▶ START</button>
-        <button class="custom-button" id="resetBtn" type="button">🗑️ Reset</button>
+      <button class="custom-button" id="startBtn" type="button" disabled>▶ START</button>
+      <button class="custom-button" id="resetBtn" type="button">↺ RESET</button>
     </div>
 
-</div>
+    <div id="hint" class="map-hint">Click anywhere on the map to choose a launch point</div>
+    <div id="flight-status" class="flight-status" aria-live="polite">Choose your launch point</div>
+    <div id="wind-status" class="wind-status" aria-live="polite">Wind: waiting for location</div>
+  </main>
 
-<!-- Загрузочная заставка -->
-<div class="loading" id="loading">
-    <div class="loading-status">Loading Map... 🗺️</div>
-    <div class="loading-description">
-        <h2>Launch a virtual hot air balloon anywhere on Earth</h2>
-        <p>and watch it drift using real weather forecasts</p>
+  <div id="loading" class="loading">
+    <div class="loading-card">
+      <div class="loading-spinner"></div>
+      <div class="loading-status">Preparing your balloon…</div>
+      <p>Choose a place on Earth and let the wind decide the journey.</p>
     </div>
-</div>
+  </div>
 
-<!-- ═══ СТИЛИ ═══ -->
-<style>
-    /* Скрытый H1 для SEO */
-    .seo-h1 {
-        position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-        overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
-    }
-
-    /* --- БАЗОВЫЙ ДВУХКОЛОНОЧНЫЙ МАКЕТ --- */
-    html, body {
-        margin: 0; padding: 0; width: 100%; height: 100%;
-        overflow: hidden !important; /* Убираем скролл */
-        background: #0b0f14;
-        font-family: system-ui, -apple-system, sans-serif;
-    }
-
-    .app {
-        display: flex;
-        width: 100vw;
-        height: 100vh;
-        position: relative;
-    }
-
-    /* Левая панель (карта мира) */
-    .minimap-panel {
-        position: relative;
-        width: 30%;
-        height: 100%;
-        border-right: 2px solid rgba(0,0,0,0.5);
-        z-index: 10;
-    }
-
-    /* Правая панель (вид от первого лица) */
-    .first-person-panel {
-        position: relative;
-        width: 70%;
-        height: 100%;
-        overflow: hidden;
-        background: #87CEEB;
-    }
-
-    #map, #pov-map {
-        width: 100%;
-        height: 100%;
-        background: #111;
-    }
-
-    /* Убираем зум-кнопки на маленькой карте */
-    .minimap-panel .leaflet-control-zoom { display: none; }
-
-    /* --- ЭФФЕКТ КОРЗИНЫ --- */
-    .basket-overlay {
-        position: absolute;
-        bottom: -20px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 80%;
-        height: 200px;
-        pointer-events: none;
-        z-index: 1000;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-end;
-    }
-
-    .basket-rope {
-        position: absolute;
-        bottom: 100px;
-        width: 4px;
-        height: 300px;
-        background: #4a3b2c;
-        box-shadow: 2px 0 5px rgba(0,0,0,0.5);
-    }
-    .basket-rope.left { left: 10%; transform: rotate(10deg); transform-origin: bottom; }
-    .basket-rope.right { right: 10%; transform: rotate(-10deg); transform-origin: bottom; }
-
-    .basket-body {
-        position: relative;
-        width: 100%;
-        height: 120px;
-        background: repeating-linear-gradient(
-            45deg, #8b5a2b, #8b5a2b 10px, #6b4226 10px, #6b4226 20px
-        );
-        border-radius: 50% 50% 0 0 / 20% 20% 0 0;
-        border-top: 8px solid #a0522d;
-        box-shadow: inset 0 10px 20px rgba(0,0,0,0.6);
-        display: flex;
-        align-items: flex-start;
-        justify-content: center;
-        padding-top: 20px;
-        color: rgba(255,255,255,0.4);
-        font-family: monospace;
-        font-size: 14px;
-    }
-
-    /* --- УПРАВЛЕНИЕ --- */
-    .map-controls {
-        position: absolute;
-        left: 18px;
-        top: 18px;
-        z-index: 1600;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .map-controls .custom-button {
-        min-width: 130px; padding: 11px 18px;
-        border: 1px solid rgba(255,255,255,.18); border-radius: 24px;
-        color: #fff; background: rgba(8,18,30,.78);
-        backdrop-filter: blur(10px); font-size: 13px;
-        font-weight: 650; letter-spacing: .4px; cursor: pointer;
-        box-shadow: 0 4px 16px rgba(0,0,0,.28);
-        transition: transform .15s, background .2s;
-    }
-    .map-controls .custom-button:hover { transform: translateY(-2px); background: rgba(25,45,65,.94); }
-    .map-controls .custom-button:disabled { opacity: .48; cursor: not-allowed; transform: none; }
-
-    /* --- КООРДИНАТЫ --- */
-    .map-caption {
-        position: absolute; left: 14px; bottom: 14px; z-index: 1200;
-        padding: 6px 10px; border: 1px solid rgba(255,255,255,.14);
-        border-radius: 8px; color: rgba(255,255,255,.9);
-        background: rgba(0,0,0,.58); backdrop-filter: blur(8px);
-        font: 12px/1.4 ui-monospace, monospace; pointer-events: none;
-    }
-
-    /* --- СУЩЕСТВО --- */
-    .creature-overlay {
-        position: absolute; left: 50%; top: 50%;
-        width: min(15vw, 220px); transform: translate(-50%, -50%);
-        opacity: 0; visibility: hidden; pointer-events: none; z-index: 1100;
-        transition: left 2s cubic-bezier(.22,.61,.36,1),
-                    top 2s cubic-bezier(.22,.61,.36,1),
-                    width 2s cubic-bezier(.22,.61,.36,1),
-                    opacity .6s ease, visibility 0s linear .6s;
-    }
-    .creature-overlay.is-appearing {
-        opacity: 1; visibility: visible;
-        transition: left 2s cubic-bezier(.22,.61,.36,1),
-                    top 2s cubic-bezier(.22,.61,.36,1),
-                    width 2s cubic-bezier(.22,.61,.36,1),
-                    opacity .6s ease, visibility 0s;
-    }
-    .creature-overlay img {
-        display: block; width: 100%; height: auto; max-height: 78vh;
-        object-fit: contain; filter: drop-shadow(0 12px 24px rgba(0,0,0,.5));
-    }
-    .creature-overlay.is-large {
-        left: 50%; top: 50%; width: min(50vw, 720px); pointer-events: auto;
-    }
-    .creature-overlay.is-leaving {
-        opacity: 0; visibility: visible; width: min(10vw, 140px);
-        left: 65%; top: 55%; pointer-events: none;
-    }
-
-    .release-btn {
-        position: absolute; top: -14px; right: -14px;
-        display: none; align-items: center; justify-content: center;
-        width: 34px; height: 34px; border: 1px solid rgba(255,255,255,.2);
-        border-radius: 50%; color: #fff; background: rgba(0,0,0,.72);
-        font-size: 17px; cursor: pointer; backdrop-filter: blur(6px);
-    }
-    .release-btn:hover { background: rgba(170,35,35,.92); }
-    .creature-overlay.is-large .release-btn { display: flex; }
-
-    .creature-name {
-        position: absolute; left: 50%; bottom: -30px;
-        transform: translateX(-50%); color: #fff; font-size: 15px;
-        font-weight: 600; text-shadow: 0 2px 6px #000;
-        white-space: nowrap; opacity: 0; transition: opacity .4s ease .3s;
-    }
-    .creature-overlay.is-large .creature-name { opacity: 1; }
-
-    /* --- ПОДСКАЗКА --- */
-    .map-hint {
-        position: absolute; right: 18px; bottom: 18px; z-index: 1600;
-        max-width: min(420px, calc(100% - 36px)); padding: 9px 14px;
-        border: 1px solid rgba(255,255,255,.12); border-radius: 20px;
-        color: #fff; background: rgba(0,0,0,.62);
-        backdrop-filter: blur(8px); font-size: 12px;
-        pointer-events: none; transition: opacity .4s;
-    }
-
-    /* --- ЗАГРУЗКА --- */
-    #loading {
-        position: fixed; inset: 0; z-index: 5000;
-        display: flex; flex-direction: column; align-items: center;
-        justify-content: center; gap: 20px; text-align: center;
-        color: #fff; background: #101820;
-    }
-    .loading-status { font-size: 1.2rem; font-weight: bold; }
-    .loading-description { max-width: 500px; padding: 0 20px; }
-    .loading-description h2 { margin: 0 0 8px; color: #fff; font-size: 1.3rem; font-weight: 600; }
-    .loading-description p { margin: 0; color: #b3b3b3; font-size: .95rem; }
-
-   
-}
-</style>
-
-<!-- ═══ ПОДКЛЮЧЕНИЕ СКРИПТОВ ═══ -->
-<script src="js/config.js"></script>
-<script src="js/api.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/balloon.js"></script>
-<script src="js/main.js"></script>
-<script src="js/creatures.js"></script>
-
-<!-- Адаптер для связи balloon.js и creatures.js -->
-<script>
+  <!-- Keep config/api/ui: UI helpers and the Open-Meteo wind adapter are used by this build.
+       No GAME_2 request is made to Aerost.art /api/balloons or /api/wind. -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/balloon.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/creatures.js"></script>
+  <script>
+    // Bridge for the creature module. The existing creatures.js file is kept separate.
     window.checkNearbyPlace = function (lat, lon) {
-        const creatures = window.AerostarCreatures;
-        if (creatures && typeof creatures.update === 'function') {
-            creatures.update(Number(lat), Number(lon));
-        }
+      const module = window.AerostarCreatures;
+      if (module && typeof module.update === "function") {
+        module.update(Number(lat), Number(lon));
+      }
     };
-</script>
-
+  </script>
 </body>
 </html>
