@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 2. Инициализация обработчиков кнопок (START, Reset)
     initUIHandlers();
+
+     initPovMap(52.12, 23.72); 
     
     // 3. Восстановление сессии (если было)
     if (typeof restoreSession === 'function') restoreSession();
