@@ -1,1113 +1,173 @@
-/* =========================================================
-   AEROST.ART — FUTURISTIC HUD UI
-   ========================================================= */
-
+/* Aerostar GAME_2 — coordinated flight-view layout */
 :root {
-
-    --hud-bg: rgba(12, 22, 40, 0.48);
-    --hud-bg-strong: rgba(15, 25, 45, 0.78);
-
-    --hud-border: rgba(255,255,255,0.10);
-
-    --hud-text: rgba(255,255,255,0.92);
-    --hud-subtext: rgba(255,255,255,0.62);
-
-    --hud-accent: #8fd3ff;
-
-    --hud-shadow:
-        0 8px 32px rgba(0,0,0,0.28),
-        inset 0 0 0 1px rgba(255,255,255,0.03);
-
-    --hud-blur: blur(14px);
-
-    --success: #8fffa6;
-    --warning: #ffd580;
-    --info: #8fd3ff;
+  color-scheme: dark;
+  --hud: rgba(8, 18, 29, .78);
+  --line: rgba(255,255,255,.18);
+  --text: #f5f8fb;
+  --muted: rgba(245,248,251,.72);
 }
-
-/* =========================================================
-   RESET
-   ========================================================= */
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+* { box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%; margin: 0; padding: 0;
+  overflow: hidden; background: #071018; color: var(--text);
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
 }
-
-html,
-body {
-
-    width: 100%;
-    height: 100%;
-
-    overflow: hidden;
-
-    background: #071018;
-
-    color: var(--hud-text);
-
-    font-family: Inter, "Segoe UI", sans-serif;
+.seo-h1 {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap;
 }
-
-/* =========================================================
-   MAP
-   ========================================================= */
-
-#map {
-
-    width: 100%;
-    height: 100%;
-
-    background: #071018;
-
-    position: relative;
-
-    z-index: 1;
+#app {
+  position: relative; width: 100%; height: 100vh; height: 100dvh;
+  min-height: 360px; overflow: hidden; isolation: isolate; background: #071018;
 }
-
-#haze-canvas {
-
-    position: absolute;
-
-    top: 0;
-    left: 0;
-
-    width: 100%;
-    height: 100%;
-
-    pointer-events: none;
-
-    z-index: 1000;
+#map, #pov-map { position: absolute; inset: 0; width: 100%; height: 100%; background: #101820; }
+.world-map-wrap {
+  position: absolute; inset: 0; z-index: 1; overflow: hidden;
+  transition: inset .8s cubic-bezier(.2,.7,.2,1), width .8s, height .8s, border-radius .8s, box-shadow .8s;
 }
-
-/* =========================================================
-   GLOBAL HUD PANEL
-   ========================================================= */
-
-.hud-panel {
-
-    background: var(--hud-bg);
-
-    backdrop-filter: var(--hud-blur);
-
-    border: 1px solid var(--hud-border);
-
-    box-shadow: var(--hud-shadow);
-
-    border-radius: 22px;
+.world-map-label {
+  display: none; position: absolute; top: 8px; left: 10px; z-index: 500;
+  padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px;
+  background: rgba(4,12,20,.72); color: #fff; font-size: 10px; letter-spacing: .12em;
+  pointer-events: none;
 }
-
-/* =========================================================
-   PROFILE BUTTON
-   ========================================================= */
-
-.profile-btn {
-
-    position: absolute;
-
-    top: 20px;
-    right: 20px;
-
-    z-index: 2000;
-
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    padding: 10px 18px;
-
-    border-radius: 999px;
-
-    background: rgba(0,0,0,0);
-
-    /* backdrop-filter: blur(18px); */
-
-    border: 1px solid rgba(255,255,255,0.1);
-
-    color: rgba(0,0,0,1);
-
-    font-size: 14px;
-    font-weight: 600;
-
-    box-shadow:
-        0 8px 24px rgba(0,0,0,0.7);
-
-    cursor: pointer;
-
-    transition: 0.25s ease;
+.pov-panel {
+  position: absolute; inset: 0; z-index: 2; overflow: hidden;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .7s ease, visibility 0s linear .7s;
 }
-
-
-.profile-btn:hover {
-    background: rgba(255, 255, 255, 1) !important;
-    border-color: rgba(0, 0, 0, 0.15) !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15) !important;
+#pov-map { z-index: 1; }
+.pov-vignette {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 42%, transparent 48%, rgba(0,0,0,.10) 78%, rgba(0,0,0,.34) 100%);
 }
-
-/* =========================================================
-   LEFT CONTROLS
-   ========================================================= */
-
-.left-controls {
-
-    position: absolute;
-
-    top: 20px;
-    left: 50px;
-
-    z-index: 2000;
-
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+#haze-canvas { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; pointer-events: none; }
+.app.flight-mode .pov-panel { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
+.app.flight-mode .world-map-wrap {
+  inset: 18px auto auto 18px; width: clamp(170px, 19vw, 270px);
+  height: clamp(118px, 16vw, 190px); z-index: 8;
+  border: 2px solid rgba(255,255,255,.85); border-radius: 13px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.48); overflow: hidden;
 }
+.app.flight-mode .world-map-label { display: block; }
+.app.flight-mode .map-caption { left: 8px; bottom: 7px; font-size: 10px; padding: 4px 6px; }
+.app.flight-mode #map { cursor: default; }
+.leaflet-container { background: #101820; }
+.leaflet-control-attribution { font-size: 9px !important; }
 
-/* =========================================================
-   CUSTOM BUTTONS
-   ========================================================= */
+/* Basket foreground: a restrained physical frame, not a fake landscape. */
+.basket-overlay { display: none; position: absolute; inset: 0; z-index: 6; pointer-events: none; overflow: hidden; }
+.app.flight-mode .basket-overlay { display: block; }
+.basket-rope {
+  position: absolute; bottom: 42px; width: 5px; height: min(40vh, 310px);
+  background: linear-gradient(90deg,#21180f,#9b7950 45%,#24190f);
+  border-radius: 4px; box-shadow: 0 0 5px rgba(0,0,0,.65);
+}
+.rope-left { left: 12%; transform: rotate(8deg); transform-origin: bottom; }
+.rope-right { right: 12%; transform: rotate(-8deg); transform-origin: bottom; }
+.basket-rim {
+  position: absolute; left: 50%; bottom: -5.5vh; transform: translateX(-50%);
+  width: min(76vw, 920px); height: 18vh; min-height: 105px;
+  border: 12px solid #5b351d; border-bottom: 0;
+  border-radius: 50% 50% 0 0 / 38% 38% 0 0;
+  background: linear-gradient(180deg,rgba(184,132,77,.95),rgba(71,39,21,.98) 35%,#1b100b 100%);
+  box-shadow: 0 -9px 24px rgba(0,0,0,.5), inset 0 9px 12px rgba(255,220,170,.22);
+}
+.basket-wicker {
+  position: absolute; left: 50%; bottom: -12vh; transform: translateX(-50%);
+  width: min(72vw, 880px); height: 16vh; min-height: 95px;
+  border-radius: 48% 48% 0 0 / 30% 30% 0 0;
+  background: repeating-linear-gradient(0deg,rgba(30,16,8,.0) 0 8px,rgba(24,12,5,.5) 9px 11px),
+              repeating-linear-gradient(90deg,#6d4325 0 12px,#9b7043 13px 17px,#50301c 18px 21px);
+  border-top: 5px solid #c0915e; box-shadow: inset 0 10px 20px rgba(0,0,0,.45);
+}
+.view-label {
+  position: absolute; right: 18px; top: 18px; z-index: 7;
+  padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px;
+  background: rgba(4,12,20,.55); backdrop-filter: blur(8px);
+  color: rgba(255,255,255,.82); font-size: 10px; letter-spacing: .13em;
+}
+.app:not(.flight-mode) .view-label { display: none; }
 
+.map-controls {
+  position: absolute; left: 18px; top: 18px; z-index: 20;
+  display: flex; flex-direction: column; gap: 9px;
+}
 .custom-button {
-
-    min-width: 170px;
-
-    padding: 14px 22px;
-
-    border-radius: 18px;
-
-    border: 1px solid var(--hud-border);
-
-    background: var(--hud-bg);
-
-    backdrop-filter: var(--hud-blur);
-
-    color: white;
-
-    font-size: 15px;
-    font-weight: 600;
-
-    letter-spacing: 0.5px;
-
-    box-shadow: var(--hud-shadow);
-
-    cursor: pointer;
-
-    transition: all 0.25s ease;
+   min-width: 128px; padding: 11px 17px; border: 1px solid var(--line);
+  border-radius: 24px; color: #fff; background: var(--hud);
+  backdrop-filter: blur(12px); font-size: 13px; font-weight: 700;
+  letter-spacing: .04em; cursor: pointer; box-shadow: 0 5px 18px rgba(0,0,0,.28);
+  transition: transform .18s, background .18s, opacity .18s;
 }
-
-.custom-button:hover {
-
-    transform: translateY(-2px);
-
-    background: rgba(255,255,255,0.08);
+.custom-button:hover:not(:disabled) { transform: translateY(-1px); background: rgba(28,48,66,.94); }
+.custom-button:disabled { opacity: .42; cursor: not-allowed; }
+.app.flight-mode .map-controls { left: auto; right: 18px; top: 18px; }
+.map-caption {
+  position: absolute; left: 12px; bottom: 12px; z-index: 500;
+  max-width: calc(100% - 24px); padding: 6px 9px;
+  border: 1px solid var(--line); border-radius: 8px;
+  color: rgba(255,255,255,.92); background: rgba(0,0,0,.62);
+  backdrop-filter: blur(8px); font: 11px/1.35 ui-monospace, monospace;
+  pointer-events: none;
 }
-
-.custom-button:disabled {
-
-    opacity: 0.35;
-
-    cursor: not-allowed;
+.map-hint, .flight-status, .wind-status {
+  position: absolute; z-index: 20; padding: 8px 12px;
+  border: 1px solid var(--line); border-radius: 18px;
+  color: #fff; background: rgba(0,0,0,.62); backdrop-filter: blur(10px);
+  font-size: 12px; pointer-events: none;
 }
+.map-hint { right: 18px; bottom: 18px; max-width: min(430px, calc(100% - 36px)); transition: opacity .3s; }
+.flight-status { left: 18px; bottom: 18px; display: none; }
+.wind-status { right: 18px; top: 68px; display: none; }
+.app.flight-mode .flight-status, .app.flight-mode .wind-status { display: block; }
+.app.flight-mode .map-hint { display: none; }
 
-/* =========================================================
-   INFO PANEL
-   ========================================================= */
-
-.info-panel {
-
-    position: absolute;
-
-    top: 85px;
-    right: 20px;
-
-    min-width: 280px;
-
-    padding: 18px;
-
-    border-radius: 24px;
-
-    background: var(--hud-bg-strong);
-
-    backdrop-filter: var(--hud-blur);
-
-    border: 1px solid var(--hud-border);
-
-    box-shadow: var(--hud-shadow);
-
-    z-index: 2000;
+/* Creature is intentionally above the satellite imagery, below controls. */
+.creature-overlay {
+  position: absolute; left: 50%; top: 46%; width: min(16vw, 220px);
+  transform: translate(-50%,-50%); opacity: 0; visibility: hidden;
+  pointer-events: none; z-index: 12;
+  transition: width 2s cubic-bezier(.22,.61,.36,1), left 2s, top 2s, opacity .6s, visibility 0s linear .6s;
 }
-
-/* =========================================================
-   COORDS
-   ========================================================= */
-
-.coord-display {
-
-    margin: 14px 0;
-
-    padding: 12px;
-
-    border-radius: 14px;
-
-    background: rgba(255,255,255,0.04);
-
-    border: 1px solid rgba(255,255,255,0.05);
-
-    border-left: 2px solid var(--hud-accent);
-
-    font-family: Consolas, monospace;
-
-    color: rgba(255,255,255,0.85);
-
-    line-height: 1.5;
+.creature-overlay.is-appearing { opacity: 1; visibility: visible; transition-delay: 0s; }
+.creature-overlay img { display: block; width: 100%; max-height: 72vh; object-fit: contain; filter: drop-shadow(0 14px 26px rgba(0,0,0,.58)); }
+.creature-overlay.is-large { width: min(48vw, 680px); pointer-events: auto; }
+.creature-overlay.is-leaving { opacity: 0; width: min(9vw, 130px); left: 66%; top: 55%; }
+.release-btn {
+  display: none; position: absolute; top: -12px; right: -12px;
+  width: 34px; height: 34px; border: 1px solid rgba(255,255,255,.25);
+  border-radius: 50%; color: #fff; background: rgba(0,0,0,.75);
+  font-size: 22px; line-height: 1; cursor: pointer;
 }
-
-/* =========================================================
-   WIND INFO
-   ========================================================= */
-
-.wind-info {
-
-    margin-top: 14px;
-
-    padding: 12px;
-
-    border-radius: 14px;
-
-    background: rgba(143,211,255,0.08);
-
-    border: 1px solid rgba(143,211,255,0.14);
-
-    color: rgba(255,255,255,0.88);
-
-    line-height: 1.5;
+.creature-overlay.is-large .release-btn { display: grid; place-items: center; }
+.creature-name {
+  position: absolute; left: 50%; bottom: -28px; transform: translateX(-50%);
+  color: #fff; font-weight: 700; text-shadow: 0 2px 8px #000;
+  white-space: nowrap; opacity: 0; transition: opacity .3s;
 }
-
-/* =========================================================
-   FLIGHT STATUS
-   ========================================================= */
-
-.flight-status {
-
-    margin-top: 14px;
-
-    padding: 12px;
-
-    border-radius: 14px;
-
-    text-align: center;
-
-    font-weight: 600;
-
-    backdrop-filter: blur(10px);
-}
-
-.status-ready {
-
-    background: rgba(255,193,7,0.15);
-
-    color: var(--warning);
-}
-
-.status-flying {
-
-    background: rgba(76,175,80,0.15);
-
-    color: var(--success);
-}
-
-.status-waiting {
-
-    background: rgba(33,150,243,0.15);
-
-    color: var(--info);
-}
-
-/* =========================================================
-   HINT
-   ========================================================= */
-
-.hint {
-
-    position: absolute;
-
-    bottom: 30px;
-    left: 50%;
-
-    transform: translateX(-50%);
-
-    padding: 10px 18px;
-
-    border-radius: 999px;
-
-    background: rgba(10,20,35,0.65);
-
-    backdrop-filter: blur(12px);
-
-    border: 1px solid rgba(255,255,255,0.08);
-
-    color: white;
-
-    font-size: 14px;
-
-    z-index: 2000;
-
-    pointer-events: none;
-}
-
-/* =========================================================
-   LOADING
-   ========================================================= */
+.creature-overlay.is-large .creature-name { opacity: 1; }
 
 .loading {
-
-    position: absolute;
-
-    top: 50%;
-    left: 50%;
-
-    transform: translate(-50%, -50%);
-
-    padding: 16px 24px;
-
-    border-radius: 16px;
-
-    background: rgba(10,20,35,0.88);
-
-    border: 1px solid rgba(255,255,255,0.08);
-
-    backdrop-filter: blur(14px);
-
-    color: white;
-
-    z-index: 3000;
+  position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center;
+  background: #071018; transition: opacity .45s, visibility .45s;
 }
-
-/* =========================================================
-   AUTH MODAL
-   ========================================================= */
-
-.auth-modal {
-
-    position: fixed;
-
-    top: 0;
-    left: 0;
-
-    width: 100%;
-    height: 100%;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    background: rgba(0,0,0,0.75);
-
-    backdrop-filter: blur(8px);
-
-    z-index: 10000;
-}
-
-.auth-modal.hidden {
-    display: none;
-}
-
-.auth-container {
-
-    width: 90%;
-    max-width: 420px;
-
-    padding: 30px;
-
-    border-radius: 28px;
-
-    background: rgba(15,25,45,0.85);
-
-    backdrop-filter: blur(18px);
-
-    border: 1px solid rgba(255,255,255,0.08);
-
-    box-shadow:
-        0 20px 60px rgba(0,0,0,0.45);
-
-    color: white;
-}
-
-/* =========================================================
-   AUTH TABS
-   ========================================================= */
-
-.auth-tabs {
-
-    display: flex;
-
-    gap: 10px;
-
-    margin-bottom: 24px;
-}
-
-.auth-tab {
-
-    flex: 1;
-
-    padding: 12px;
-
-    text-align: center;
-
-    border-radius: 14px;
-
-    cursor: pointer;
-
-    color: rgba(255,255,255,0.6);
-
-    transition: 0.2s;
-}
-
-.auth-tab.active {
-
-    background: rgba(255,255,255,0.08);
-
-    color: white;
-}
-
-/* =========================================================
-   AUTH FORM
-   ========================================================= */
-
-.auth-form {
-
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-.auth-form.hidden {
-    display: none;
-}
-
-.auth-form input {
-
-    padding: 14px 16px;
-
-    border-radius: 14px;
-
-    border: 1px solid rgba(255,255,255,0.08);
-
-    background: rgba(255,255,255,0.04);
-
-    color: white;
-
-    outline: none;
-
-    font-size: 15px;
-}
-
-.auth-form input:focus {
-
-    border-color: rgba(143,211,255,0.5);
-}
-
-.auth-form button {
-
-    padding: 14px;
-
-    border: none;
-
-    border-radius: 16px;
-
-    background: rgba(255,255,255,0.08);
-
-    color: white;
-
-    font-size: 15px;
-    font-weight: 600;
-
-    cursor: pointer;
-
-    transition: 0.2s;
-}
-
-.auth-form button:hover {
-
-    background: rgba(255,255,255,0.1);
-}
-
-.auth-error {
-
-    color: #ff8a8a;
-
-    text-align: center;
-
-    font-size: 14px;
-}
-
-/* =========================================================
-   USER INFO
-   ========================================================= */
-
-.user-info {
-
-    position: absolute;
-
-    top: 20px;
-    right: 20px;
-
-    z-index: 2000;
-
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    padding: 12px 18px;
-
-    border-radius: 999px;
-
-    background: rgba(15,25,45,0.88);
-
-    backdrop-filter: blur(18px);
-
-    border: 1px solid rgba(255,255,255,0.08);
-
-    box-shadow:
-        0 8px 24px rgba(0,0,0,0.35);
-
-    color: white !important;
-
-    font-size: 14px;
-    font-weight: 600;
-}
-
-/* =========================================================
-   BADGES
-   ========================================================= */
-
-.guest-badge,
-.logout-btn {
-
-    padding: 6px 12px;
-
-    border-radius: 999px;
-
-    border: none;
-
-    font-size: 12px;
-}
-
-.guest-badge {
-
-    background: rgba(255,193,7,0.15);
-
-    color: var(--warning);
-}
-
-.logout-btn {
-
-    background: rgba(255,80,80,0.18);
-
-    color: white;
-
-    cursor: pointer;
-}
-
-/* =========================================================
-   LEAFLET CONTROLS
-   ========================================================= */
-
-.leaflet-control-layers {
-
-    background: var(--hud-bg) !important;
-
-    backdrop-filter: var(--hud-blur);
-
-    border: 1px solid var(--hud-border) !important;
-
-    border-radius: 18px !important;
-
-    color: white !important;
-
-    overflow: hidden;
-
-    box-shadow: var(--hud-shadow);
-
-    left: 20px !important;
-
-    top: 70px !important;
-}
-
-.leaflet-control-layers label {
-
-    color: white !important;
-}
-
-.leaflet-control-scale {
-
-    background: rgba(10,20,35,0.65);
-
-    border-radius: 10px;
-
-    padding: 4px 8px;
-
-    color: white;
-}
-
-/* =========================================================
-   BALLOON MARKER
-   ========================================================= */
-
-.balloon-marker {
-
-    font-size: 26px;
-
-    filter:
-        drop-shadow(0 0 12px rgba(255,255,255,0.55));
-}
-
-/* =========================================================
-   NOTIFICATIONS
-   ========================================================= */
-
-@keyframes slideIn {
-
-    from {
-        transform: translateX(-50%) translateY(-60px);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateX(-50%) translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes slideOut {
-
-    from {
-        transform: translateX(-50%) translateY(0);
-        opacity: 1;
-    }
-
-    to {
-        transform: translateX(-50%) translateY(-60px);
-        opacity: 0;
-    }
-}
-
-.error-notification,
-.success-notification {
-
-    animation: slideIn 0.3s ease-out;
-}
-
-.error-notification div,
-.success-notification div {
-
-    backdrop-filter: blur(12px);
-}
-
-/* =========================================================
-   WELCOME MODAL
-   ========================================================= */
-
-.welcome-modal {
-
-    position: fixed;
-
-    top: 0;
-    left: 0;
-
-    width: 100%;
-    height: 100%;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    background: rgba(0,0,0,0.72);
-
-    backdrop-filter: blur(8px);
-
-    z-index: 2000;
-}
-
-.welcome-container {
-
-    width: 90%;
-    max-width: 520px;
-
-    border-radius: 28px;
-
-    background: rgba(15,25,45,0.82);
-
-    backdrop-filter: blur(18px);
-
-    border: 1px solid rgba(255,255,255,0.08);
-
-    box-shadow:
-        0 20px 60px rgba(0,0,0,0.45);
-
-    animation: slideIn 0.3s ease-out;
-}
-
-.welcome-content {
-
-    padding: 32px;
-
-    text-align: center;
-}
-
-.welcome-icon {
-
-    font-size: 60px;
-
-    margin-bottom: 18px;
-}
-
-.welcome-title {
-
-    font-size: 30px;
-
-    font-weight: 700;
-
-    margin-bottom: 18px;
-}
-
-.welcome-text {
-
-    color: rgba(255,255,255,0.72);
-
-    line-height: 1.7;
-
-    margin-bottom: 22px;
-}
-
-.welcome-features {
-
-    margin: 24px 0;
-
-    padding: 18px;
-
-    border-radius: 18px;
-
-    background: rgba(255,255,255,0.04);
-
-    text-align: left;
-}
-
-.welcome-features h4 {
-
-    margin-bottom: 10px;
-
-    color: var(--hud-accent);
-}
-
-.welcome-features ul {
-
-    padding-left: 18px;
-}
-
-.welcome-features li {
-
-    margin: 8px 0;
-
-    color: rgba(255,255,255,0.75);
-}
-
-.welcome-buttons {
-
-    margin: 28px 0 14px;
-}
-
-.welcome-btn {
-
-    padding: 14px 30px;
-
-    border: 1px solid rgba(255,255,255,0.08);
-
-    border-radius: 999px;
-
-    background: rgba(255,255,255,0.08);
-
-    color: white;
-
-    font-size: 15px;
-    font-weight: 600;
-
-    cursor: pointer;
-
-    transition: 0.2s;
-}
-
-.welcome-btn:hover {
-
-    background: rgba(255,255,255,0.14);
-
-    transform: translateY(-2px);
-}
-
-.dont-show-again {
-
-    margin-top: 16px;
-
-    font-size: 12px;
-
-    color: rgba(255,255,255,0.5);
-}
-
-/* =========================================================
-   SUPPORT BANNER
-   ========================================================= */
-
-#support-banner {
-
-    position: fixed;
-
-    bottom: 20px;
-    left: 50%;
-
-    transform: translateX(-50%);
-
-    z-index: 1500;
-
-    padding: 14px 18px;
-
-    border-radius: 22px;
-
-    background: rgba(12,22,40,0.78);
-
-    backdrop-filter: blur(18px);
-
-    border: 1px solid rgba(255,255,255,0.08);
-
-    box-shadow: var(--hud-shadow);
-
-    color: white;
-
-    max-width: 92%;
-}
-
-.support-content {
-
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.support-icon {
-
-    font-size: 24px;
-}
-
-.support-text {
-
-    display: flex;
-    flex-direction: column;
-}
-
-.support-title {
-
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.support-subtitle {
-
-    margin-top: 2px;
-
-    font-size: 12px;
-
-    color: rgba(255,255,255,0.58);
-}
-
-.support-button {
-
-    padding: 10px 18px;
-
-    border-radius: 999px;
-
-    background: rgba(255,255,255,0.08);
-
-    border: 1px solid rgba(255,255,255,0.08);
-
-    text-decoration: none;
-
-    color: white;
-
-    font-weight: 600;
-
-    transition: 0.2s;
-}
-
-.support-button:hover {
-
-    background: rgba(255,255,255,0.14);
-
-    transform: translateY(-1px);
-}
-
-.close-button {
-
-    background: transparent;
-
-    border: none;
-
-    color: rgba(255,255,255,0.7);
-
-    font-size: 18px;
-
-    cursor: pointer;
-}
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
-@media (max-width: 768px) {
-
-    .left-controls {
-
-        left: 12px;
-        top: 12px;
-    }
-
-    .custom-button {
-
-        min-width: 130px;
-
-        padding: 12px 16px;
-
-        font-size: 14px;
-    }
-
-    .info-panel {
-
-        right: 12px;
-
-        width: calc(100% - 24px);
-
-        min-width: unset;
-    }
-
-    .support-subtitle {
-
-        display: none;
-    }
-
-    .support-content {
-
-        gap: 10px;
-    }
-}
-
-/* LIVE AEROSTAR кнопка */
-.live-button {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: linear-gradient(135deg, #ff0000, #cc0000);
-    color: white;
-    padding: 12px 24px;
-    border-radius: 40px;
-    text-decoration: none;
-    font-weight: bold;
-    font-size: 14px;
-    z-index: 1000;
-    box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
-    transition: transform 0.2s, box-shadow 0.2s;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-.live-button:hover {
-    transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(255, 0, 0, 0.4);
-}
-
-/* На мобильных устройствах чуть меньше */
-@media (max-width: 768px) {
-    .live-button {
-        padding: 8px 16px;
-        font-size: 12px;
-        bottom: 15px;
-        right: 15px;
-    }
-}
-
-/* =========================================================
-   GAME_2 — FULLSCREEN MAP OVERRIDES
-   The map is the background of the entire game screen.
-   ========================================================= */
-
-html,
-body {
-    width: 100%;
-    min-width: 0;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-}
-
-body {
-    overflow-x: hidden;
-}
-
-/* Defensive cleanup for fragments of the previous split-screen layout. */
-#scenePanel,
-#scene-panel,
-.scene-panel,
-.scene-container,
-.scene-panel-container {
-    display: none !important;
-}
-
-#app {
-    position: relative;
-    display: block;
-    width: 100%;
-    height: 100vh;
-    height: 100dvh;
-    min-height: 420px;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-}
-
-#app > .map-panel {
-    position: absolute;
-    inset: 0;
-    display: block;
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-}
-
-#app #map {
-    position: absolute !important;
-    inset: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    min-height: 0;
-    z-index: 1;
-}
-
-/* Canvas and creature are transparent overlays above the map. */
-#app #haze-canvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 650;
-}
-
-#app .creature-overlay {
-    z-index: 1100;
-}
-
-/* Avoid legacy CSS forcing the map or its parent into a column/grid. */
-#app,
-#app > .map-panel {
-    grid-template-columns: none !important;
-    flex: none !important;
+.loading.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.loading-card { display: grid; justify-items: center; gap: 12px; max-width: 360px; padding: 26px; text-align: center; }
+.loading-card p { color: var(--muted); margin: 0; font-size: 14px; line-height: 1.5; }
+.loading-status { font-size: 18px; font-weight: 700; }
+.loading-spinner { width: 30px; height: 30px; border: 3px solid rgba(255,255,255,.2); border-top-color: #8fd3ff; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 700px) {
+  .map-controls { left: 10px; top: 10px; }
+  .custom-button { min-width: 112px; padding: 10px 13px; font-size: 12px; }
+  .app.flight-mode .world-map-wrap { inset: 10px auto auto 10px; width: 154px; height: 112px; }
+  .app.flight-mode .map-controls { right: 10px; top: 10px; }
+  .app.flight-mode .wind-status { top: 58px; right: 10px; max-width: 44vw; }
+  .view-label { right: 10px; top: auto; bottom: 20vh; font-size: 9px; }
+  .basket-rim { width: 92vw; height: 15vh; }
+  .basket-wicker { width: 88vw; }
+  .basket-rope { height: 28vh; }
+  .map-hint { right: 10px; bottom: 10px; }
 }
