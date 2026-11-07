@@ -4,155 +4,65 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real Wind Hot Air Balloon Flight Simulator | Live Wind Data</title>
-    <meta name="description" content="Fly a virtual hot air balloon with real-time wind data. Choose any location on Earth and drift with live wind speed and direction. Free, no ads, no signup.">
-    <meta name="keywords" content="hot air balloon, flight simulator, real wind, live wind data, virtual balloon, wind simulator, interactive map, live wind map, balloon tracking">
-    <meta name="author" content="Aerostar">
-    <meta name="robots" content="index, follow">
-
-    <!-- Open Graph / Social Media -->
-    <meta property="og:title" content="Real Wind Hot Air Balloon Flight Simulator">
-    <meta property="og:description" content="Fly a virtual balloon with live wind data anywhere on Earth. Free, no ads.">
-    <meta property="og:image" content="https://aerost.art/images/preview.jpg">
-    <meta property="og:url" content="https://aerost.art">
-    <meta property="og:type" content="website">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Real Wind Hot Air Balloon Flight Simulator">
-    <meta name="twitter:description" content="Fly with live wind data. Free. No ads.">
-
+    <meta name="description" content="Fly a virtual hot air balloon with real-time wind data. Choose any location on Earth and drift with live wind speed and direction.">
+    
     <!-- Leaflet connection -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="css/styles.css?v=20261106-2" />
+    
+    <!-- Ваши стили -->
+    <link rel="stylesheet" href="css/styles.css?v=20261107-1" />
 
     <!-- Canonical URL -->
     <link rel="canonical" href="https://aerost.art/">
-    <script defer src="https://cloud.umami.is/script.js" data-website-id="059675cf-3a0e-433a-9b94-bff4ab226452"></script>
 </head>
 <body>
 
 <!-- SEO H1 (visually hidden) -->
 <h1 class="seo-h1">Real-Time Hot Air Balloon Flight Simulator with Live Wind Data</h1>
 
-<!-- Welcome Modal (оставлено как было) -->
-<div id="welcomeModal" class="welcome-modal" style="display: none;">
-    <div class="welcome-container">
-        <div class="welcome-content">
-            <div class="welcome-icon">🎈</div>
-            <div class="welcome-title">Welcome to Aerostar!</div>
-            <div class="welcome-text">
-                <p>Enjoy a virtual hot air balloon flight.</p>
-                <p>Pick any starting point and your balloon will fly according to <strong>real wind data</strong> in that area.</p>
-            </div>
-            <div class="welcome-features">
-                <h4>📋 How it works:</h4>
-                <ul>
-                    <li>🎯 Click on the map to choose a starting point</li>
-                    <li>🚀 Press "START" to begin the flight</li>
-                    <li>🌬️ The balloon moves based on real-time wind data</li>
-                    <li>👥 You can fly as a Guest (session ends when browser closes)</li>
-                    <li>🔐 <strong>Register</strong> to keep your flight going for days</li>
-                </ul>
-            </div>
-            <div class="welcome-buttons">
-                <button class="welcome-btn welcome-btn-primary" id="closeWelcomeBtn">Let's fly! 🎈</button>
-            </div>
-            <div class="dont-show-again" id="dontShowAgain">
-                <input type="checkbox" id="dontShowCheckbox"> Don't show again
-            </div>
-        </div>
-    </div>
-</div>
-
-<!--
-  GAME_2: основной экран приложения.
-  Одна интерактивная карта Leaflet занимает всю рабочую область.
-  js/main.js добавляет на неё спутниковый слой ESRI, маркеры,
-  прогноз ветра и траекторию. Отдельной искусственной сцены нет.
--->
+<!-- ═══ ОСНОВНОЙ ЭКРАН ═══ -->
 <div class="app" id="app">
-    <main class="map-panel" aria-label="Aerostar flight map">
-        <!-- Главная карта. Не отключать pointer-events:
-             main.js обрабатывает клики по ней для выбора старта. -->
+    
+    <!-- ЛЕВАЯ ПАНЕЛЬ: Карта мира (Зум 2) -->
+    <div class="minimap-panel">
         <div id="map"></div>
+        <div class="map-caption" id="mapCaption" aria-live="polite">широта —, долгота —</div>
+    </div>
 
-        <!-- Атмосферная зона, которую рисует balloon.js.
-             Canvas прозрачен для мыши и не мешает Leaflet. -->
+    <!-- ПРАВАЯ ПАНЕЛЬ: Вид от первого лица -->
+    <div class="first-person-panel">
+        <div id="pov-map"></div>
+        
         <canvas id="haze-canvas" aria-hidden="true"></canvas>
 
-        <!-- Координаты выбранной точки / текущего положения шара. -->
-        <div class="map-caption" id="mapCaption" aria-live="polite">
-            широта —, долгота —
+        <!-- Корзина -->
+        <div class="basket-overlay">
+            <div class="basket-rope left"></div>
+            <div class="basket-rope right"></div>
+            <div class="basket-body">🎈 Вы в корзине</div>
         </div>
 
-        <!-- Изображение мифического существа поверх спутниковой карты.
-             Классы анимации добавляет js/creatures.js. -->
+        <!-- Существо -->
         <div class="creature-overlay" id="creatureOverlay" aria-live="polite">
             <img id="creatureImg" src="" alt="Мифическое существо">
-            <button class="release-btn" id="releaseBtn" type="button"
-                    title="Отпустить существо" aria-label="Отпустить существо">✕</button>
+            <button class="release-btn" id="releaseBtn" type="button" title="Отпустить">✕</button>
             <div class="creature-name" id="creatureName"></div>
         </div>
 
-        <!-- Кнопки: их ID используются обработчиками в js/main.js. -->
-        <div class="map-controls">
-            <button class="custom-button" id="startBtn" type="button" disabled>▶ START</button>
-            <button class="custom-button" id="resetBtn" type="button">🗑️ Reset</button>
-        </div>
-
-        <!-- Подсказка выбора места старта. -->
+        <!-- Подсказка -->
         <div class="map-hint" id="hint">👆 Click on the map to set a start location</div>
-    </main>
-</div>
-
-<!-- Support Banner (оставлено как было) -->
-<div id="support-banner">
-    <div class="support-content">
-        <span class="support-icon">🎈</span>
-        <div class="support-text">
-            <div class="support-title">Enjoying the flight?</div>
-            <div class="support-subtitle">Support real-time balloon exploration</div>
-        </div>
-        <a href="https://patreon.com/aerostart"
-           target="_blank"
-           rel="noopener noreferrer"
-           class="support-button">
-            Patreon
-        </a>
-        <button id="close-ad" class="close-button">✕</button>
     </div>
-</div>
 
-<!-- Profile Button -->
-<div id="profileButton" class="profile-btn">
-    <span>👤</span>
-    <span id="profileStatus">Guest</span>
-</div>
-
-<!-- Auth Modal -->
-<div id="authModal" class="auth-modal hidden">
-    <div class="auth-container">
-        <div class="auth-tabs">
-            <div class="auth-tab active" data-tab="login">Login</div>
-            <div class="auth-tab" data-tab="register">Register</div>
-        </div>
-        <div id="loginForm" class="auth-form">
-            <input type="email" id="loginEmail" placeholder="Email">
-            <input type="password" id="loginPassword" placeholder="Password">
-            <button id="loginBtn">Login</button>
-            <div id="loginError" class="auth-error"></div>
-        </div>
-        <div id="registerForm" class="auth-form hidden">
-            <input type="email" id="regEmail" placeholder="Email">
-            <input type="password" id="regPassword" placeholder="Password (min. 6 chars)">
-            <button id="registerBtn">Create Account</button>
-            <div id="regError" class="auth-error"></div>
-        </div>
-        <div style="text-align: center; margin-top: 15px; font-size: 12px; color: #999;">
-            <button id="continueGuestBtn" style="background: none; border: none; color: #4285f4; cursor: pointer;">Continue as Guest</button>
-        </div>
+    <!-- Кнопки управления (поверх всего) -->
+    <div class="map-controls">
+        <button class="custom-button" id="startBtn" type="button" disabled>▶ START</button>
+        <button class="custom-button" id="resetBtn" type="button">🗑️ Reset</button>
     </div>
+
 </div>
 
+<!-- Загрузочная заставка -->
 <div class="loading" id="loading">
     <div class="loading-status">Loading Map... 🗺️</div>
     <div class="loading-description">
@@ -161,116 +71,137 @@
     </div>
 </div>
 
-<!-- SEO Footer (оставлено как было) -->
-<footer class="seo-footer">
-    <div class="seo-footer-content">
-        <h2>How the Virtual Balloon Works with Live Wind</h2>
-        <p><strong>Aerostar</strong> is a free virtual hot air balloon flight simulator powered by <strong>real-time wind data</strong>. Click anywhere on the map, press START, and watch your balloon drift according to actual meteorological conditions — wind speed, direction, and gusts — at that exact location anywhere on Earth.</p>
-
-        <h3>Real Wind Simulation Technology</h3>
-        <p>The balloon responds to live wind data including speed (measured in meters per second), direction in degrees, and local gusts. Unlike most simulators that use random or pre-programmed wind patterns, Aerostar fetches current weather conditions from global meteorological sources. The simulation covers the entire planet — from mountain thermals in the Swiss Alps to consistent ocean breezes across the Pacific.</p>
-
-        <h3>Free and No Registration Required</h3>
-        <p>You can fly as a guest immediately — the balloon will drift until you close your browser. For longer flights that persist across browser sessions and days of drifting, you can <a href="#" id="registerLinkFooter">create a free account</a>. No credit card required. No hidden fees. No ads. No trackers.</p>
-
-        <h3>Why Real Wind Matters</h3>
-        <p>Traditional balloon simulators use fake or predictable wind. Real wind creates <strong>authentic, unpredictable journeys</strong>. A launch over the Rocky Mountains behaves differently than a launch above the Amazon rainforest. You might drift into unexpected weather patterns, experience calm mornings with gentle breezes, or get carried by stronger afternoon gusts. Every flight is unique.</p>
-
-        <h3>Technical Details</h3>
-        <p>Wind data updates regularly from real-time meteorological APIs. The balloon's altitude is simulated at approximately 500 meters above ground level — where wind patterns differ significantly from surface conditions. Coordinates update every few seconds as the balloon drifts. The simulation is purely for relaxation and exploration — no competitive elements, no scores, no timers.</p>
-
-        <h2 style="text-align: center; margin-top: 2rem;">🎈 Let's see where the wind takes us! 🎈</h2>
-
-        <div class="support-footer-box">
-            <h3>Support Independent Web Projects</h3>
-            <p>Aerostar is entirely funded by voluntary donations. Server costs for live wind data APIs and cloud hosting are the only expenses. If you enjoy watching the balloon drift over Patagonia, the Norwegian fjords, or the Sahara Desert, please consider a small contribution to keep the wind blowing.</p>
-            <div style="text-align: center; margin: 1.5rem 0;">
-                <a href="/support.html" class="support-footer-button">🎈 Support Aerostar →</a>
-                <a href="https://patreon.com/aerostart" target="_blank" rel="noopener noreferrer" class="patreon-footer-button">Become a Patreon</a>
-            </div>
-        </div>
-
-        <div class="seo-footer-links">
-            <a href="/about.html">About</a> |
-            <a href="/support.html">Support the Project</a> |
-            <a href="/privacy.html">Privacy Policy</a>
-        </div>
-
-        <p class="seo-footer-copy">&copy; 2025 Aerostar — Real wind. Real flight. No ads. No trackers.</p>
-    </div>
-</footer>
-
-<!-- Стили полноэкранной спутниковой карты и наложенного изображения существа. -->
+<!-- ═══ СТИЛИ ═══ -->
 <style>
-    /* Скрытый H1 сохраняет SEO-заголовок, не занимая место на экране. */
+    /* Скрытый H1 для SEO */
     .seo-h1 {
         position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
         overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
     }
 
+    /* --- БАЗОВЫЙ ДВУХКОЛОНОЧНЫЙ МАКЕТ --- */
     html, body {
-        margin: 0; padding: 0; width: 100%; min-height: 100%;
+        margin: 0; padding: 0; width: 100%; height: 100%;
+        overflow: hidden !important; /* Убираем скролл */
+        background: #0b0f14;
         font-family: system-ui, -apple-system, sans-serif;
-        background: #0b0f14; overflow-x: hidden;
-    }
-    body { overflow-y: auto; }
-
-    /* Убираем возможные остатки старой двухпанельной сцены,
-       если сервер/старый фрагмент разметки ещё содержит её. */
-    #scenePanel, #scene-panel, .scene-panel, .scene-container, .scene-panel-container {
-        display: none !important;
     }
 
-    /* Рабочая область карты занимает всё окно браузера. */
     .app {
-        position: relative;
-        display: block;
-        width: 100%;
+        display: flex;
+        width: 100vw;
         height: 100vh;
-        height: 100dvh;
-        min-height: 420px;
-        overflow: hidden;
+        position: relative;
     }
-    .map-panel {
-        position: absolute;
-        inset: 0;
-        width: 100%;
+
+    /* Левая панель (карта мира) */
+    .minimap-panel {
+        position: relative;
+        width: 30%;
+        height: 100%;
+        border-right: 2px solid rgba(0,0,0,0.5);
+        z-index: 10;
+    }
+
+    /* Правая панель (вид от первого лица) */
+    .first-person-panel {
+        position: relative;
+        width: 70%;
         height: 100%;
         overflow: hidden;
-        background: #111;
-        isolation: isolate;
+        background: #87CEEB;
     }
 
-    /* Важно: pointer-events должны оставаться включёнными —
-       main.js ловит здесь клики для выбора места запуска. */
-    #map {
-        position: absolute !important;
-        inset: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        z-index: 1;
+    #map, #pov-map {
+        width: 100%;
+        height: 100%;
         background: #111;
     }
 
-    /* Прозрачный canvas рисует атмосферную зону и не перехватывает мышь. */
-    #haze-canvas {
-        position: absolute; inset: 0; width: 100%; height: 100%;
-        z-index: 650; pointer-events: none; opacity: .4;
+    /* Убираем зум-кнопки на маленькой карте */
+    .minimap-panel .leaflet-control-zoom { display: none; }
+
+    /* --- ЭФФЕКТ КОРЗИНЫ --- */
+    .basket-overlay {
+        position: absolute;
+        bottom: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80%;
+        height: 200px;
+        pointer-events: none;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
     }
 
+    .basket-rope {
+        position: absolute;
+        bottom: 100px;
+        width: 4px;
+        height: 300px;
+        background: #4a3b2c;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+    }
+    .basket-rope.left { left: 10%; transform: rotate(10deg); transform-origin: bottom; }
+    .basket-rope.right { right: 10%; transform: rotate(-10deg); transform-origin: bottom; }
+
+    .basket-body {
+        position: relative;
+        width: 100%;
+        height: 120px;
+        background: repeating-linear-gradient(
+            45deg, #8b5a2b, #8b5a2b 10px, #6b4226 10px, #6b4226 20px
+        );
+        border-radius: 50% 50% 0 0 / 20% 20% 0 0;
+        border-top: 8px solid #a0522d;
+        box-shadow: inset 0 10px 20px rgba(0,0,0,0.6);
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 20px;
+        color: rgba(255,255,255,0.4);
+        font-family: monospace;
+        font-size: 14px;
+    }
+
+    /* --- УПРАВЛЕНИЕ --- */
+    .map-controls {
+        position: absolute;
+        left: 18px;
+        top: 18px;
+        z-index: 1600;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .map-controls .custom-button {
+        min-width: 130px; padding: 11px 18px;
+        border: 1px solid rgba(255,255,255,.18); border-radius: 24px;
+        color: #fff; background: rgba(8,18,30,.78);
+        backdrop-filter: blur(10px); font-size: 13px;
+        font-weight: 650; letter-spacing: .4px; cursor: pointer;
+        box-shadow: 0 4px 16px rgba(0,0,0,.28);
+        transition: transform .15s, background .2s;
+    }
+    .map-controls .custom-button:hover { transform: translateY(-2px); background: rgba(25,45,65,.94); }
+    .map-controls .custom-button:disabled { opacity: .48; cursor: not-allowed; transform: none; }
+
+    /* --- КООРДИНАТЫ --- */
     .map-caption {
         position: absolute; left: 14px; bottom: 14px; z-index: 1200;
-        max-width: calc(100% - 28px); padding: 6px 10px;
-        border: 1px solid rgba(255,255,255,.14); border-radius: 8px;
-        color: rgba(255,255,255,.9); background: rgba(0,0,0,.58);
-        backdrop-filter: blur(8px);
-        font: 12px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
-        pointer-events: none;
+        padding: 6px 10px; border: 1px solid rgba(255,255,255,.14);
+        border-radius: 8px; color: rgba(255,255,255,.9);
+        background: rgba(0,0,0,.58); backdrop-filter: blur(8px);
+        font: 12px/1.4 ui-monospace, monospace; pointer-events: none;
     }
 
-    /* Существо — HTML-слой поверх настоящей карты, не отдельный фон. */
+    /* --- СУЩЕСТВО --- */
     .creature-overlay {
-        position: absolute; left: 60%; top: 52%;
+        position: absolute; left: 50%; top: 50%;
         width: min(15vw, 220px); transform: translate(-50%, -50%);
         opacity: 0; visibility: hidden; pointer-events: none; z-index: 1100;
         transition: left 2s cubic-bezier(.22,.61,.36,1),
@@ -289,7 +220,6 @@
         display: block; width: 100%; height: auto; max-height: 78vh;
         object-fit: contain; filter: drop-shadow(0 12px 24px rgba(0,0,0,.5));
     }
-    /* Существо вырастает примерно до половины ширины экрана. */
     .creature-overlay.is-large {
         left: 50%; top: 50%; width: min(50vw, 720px); pointer-events: auto;
     }
@@ -316,27 +246,7 @@
     }
     .creature-overlay.is-large .creature-name { opacity: 1; }
 
-    /* Управление полётом поверх карты. */
-    .map-controls {
-        position: absolute; left: 18px; top: 18px; z-index: 1600;
-        display: flex; flex-direction: column; gap: 10px;
-    }
-    .map-controls .custom-button {
-        min-width: 130px; padding: 11px 18px;
-        border: 1px solid rgba(255,255,255,.18); border-radius: 24px;
-        color: #fff; background: rgba(8,18,30,.78);
-        backdrop-filter: blur(10px); font-size: 13px;
-        font-weight: 650; letter-spacing: .4px; cursor: pointer;
-        box-shadow: 0 4px 16px rgba(0,0,0,.28);
-        transition: transform .15s, background .2s;
-    }
-    .map-controls .custom-button:hover {
-        transform: translateY(-2px); background: rgba(25,45,65,.94);
-    }
-    .map-controls .custom-button:disabled {
-        opacity: .48; cursor: not-allowed; transform: none;
-    }
-
+    /* --- ПОДСКАЗКА --- */
     .map-hint {
         position: absolute; right: 18px; bottom: 18px; z-index: 1600;
         max-width: min(420px, calc(100% - 36px)); padding: 9px 14px;
@@ -346,36 +256,7 @@
         pointer-events: none; transition: opacity .4s;
     }
 
-    /* SEO-футер сохранён; он находится ниже полноэкранной карты. */
-    .seo-footer {
-        position: relative; z-index: 1; margin-top: 0; padding: 2rem 1rem;
-        border-top: 1px solid #333; color: #ccc; background: #1a1a2e;
-        font-family: system-ui, -apple-system, sans-serif; line-height: 1.6;
-    }
-    .seo-footer-content { max-width: 900px; margin: 0 auto; }
-    .seo-footer h2 { color: #ff9800; font-size: 1.5rem; margin-bottom: 1rem; }
-    .seo-footer h3 { color: #ffb74d; font-size: 1.2rem; margin: 1.5rem 0 .75rem; }
-    .seo-footer a { color: #ff9800; text-decoration: none; }
-    .seo-footer a:hover { text-decoration: underline; }
-    .seo-footer-links { margin: 1.5rem 0; text-align: center; font-size: .9rem; }
-    .seo-footer-copy { margin-top: 1rem; color: #888; text-align: center; font-size: .8rem; }
-    .support-footer-box {
-        margin: 2rem 0; padding: 1.5rem; border-radius: 16px;
-        background: #0f3460; text-align: center;
-    }
-    .support-footer-button, .patreon-footer-button {
-        display: inline-block; margin: .5rem; padding: .75rem 1.5rem;
-        border-radius: 40px; color: #1a1a2e; background: #ff9800;
-        font-weight: bold; transition: transform .2s, background .2s;
-    }
-    .patreon-footer-button { color: #fff; background: #f96854; }
-    .support-footer-button:hover, .patreon-footer-button:hover {
-        transform: scale(1.05); text-decoration: none;
-    }
-    .support-footer-button:hover { background: #ffb74d; }
-    .patreon-footer-button:hover { background: #ff7a66; }
-
-    /* Загрузочная заставка поверх карты до завершения инициализации. */
+    /* --- ЗАГРУЗКА --- */
     #loading {
         position: fixed; inset: 0; z-index: 5000;
         display: flex; flex-direction: column; align-items: center;
@@ -383,240 +264,20 @@
         color: #fff; background: #101820;
     }
     .loading-status { font-size: 1.2rem; font-weight: bold; }
-    .loading-description {
-        max-width: 500px; padding: 0 20px; animation: fadeIn 1s ease-in-out;
-    }
-    .loading-description h2 {
-        margin: 0 0 8px; color: #fff; font-size: 1.3rem;
-        font-weight: 600; line-height: 1.4;
-    }
+    .loading-description { max-width: 500px; padding: 0 20px; }
+    .loading-description h2 { margin: 0 0 8px; color: #fff; font-size: 1.3rem; font-weight: 600; }
     .loading-description p { margin: 0; color: #b3b3b3; font-size: .95rem; }
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Иконка чужих аэростатов, создаваемая inline-скриптом. */
-    .balloon-div-icon {
-        border: 0; background: none; font-size: 24px;
-        line-height: 24px; text-align: center;
-        filter: drop-shadow(0 2px 3px rgba(0,0,0,.4));
-    }
-    .balloon-popup b { color: #16a34a; }
-
-    @media (max-width: 720px) {
-        .map-controls { top: 12px; left: 12px; }
-        .map-controls .custom-button { min-width: 112px; padding: 9px 14px; }
-        .map-caption { left: 10px; bottom: 10px; }
-        .map-hint { right: 10px; bottom: 10px; font-size: 11px; }
-        .creature-overlay { width: 24vw; }
-        .creature-overlay.is-large { width: 78vw; }
-        .seo-footer { padding: 1rem; font-size: .9rem; }
-        .seo-footer h2 { font-size: 1.3rem; }
-        .seo-footer h3 { font-size: 1.1rem; }
-        .support-footer-button, .patreon-footer-button {
-            display: block; margin: .5rem auto; text-align: center;
-        }
-    }
 </style>
 
-<!-- Вспомогательные inline-обработчики баннера, welcome-окна и SEO-ссылки. -->
-<script>
-    // Регистрация ссылки в футере для открытия модалки авторизации
-    document.addEventListener('DOMContentLoaded', function() {
-        const footerRegLink = document.getElementById('registerLinkFooter');
-        if (footerRegLink) {
-            footerRegLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                const profileBtn = document.getElementById('profileButton');
-                if (profileBtn) profileBtn.click();
-            });
-        }
-    });
-
-    // 1. Логика Patreon баннера (закрытие)
-    const closeAdBtn = document.getElementById('close-ad');
-    if (closeAdBtn) {
-        closeAdBtn.addEventListener('click', () => {
-            document.getElementById('support-banner').style.display = 'none';
-        });
-    }
-
-    // 2. Логика приветственного окна с проверкой языка
-    (function() {
-        const WELCOME_KEY = 'welcome_shown';
-
-        const userLang = navigator.language || navigator.userLanguage;
-        if (userLang.startsWith('ru')) {
-            const title = document.querySelector('.welcome-title');
-            const text = document.querySelector('.welcome-text');
-            const features = document.querySelector('.welcome-features');
-            const btn = document.getElementById('closeWelcomeBtn');
-            const dontShow = document.getElementById('dontShowAgain');
-
-            if (title) title.textContent = "Добро пожаловать в Aerostar!";
-            if (text) text.innerHTML = `
-                <p>Здесь можно полетать на виртуальном воздушном шаре.</p>
-                <p>Выберите любую точку старта и ваш аэростат полетит в соответствии с <strong>реальным ветром</strong> в этой местности.</p>
-            `;
-            if (features) features.innerHTML = `
-                <h4>📋 Как это работает:</h4>
-                <ul>
-                    <li>🎯 Кликните на карту - выберите точку старта</li>
-                    <li>🚀 Нажмите "СТАРТ" - шар начнет полет</li>
-                    <li>🌬️ Шар движется по реальным данным ветра</li>
-                    <li>👥 Можно летать как гость (шар исчезнет при закрытии браузера)</li>
-                    <li>🔐 Чтобы лететь сутками - <strong>зарегистрируйтесь</strong></li>
-                </ul>
-            `;
-            if (btn) btn.textContent = "Полетели! 🎈";
-            if (dontShow) dontShow.innerHTML = '<input type="checkbox" id="dontShowCheckbox"> Не показывать снова';
-        }
-
-        if (!localStorage.getItem(WELCOME_KEY)) {
-            setTimeout(() => {
-                const modal = document.getElementById('welcomeModal');
-                if (modal) modal.style.display = 'flex';
-            }, 500);
-        }
-
-        document.addEventListener('click', function(e) {
-            if (e.target && e.target.id === 'closeWelcomeBtn') {
-                const modal = document.getElementById('welcomeModal');
-                const dontShowCheckbox = document.getElementById('dontShowCheckbox');
-                if (dontShowCheckbox && dontShowCheckbox.checked) {
-                    localStorage.setItem(WELCOME_KEY, 'true');
-                }
-                if (modal) modal.style.display = 'none';
-            }
-        });
-    })();
-</script>
-
-<!-- Отображение остальных аэростатов на общей карте Leaflet. -->
-<script>
-(function() {
-    'use strict';
-
-    function getMapInstance() {
-        if (typeof window.map !== 'undefined' && window.map instanceof L.Map) {
-            return window.map;
-        }
-        return window.map || null;
-    }
-
-    let balloonLayer = null;
-    let lastClickTime = 0;
-
-    // Кнопки showBalloonsBtn / hideBalloonsBtn удалены из HTML.
-    // Оставляем функции доступными через window.AerostarBalloons на случай вызова из консоли.
-    function setStatus(text, visible) { /* no-op: UI статуса удалён */ }
-    function showButtons(state) { /* no-op */ }
-    function balloonIcon() {
-        return L.divIcon({
-            className: 'balloon-div-icon',
-            html: '🎈',
-            iconSize: [24, 24],
-            iconAnchor: [12, 12],
-            popupAnchor: [0, -12]
-        });
-    }
-
-    function isGuest(balloon) {
-        if (balloon.email === 'guest@aerost.art') return true;
-        if (balloon.id && balloon.id.startsWith('guest_')) return true;
-        if (balloon.user_id && balloon.user_id.startsWith('guest_')) return true;
-        if (!balloon.email || balloon.email.toLowerCase().includes('guest')) return true;
-        return false;
-    }
-
-    function maskEmail(email) {
-        if (!email || !email.includes('@')) return 'Pilot';
-        const [name, domain] = email.split('@');
-        if (name.length <= 2) return name + '***@' + domain;
-        return name.substring(0, 2) + '***@' + domain;
-    }
-
-    async function loadBalloons() {
-        const map = getMapInstance();
-        if (!map) {
-            setTimeout(loadBalloons, 500);
-            return;
-        }
-
-        lastClickTime = Date.now();
-
-        try {
-            const response = await fetch('https://aerost.art/api/balloons', { cache: 'no-store' });
-            if (!response.ok) throw new Error('HTTP ' + response.status);
-
-            const balloons = await response.json();
-
-            if (balloonLayer) {
-                map.removeLayer(balloonLayer);
-                balloonLayer = null;
-            }
-
-            balloonLayer = L.layerGroup();
-            if (!Array.isArray(balloons) || balloons.length === 0) return;
-
-            balloons.forEach(function(b) {
-                if (typeof b.current_lat !== 'number' || typeof b.current_lng !== 'number') return;
-                const guestStatus = isGuest(b);
-                const displayName = guestStatus ? 'Guest' : maskEmail(b.email);
-                const marker = L.marker([b.current_lat, b.current_lng], {
-                    icon: balloonIcon(),
-                    title: displayName
-                });
-                marker.bindPopup(
-                    '<div style="font-family: system-ui, sans-serif; font-size: 14px; text-align: center;">' +
-                        '<div style="font-size: 20px; margin-bottom: 4px;">🎈</div>' +
-                        '<div><b>' + displayName + '</b></div>' +
-                    '</div>'
-                );
-                balloonLayer.addLayer(marker);
-            });
-
-            balloonLayer.addTo(map);
-
-        } catch (err) {
-            console.error('[Aerostar] Error loading balloons:', err);
-        }
-    }
-
-    function hideBalloons() {
-        const map = getMapInstance();
-        if (map && balloonLayer) {
-            map.removeLayer(balloonLayer);
-            balloonLayer = null;
-        }
-    }
-
-    window.AerostarBalloons = { load: loadBalloons, hide: hideBalloons };
-})();
-</script>
-
-<!-- ═══════════════════════════════════════════════════════
-     ОРИГИНАЛЬНЫЕ СКРИПТЫ ПРОЕКТА
-     ═══════════════════════════════════════════════════════ -->
+<!-- ═══ ПОДКЛЮЧЕНИЕ СКРИПТОВ ═══ -->
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js"></script>
-<script src="js/auth.js"></script>
 <script src="js/balloon.js"></script>
 <script src="js/main.js"></script>
-
-<!-- ═══════════════════════════════════════════════════════
-     СКРИПТ СУЩЕСТВ (триггер по координатам шара)
-     ═══════════════════════════════════════════════════════ -->
 <script src="js/creatures.js"></script>
 
-<!--
-  Адаптер совместимости:
-  balloon.js вызывает checkNearbyPlace(lat, lon), а creatures.js экспортирует
-  window.AerostarCreatures.update(lat, lon). Соединяем эти два интерфейса здесь,
-  не меняя сам модуль полёта.
--->
+<!-- Адаптер для связи balloon.js и creatures.js -->
 <script>
     window.checkNearbyPlace = function (lat, lon) {
         const creatures = window.AerostarCreatures;
@@ -625,7 +286,6 @@
         }
     };
 </script>
-
 
 </body>
 </html>
