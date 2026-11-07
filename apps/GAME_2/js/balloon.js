@@ -56,6 +56,10 @@ function moveBalloon() {
     }
     
     updateCoordDisplay(window.App.balloonPosition.lat, window.App.balloonPosition.lng);
+if (typeof syncMaps === 'function') {
+        syncMaps(window.App.balloonPosition.lat, window.App.balloonPosition.lng);
+    }
+    
     
     // Связь с мифическими существами
     checkNearbyPlace(window.App.balloonPosition.lat, window.App.balloonPosition.lng);
