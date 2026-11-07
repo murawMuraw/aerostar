@@ -94,10 +94,11 @@ function initMap() {
 // ─── ПРАВАЯ КАРТА (ВИД ОТ ПЕРВОГО ЛИЦА) ───
 let povMap = null;
 
+let povMap = null;
+
 function initPovMap(lat, lon) {
     if (povMap) return; // Уже создана
 
-    // Создаем правую карту с высоким зумом (15 — как будто летим низко)
     povMap = L.map('pov-map', {
         zoomControl: false,
         dragging: false,
@@ -105,14 +106,21 @@ function initPovMap(lat, lon) {
         touchZoom: false,
         doubleClickZoom: false,
         keyboard: false,
-        zoomSnap: 0.1
-    }).setView([lat, lon], 15); 
+        zoomSnap: 0.1,
+        center: [lat, lon],
+        zoom: 15
+    });
 
-    // Спутниковый слой ESRI
-    L.tileLayer(
+    // Спутниковый слой Esri
+    const povLayer = L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         { maxZoom: 19 }
     ).addTo(povMap);
+
+    // 👇 ВАЖНО: Принудительно обновляем размеры карты после создания
+    setTimeout(() => {
+        povMap.invalidateSize();
+    }, 100);
 }
 
 // ─── СИНХРОНИЗАЦИЯ КАРТ ПРИ ДВИЖЕНИИ ШАРА ───
