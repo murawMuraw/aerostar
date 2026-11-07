@@ -268,42 +268,7 @@
     .loading-description h2 { margin: 0 0 8px; color: #fff; font-size: 1.3rem; font-weight: 600; }
     .loading-description p { margin: 0; color: #b3b3b3; font-size: .95rem; }
 
-    /* Принудительно задаем размеры правой панели и карты */
-.first-person-panel {
-    position: relative !important;
-    width: 70% !important;
-    height: 100vh !important; /* На весь экран */
-    background: #2a4d6b !important; /* Временно делаем фон синим, чтобы увидеть блок */
-    z-index: 1 !important;
-}
-
-#pov-map {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    z-index: 2 !important;
-    background: transparent !important;
-}
-
-/* Убедимся, что левая панель не перекрывает правую */
-.minimap-panel {
-    position: relative !important;
-    width: 30% !important;
-    height: 100vh !important;
-    z-index: 10 !important;
-}
-
-    .first-person-panel {
-    background: #2a4d6b !important; /* Тестовый синий фон */
-}
-#pov-map {
-    z-index: 10 !important;
-    background: transparent !important;
-}
-#haze-canvas {
-    display: none !important; /* Убираем canvas, он может перекрывать */
+   
 }
 </style>
 
