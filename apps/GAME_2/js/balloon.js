@@ -1,4 +1,3 @@
-//Логика полёта, движение шара
 // ========== МОДУЛЬ УПРАВЛЕНИЯ ШАРОМ ==========
 
 // Расчет следующей точки на основе ветра
@@ -23,7 +22,7 @@ function calculateNextPoint(start, wind, seconds) {
     };
 }
 
-// Обновление прогноза полета
+// Обновление прогноза полета (только для внутренней логики, без отрисовки линии на карте)
 async function updateForecast(startPoint) {
     if (!startPoint) return;
     
@@ -33,6 +32,8 @@ async function updateForecast(startPoint) {
     window.App.currentWind = wind;
     updateWindDisplay(wind);
     
+    // Прогнозные точки можно оставить в памяти, если они понадобятся позже,
+    // но мы больше не рисуем пунктирную линию на карте.
     window.App.forecastPoints = [startPoint];
     let currentPoint = startPoint;
     
@@ -41,68 +42,6 @@ async function updateForecast(startPoint) {
         window.App.forecastPoints.push(L.latLng(nextPoint.lat, nextPoint.lng));
         currentPoint = L.latLng(nextPoint.lat, nextPoint.lng);
     }
-    
-    if (window.App.forecastLine) {
-        window.map.removeLayer(window.App.forecastLine);
-    }
-    
-    window.App.forecastLine = L.polyline(window.App.forecastPoints, {
-        color: '#00aaff', 
-        weight: 3, 
-        opacity: 0.7, 
-        dashArray: '5, 5'
-    }).addTo(window.map);
-}
-
-// Окружность на грани видимости
-function updateHaze(center) {
-    const canvas = document.getElementById('haze-canvas');
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.map.getSize().x;
-    canvas.height = window.map.getSize().y;
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    if (!center || !window.App.isFlying) return;
-    
-    const centerPoint = window.map.latLngToContainerPoint(center);
-    
-    const metersPerPixel = window.map.distance(
-        window.map.containerPointToLatLng([0, 0]), 
-        window.map.containerPointToLatLng([1, 0])
-    );
-    
-    const radius = (window.App.ZONES.HAZE || 500) / metersPerPixel;
-    
-    // Рисуем окружность
-    ctx.beginPath();
-    ctx.arc(centerPoint.x, centerPoint.y, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(0, 150, 255, 0.6)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    
-    // Добавляем маленькие метки на окружности (как на радаре)
-    const numMarks = 8;
-    for (let i = 0; i < numMarks; i++) {
-        const angle = (i / numMarks) * Math.PI * 2;
-        const x = centerPoint.x + Math.cos(angle) * radius;
-        const y = centerPoint.y + Math.sin(angle) * radius;
-        
-        ctx.beginPath();
-        ctx.arc(x, y, 3, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0, 150, 255, 0.8)';
-        ctx.fill();
-    }
-    
-    ctx.font = '12px Arial';
-    ctx.fillStyle = 'rgba(0, 150, 255, 0.7)';
-    ctx.shadowBlur = 0;
-    ctx.fillText('⟡', centerPoint.x + radius - 10, centerPoint.y);
-    ctx.fillText('⟡', centerPoint.x - radius + 10, centerPoint.y);
-    ctx.fillText('⟡', centerPoint.x, centerPoint.y + radius - 10);
-    ctx.fillText('⟡', centerPoint.x, centerPoint.y - radius + 10);
 }
 
 // Движение шара
@@ -117,10 +56,11 @@ function moveBalloon() {
     }
     
     updateCoordDisplay(window.App.balloonPosition.lat, window.App.balloonPosition.lng);
-    updateHaze(window.App.balloonPosition);
     
+    // Связь с мифическими существами
     checkNearbyPlace(window.App.balloonPosition.lat, window.App.balloonPosition.lng);
     
+    // Отрисовка красного следа (пути)
     if (window.App.actualPathPoints.length === 0 || 
         window.map.distance(window.App.balloonPosition, window.App.actualPathPoints[window.App.actualPathPoints.length - 1]) > 10) {
         window.App.actualPathPoints.push(window.App.balloonPosition);
@@ -140,7 +80,6 @@ function moveBalloon() {
 }
 
 // Старт полета
-// Старт полета (Исправленная версия с поддержкой погоды)
 async function startFlight() {
     if (!window.App.balloonPosition) {
         showError('Select the starting point on the map');
@@ -165,7 +104,6 @@ async function startFlight() {
         
         window.App.balloonId = balloon.id;
         
-        // ИСПРАВЛЕНИЕ: Передаем в объект также температуру и осадки, которые вернул сервер
         window.App.currentWind = { 
             speed: balloon.wind_speed, 
             direction: balloon.wind_direction,
@@ -174,7 +112,6 @@ async function startFlight() {
             precip: balloon.precip !== undefined ? balloon.precip : '--'
         };
         
-        // Сразу же отображаем полные данные на главной панели
         updateWindDisplay(window.App.currentWind);
         
         if (window.App.startMarker) {
@@ -201,7 +138,7 @@ async function startFlight() {
         if (window.App.movementInterval) clearInterval(window.App.movementInterval);
         window.App.movementInterval = setInterval(moveBalloon, 1000);
         
-        // Интервал обновления погоды (работает раз в минуту, запрашивает кэш сервера)
+        // Интервал обновления погоды
         if (window.App.windUpdateInterval) clearInterval(window.App.windUpdateInterval);
         window.App.windUpdateInterval = setInterval(async () => {
             if (window.App.isFlying && window.App.balloonPosition) {
@@ -218,7 +155,6 @@ async function startFlight() {
         setStartButtonEnabled(false);
         updateFlightStatus('flying', '🎈 FLIGHT');
         hideHint();
-        updateHaze(window.App.balloonPosition);
         showSuccess('The flight has begun! Follow the ball on the map');
         
     } catch (error) {
@@ -277,7 +213,6 @@ async function restoreBalloon() {
             setStartButtonEnabled(false);
             updateFlightStatus('flying', '🎈 FLIGHT');
             hideHint();
-            updateHaze(window.App.balloonPosition);
             
             if (window.App.movementInterval) clearInterval(window.App.movementInterval);
             window.App.movementInterval = setInterval(moveBalloon, 1000);
@@ -331,6 +266,7 @@ function resetFlight() {
         window.App.startMarker = null;
     }
     
+    // Убираем линию прогноза, если она вдруг осталась
     if (window.App.forecastLine) {
         window.map.removeLayer(window.App.forecastLine);
         window.App.forecastLine = null;
@@ -353,7 +289,6 @@ function resetFlight() {
     setStartButtonEnabled(false);
     updateFlightStatus('ready', '⏸️');
     updateHint('👆 Select your starting location');
-    updateHaze(null);
     hidePlaceInfo();
     
     showSuccess('Stop');
