@@ -14,7 +14,17 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 2. Инициализация обработчиков кнопок (START, Reset)
     initUIHandlers();
+ const povContainer = document.getElementById('pov-map');
+    if (povContainer) {
+        console.log('✅ Контейнер pov-map найден. Размеры:', povContainer.offsetWidth, 'x', povContainer.offsetHeight);
+    } else {
+        console.error('❌ Контейнер pov-map НЕ найден в HTML!');
+    }
 
+    initPovMap(52.12, 23.72); 
+
+
+    
      initPovMap(52.12, 23.72); 
     
     // 3. Восстановление сессии (если было)
