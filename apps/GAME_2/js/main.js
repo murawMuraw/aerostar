@@ -112,6 +112,52 @@ function initMap() {
         }
     });
 }
+// --- Инициализация второй карты (Вид от первого лица) ---
+let povMap = null;
+
+function initPovMap(lat, lon) {
+    if (povMap) return; // Уже создана
+
+    povMap = L.map('pov-map', {
+        zoomControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        touchZoom: false,
+        doubleClickZoom: false,
+        keyboard: false,
+        zoomSnap: 0.1
+    }).setView([lat, lon], 15); // 15 - это высокий зум (близко к земле)
+
+    // Используем спутниковый слой Esri
+    L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 19 }
+    ).addTo(povMap);
+}
+
+// Функция для синхронизации обеих карт при движении шара
+function syncMaps(lat, lon) {
+    // 1. Двигаем маркер на маленькой карте (map)
+    if (window.map && window.balloonMarker) {
+        window.balloonMarker.setLatLng([lat, lon]);
+    }
+
+    // 2. Если вторая карта еще не создана, создаем её
+    if (!povMap) {
+        initPovMap(lat, lon);
+    } else {
+        // 3. Двигаем камеру на большой карте (вид от первого лица)
+        // Используем panTo для плавности
+        povMap.setView([lat, lon], povMap.getZoom(), { animate: true, duration: 0.5 });
+    }
+    
+    // Обновляем координаты на экране
+    const caption = document.getElementById('mapCaption');
+    if (caption) {
+        caption.textContent = `широта ${lat.toFixed(4)}, долгота ${lon.toFixed(4)}`;
+    }
+}
+
 
 // UI Handlers Initialization
 function initUIHandlers() {
