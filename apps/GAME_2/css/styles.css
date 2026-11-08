@@ -232,3 +232,27 @@ html, body {
     max-width: 132px; font-size: 10px;
   }
 }
+/* Чистый правый верхний угол во время полёта */
+
+/* Убираем надпись BALLOON · LOW-ALTITUDE VIEW */
+.app.flight-mode .view-label {
+    display: none !important;
+}
+
+/* Скрываем START после начала полёта */
+.app.flight-mode #startBtn {
+    display: none !important;
+}
+
+/* Оставляем RESET в правом верхнем углу */
+.app.flight-mode .map-controls {
+    left: auto !important;
+    right: 18px;
+    top: 18px;
+}
+
+/* Индикатор ветра располагаем ниже RESET */
+.app.flight-mode .wind-status {
+    top: 70px;
+    right: 18px;
+}
