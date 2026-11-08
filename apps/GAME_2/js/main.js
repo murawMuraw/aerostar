@@ -1,340 +1,230 @@
-/* Aerostar GAME_2: independent world overview and close POV satellite map. */
+/* Aerostar GAME_2 — world locator + close POV map. */
 (() => {
   'use strict';
 
-  const WORLD_CENTER = [20, 0], WORLD_ZOOM = 2, POV_ZOOM = 17;
-  const ESRI = 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  const WORLD_CENTER = [20, 0];
+  const WORLD_ZOOM = 2;
+  const POV_ZOOM = 17;
+  const ESRI_URL = 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-  let povMap = null, worldMarker = null, routeLine = null, resizeTimer = null, selectionId = 0;
+  let povMap = null;
+  let worldMarker = null;
+  let worldPathLine = null;
+  let resizeTimer = null;
+  let selectionRequest = 0;
 
   const $ = id => document.getElementById(id);
-
-  const appState = () => {
+  const app = () => {
     window.App = window.App || {};
     window.App.actualPathPoints = window.App.actualPathPoints || [];
     return window.App;
   };
 
-  const setText = (id, value) => {
-    const el = $(id);
-    if (el) el.textContent = value;
-  };
-
-  const call = (name, ...args) =>
-    typeof window[name] === 'function'
-      ? window[name](...args)
-      : undefined;
-
-
-  function setOverviewInteraction(enabled) {
-    if (!window.map) return;
-
-    [
-      'dragging',
-      'scrollWheelZoom',
-      'doubleClickZoom',
-      'touchZoom',
-      'boxZoom',
-      'keyboard'
-    ].forEach(key => {
-      const handler = window.map[key];
-
-      if (handler &&
-          typeof handler[enabled ? 'enable' : 'disable'] === 'function') {
-        handler[enabled ? 'enable' : 'disable']();
-      }
-    });
+  function safeCall(name, ...args) {
+    if (typeof window[name] === 'function') return window[name](...args);
   }
 
-
-  // ---------------------------------------------------------
-  // WORLD MAP — карта мира для выбора точки запуска
-  // ---------------------------------------------------------
+  function setText(id, value) {
+    const element = $(id);
+    if (element) element.textContent = value;
+  }
 
   function initMap() {
-    const app = appState();
+    const state = app();
 
+    // The inset remains interactive during flight: zoom, pan and layer switching.
     window.map = L.map('map', {
       center: WORLD_CENTER,
       zoom: WORLD_ZOOM,
-      minZoom: 2,
+      minZoom: 1,
       maxZoom: 19,
       zoomControl: false,
       worldCopyJump: true,
       preferCanvas: true
     });
 
-    L.tileLayer(ESRI, {
+    const esri = L.tileLayer(ESRI_URL, {
       attribution: 'Tiles © Esri',
-      minZoom: 2,
-      maxZoom: 19
-    }).addTo(window.map);
+      minZoom: 1,
+      maxZoom: 19,
+      noWrap: false
+    });
+    const osm = L.tileLayer(OSM_URL, {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      minZoom: 1,
+      maxZoom: 19,
+      subdomains: 'abc',
+      noWrap: false
+    });
 
+    esri.addTo(window.map);
 
-    // Выбор точки запуска нажатием на карту.
+    // Both base maps are offered on the world inset; ESRI is the default.
+    L.control.layers(
+      { 'ESRI Satellite': esri, 'OSM Standard': osm },
+      null,
+      { collapsed: true, position: 'topright' }
+    ).addTo(window.map);
+
+    // Zoom controls are deliberately retained on the small world map.
+    L.control.zoom({ position: 'bottomright' }).addTo(window.map);
+
     window.map.on('click', async event => {
-      if (app.isFlying) return;
+      if (state.isFlying) return;
 
       const lat = event.latlng.lat;
-      const lng = event.latlng.lng;
-      const id = ++selectionId;
+      const lon = event.latlng.lng;
+      const requestId = ++selectionRequest;
 
-      app.balloonPosition = L.latLng(lat, lng);
+      state.balloonPosition = L.latLng(lat, lon);
 
-      if (app.startMarker) {
-        window.map.removeLayer(app.startMarker);
-      }
+      if (state.startMarker) window.map.removeLayer(state.startMarker);
+      state.startMarker = L.marker([lat, lon]).addTo(window.map);
 
-      app.startMarker = L.marker([lat, lng]).addTo(window.map);
+      setText('mapCaption', `LAT ${lat.toFixed(4)} · LON ${lon.toFixed(4)}`);
+      safeCall('updateCoordDisplay', lat, lon);
+      safeCall('updateFlightStatus', 'waiting', 'Fetching wind forecast…');
+      safeCall('updateHint', 'Fetching wind forecast…');
 
-      setText(
-        'mapCaption',
-        `LAT ${lat.toFixed(4)} · LON ${lng.toFixed(4)}`
-      );
-
-      call('updateCoordDisplay', lat, lng);
-      call('updateFlightStatus', 'waiting', 'Fetching wind forecast…');
-      call('updateHint', 'Fetching wind forecast…');
-
-      const button = $('startBtn');
-      if (button) button.disabled = true;
+      const startButton = $('startBtn');
+      if (startButton) startButton.disabled = true;
 
       try {
         if (typeof window.getWindData !== 'function') {
-          throw new Error('Wind service is unavailable');
+          throw new Error('Open-Meteo wind service is unavailable');
         }
+        const wind = await window.getWindData(lat, lon);
 
-        const wind = await window.getWindData(lat, lng);
+        // Discard an older response if a newer launch point was selected.
+        if (requestId !== selectionRequest) return;
+        if (!wind) throw new Error('Wind forecast is unavailable');
 
-        // Игнорируем устаревший ответ, если пользователь
-        // успел выбрать другую точку.
-        if (id !== selectionId) return;
-
-        if (!wind) {
-          throw new Error('Wind forecast is unavailable');
-        }
-
-        app.currentWind = wind;
-
-        call('updateWindDisplay', wind);
-        call('updateFlightStatus', 'ready', 'Ready to fly');
-        call('updateHint', 'Launch point selected. Press START');
-
-        if (button) button.disabled = false;
-
+        state.currentWind = wind;
+        safeCall('updateWindDisplay', wind);
+        safeCall('updateFlightStatus', 'ready', 'Ready to fly');
+        safeCall('updateHint', 'Launch point selected. Press START');
+        if (startButton) startButton.disabled = false;
       } catch (error) {
-        if (id !== selectionId) return;
-
+        if (requestId !== selectionRequest) return;
         console.warn('[GAME_2] Wind lookup failed:', error);
-
-        call('updateFlightStatus', 'error', 'Wind data unavailable');
-        call(
-          'updateHint',
-          'Could not get wind data. Please select the point again.'
-        );
+        safeCall('updateFlightStatus', 'error', 'Wind data unavailable');
+        safeCall('updateHint', 'Could not get wind data. Select another point or try again.');
       }
     });
   }
 
+  function createPovMap(lat, lon) {
+    if (!povMap) {
+      povMap = L.map('pov-map', {
+        center: [lat, lon],
+        zoom: POV_ZOOM,
+        minZoom: 12,
+        maxZoom: 19,
+        zoomControl: false,
+        attributionControl: true,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        touchZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        zoomSnap: 0.1,
+        preferCanvas: true
+      });
 
-  // ---------------------------------------------------------
-  // POV MAP — спутниковый вид из корзины воздушного шара
-  // ---------------------------------------------------------
-
-  function initPovMap(lat, lon) {
-
-    if (povMap) {
-      povMap.invalidateSize(true);
-      povMap.setView([lat, lon], POV_ZOOM, { animate: false });
-      return;
+      L.tileLayer(ESRI_URL, {
+        attribution: 'Tiles © Esri',
+        minZoom: 12,
+        maxZoom: 19
+      }).addTo(povMap);
     }
 
-    povMap = L.map('pov-map', {
-      center: [lat, lon],
-      zoom: POV_ZOOM,
-      minZoom: 12,
-      maxZoom: 19,
-      zoomControl: false,
-      attributionControl: true,
-
-      // Пользователь не двигает карту руками.
-      // Она перемещается вслед за воздушным шаром.
-      dragging: false,
-      scrollWheelZoom: false,
-      doubleClickZoom: false,
-      touchZoom: false,
-      boxZoom: false,
-      keyboard: false,
-
-      zoomSnap: 0.1,
-      preferCanvas: true
+    requestAnimationFrame(() => {
+      if (!povMap) return;
+      povMap.invalidateSize(true);
+      povMap.setView([lat, lon], POV_ZOOM, { animate: false });
     });
-
-    L.tileLayer(ESRI, {
-      attribution: 'Tiles © Esri',
-      minZoom: 12,
-      maxZoom: 19
-    }).addTo(povMap);
-
-    // На этой карте нет маркера и линии маршрута.
-    // Это вид пассажира из корзины.
   }
-
-
-  // ---------------------------------------------------------
-  // START — переход в режим полёта
-  // ---------------------------------------------------------
 
   function activateFlightView(lat, lon) {
     const root = $('app');
-
     if (!root) return;
 
-    initPovMap(lat, lon);
-
+    createPovMap(lat, lon);
     root.classList.add('flight-mode');
 
-    // Запрещаем взаимодействие с обзорной картой.
-   // setOverviewInteraction(false);
-
-    // Ждём окончания CSS-анимации изменения размеров карты.
+    // Set the world inset's initial flight view once. Later syncs only pan it,
+    // preserving whatever zoom the user chooses with +/- or the mouse wheel.
     clearTimeout(resizeTimer);
-
     resizeTimer = setTimeout(() => {
-
       if (window.map) {
         window.map.invalidateSize(true);
-
-        window.map.setView(
-          [lat, lon],
-          WORLD_ZOOM,
-          { animate: false }
-        );
+        window.map.setView([lat, lon], WORLD_ZOOM, { animate: false });
       }
-
       if (povMap) {
         povMap.invalidateSize(true);
-
-        povMap.setView(
-          [lat, lon],
-          POV_ZOOM,
-          { animate: false }
-        );
+        povMap.setView([lat, lon], POV_ZOOM, { animate: false });
       }
-
-    }, 900);
+    }, 850);
 
     setText('flight-status', '🎈 Drifting with the wind');
-
-    const wind = appState().currentWind;
-
+    const wind = app().currentWind;
     if (wind) {
-      setText(
-        'wind-status',
-        `Wind ${Number(wind.speed).toFixed(1)} m/s · ${Math.round(Number(wind.direction))}°`
-      );
+      setText('wind-status',
+        `Wind ${Number(wind.speed).toFixed(1)} m/s · ${Math.round(Number(wind.direction))}°`);
     }
   }
-
-
-  // ---------------------------------------------------------
-  // СИНХРОНИЗАЦИЯ КАРТ ПРИ ДВИЖЕНИИ ШАРА
-  // ---------------------------------------------------------
 
   function syncMaps(lat, lon) {
-
     lat = Number(lat);
     lon = Number(lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
 
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-      return;
-    }
-
-    const app = appState();
     const point = [lat, lon];
 
-    // Создаём маркер шара на карте мира.
-    if (!worldMarker && window.map) {
-
-      worldMarker = L.circleMarker(point, {
-        radius: 6,
-        color: '#fff',
-        weight: 2,
-        fillColor: '#ed5145',
-        fillOpacity: 1
-      }).addTo(window.map);
-
-      app.balloonMarker = worldMarker;
-
-    } else if (worldMarker) {
-
-      worldMarker.setLatLng(point);
+    // Keep the balloon visible in the world inset without changing its zoom.
+    if (window.map && app().isFlying) {
+      if (!worldMarker) {
+        worldMarker = L.circleMarker(point, {
+          radius: 6, color: '#fff', weight: 2,
+          fillColor: '#ed5145', fillOpacity: 1
+        }).addTo(window.map);
+        app().balloonMarker = worldMarker;
+      } else {
+        worldMarker.setLatLng(point);
+      }
+      window.map.panTo(point, { animate: true, duration: 0.6 });
     }
 
-    // Сохраняем глобальный масштаб карты мира.
-    if (
-      window.map &&
-      app.isFlying &&
-      window.map.getZoom() !== WORLD_ZOOM
-    ) {
-      window.map.setZoom(
-        WORLD_ZOOM,
-        { animate: false }
-      );
-    }
-
-    // Перемещаем спутниковую карту под наблюдателем.
-    // Маркер шара здесь не показываем.
+    // The close POV map follows the balloon. It has no marker or route line.
     if (povMap) {
-      povMap.setView(
-        point,
-        POV_ZOOM,
-        {
-          animate: true,
-          duration: 0.8
-        }
-      );
+      povMap.panTo(point, { animate: true, duration: 0.8 });
     }
 
-    setText(
-      'mapCaption',
-      `LAT ${lat.toFixed(4)} · LON ${lon.toFixed(4)}`
-    );
+    setText('mapCaption', `LAT ${lat.toFixed(4)} · LON ${lon.toFixed(4)}`);
   }
 
-
-  // ---------------------------------------------------------
-  // МАРШРУТ — отображается только на карте мира
-  // ---------------------------------------------------------
-
-  function addFlightPathPoint(position) {
-
+  function addPathPoint(position) {
     if (!window.map || !position) return;
 
-    const points = appState().actualPathPoints;
+    const lat = Number(position.lat);
+    const lon = Number(position.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
 
-    const point = L.latLng(
-      Number(position.lat),
-      Number(position.lng)
-    );
+    const points = app().actualPathPoints;
+    const point = L.latLng(lat, lon);
 
-    // Не добавляем слишком близкие точки.
-    if (
-      points.length &&
-      window.map.distance(point, points[points.length - 1]) < 20
-    ) {
-      return;
-    }
+    if (points.length &&
+        window.map.distance(point, points[points.length - 1]) < 20) return;
 
     points.push(point);
 
-    if (routeLine) {
-
-      routeLine.setLatLngs(points);
-
+    // The route is shown only on the world map, never over the passenger view.
+    if (worldPathLine) {
+      worldPathLine.setLatLngs(points);
     } else {
-
-      routeLine = L.polyline(points, {
+      worldPathLine = L.polyline(points, {
         color: '#ff654f',
         weight: 3,
         opacity: 0.9,
@@ -342,38 +232,17 @@
         lineJoin: 'round'
       }).addTo(window.map);
     }
-
-    // Маршрут намеренно не отображается на POV-карте.
   }
 
-
-  // ---------------------------------------------------------
-  // RESET — возвращение к выбору точки запуска
-  // ---------------------------------------------------------
-
-  function resetFlightView() {
-
+  function resetView() {
     const root = $('app');
-
-    if (root) {
-      root.classList.remove('flight-mode');
-    }
-
+    if (root) root.classList.remove('flight-mode');
     clearTimeout(resizeTimer);
 
-    setOverviewInteraction(true);
-
-    if (worldMarker && window.map) {
-      window.map.removeLayer(worldMarker);
-    }
-
+    if (worldMarker && window.map) window.map.removeLayer(worldMarker);
     worldMarker = null;
-
-    if (routeLine && window.map) {
-      window.map.removeLayer(routeLine);
-    }
-
-    routeLine = null;
+    if (worldPathLine && window.map) window.map.removeLayer(worldPathLine);
+    worldPathLine = null;
 
     if (povMap) {
       povMap.remove();
@@ -381,16 +250,9 @@
     }
 
     if (window.map) {
-
       requestAnimationFrame(() => {
-
         window.map.invalidateSize(true);
-
-        window.map.setView(
-          WORLD_CENTER,
-          WORLD_ZOOM,
-          { animate: true }
-        );
+        window.map.setView(WORLD_CENTER, WORLD_ZOOM, { animate: true });
       });
     }
 
@@ -398,89 +260,42 @@
     setText('flight-status', 'Choose your launch point');
     setText('wind-status', '');
 
-    const button = $('startBtn');
-
-    if (button) {
-      button.disabled = true;
-    }
+    const startButton = $('startBtn');
+    if (startButton) startButton.disabled = true;
   }
 
-
-  // ---------------------------------------------------------
-  // ОБРАБОТЧИКИ КНОПОК
-  // ---------------------------------------------------------
-
   function initUIHandlers() {
-
     const start = $('startBtn');
     const reset = $('resetBtn');
 
     if (start) {
-      start.addEventListener('click', () => {
-        call('startFlight');
-      });
+      start.addEventListener('click', () => safeCall('startFlight'));
     }
 
+    // balloon.js resetFlight() invokes resetFlightView(); do not reset twice.
     if (reset) {
-      reset.addEventListener('click', () => {
-
-        call('resetFlight');
-
-        // Безопасно, если resetFlight() уже вызывает этот метод.
-        resetFlightView();
-      });
+      reset.addEventListener('click', () => safeCall('resetFlight'));
     }
-
-    document.addEventListener('keydown', event => {
-
-      if (event.key === 'Escape') {
-
-        const modal = $('authModal');
-
-        if (modal && !modal.classList.contains('hidden')) {
-          call('showAuthModal', false);
-        }
-      }
-    });
   }
 
-
-  // ---------------------------------------------------------
-  // ПУБЛИЧНЫЕ ФУНКЦИИ ДЛЯ balloon.js
-  // Имена оставлены без изменений.
-  // ---------------------------------------------------------
-
+  // Public names consumed by the existing balloon.js.
   window.activateFlightView = activateFlightView;
   window.syncMaps = syncMaps;
-  window.addFlightPathPoint = addFlightPathPoint;
-  window.resetFlightView = resetFlightView;
-
-
-  // ---------------------------------------------------------
-  // ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ
-  // ---------------------------------------------------------
+  window.addFlightPathPoint = addPathPoint;
+  window.resetFlightView = resetView;
 
   document.addEventListener('DOMContentLoaded', () => {
-
     if (typeof L === 'undefined') {
       console.error('[GAME_2] Leaflet did not load');
       return;
     }
-
-    appState();
-
+    app();
     initMap();
     initUIHandlers();
 
     const loading = $('loading');
+    if (loading) setTimeout(() => loading.classList.add('hidden'), 450);
 
-    if (loading) {
-      setTimeout(() => loading.classList.add('hidden'), 450);
-    }
-
-    console.log(
-      '[GAME_2] World overview and POV maps initialized.'
-    );
+    console.log('[GAME_2] World map, OSM/Satellite switch and basket POV ready.');
   });
-
 })();
