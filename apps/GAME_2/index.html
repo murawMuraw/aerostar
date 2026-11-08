@@ -27,12 +27,15 @@
       <canvas id="haze-canvas" aria-hidden="true"></canvas>
 
       <!-- Stylised basket rim / ropes: stays in the foreground and does not cover the map centre. -->
-      <div class="basket-overlay" aria-hidden="true">
-        <div class="basket-rope rope-left"></div>
-        <div class="basket-rope rope-right"></div>
-        <div class="basket-rim"></div>
-        <div class="basket-wicker"></div>
-      </div>
+      <!-- Realistic transparent basket and suspension ropes -->
+<img
+  id="basket-overlay"
+  class="basket-overlay"
+  src="images/basket-overlay.png"
+  alt=""
+  aria-hidden="true"
+  draggable="false"
+>
 
       <div class="view-label">BALLOON · LOW-ALTITUDE VIEW</div>
     </section>
