@@ -1,173 +1,83 @@
-/* Aerostar GAME_2 — coordinated flight-view layout */
-:root {
-  color-scheme: dark;
-  --hud: rgba(8, 18, 29, .78);
-  --line: rgba(255,255,255,.18);
-  --text: #f5f8fb;
-  --muted: rgba(245,248,251,.72);
-}
-* { box-sizing: border-box; }
-html, body {
-  width: 100%; height: 100%; margin: 0; padding: 0;
-  overflow: hidden; background: #071018; color: var(--text);
-  font-family: Inter, "Segoe UI", system-ui, sans-serif;
-}
-.seo-h1 {
-  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap;
-}
-#app {
-  position: relative; width: 100%; height: 100vh; height: 100dvh;
-  min-height: 360px; overflow: hidden; isolation: isolate; background: #071018;
-}
-#map, #pov-map { position: absolute; inset: 0; width: 100%; height: 100%; background: #101820; }
-.world-map-wrap {
-  position: absolute; inset: 0; z-index: 1; overflow: hidden;
-  transition: inset .8s cubic-bezier(.2,.7,.2,1), width .8s, height .8s, border-radius .8s, box-shadow .8s;
-}
-.world-map-label {
-  display: none; position: absolute; top: 8px; left: 10px; z-index: 500;
-  padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px;
-  background: rgba(4,12,20,.72); color: #fff; font-size: 10px; letter-spacing: .12em;
-  pointer-events: none;
-}
-.pov-panel {
-  position: absolute; inset: 0; z-index: 2; overflow: hidden;
-  opacity: 0; visibility: hidden; pointer-events: none;
-  transition: opacity .7s ease, visibility 0s linear .7s;
-}
-#pov-map { z-index: 1; }
-.pov-vignette {
-  position: absolute; inset: 0; z-index: 3; pointer-events: none;
-  background: radial-gradient(ellipse at 50% 42%, transparent 48%, rgba(0,0,0,.10) 78%, rgba(0,0,0,.34) 100%);
-}
-#haze-canvas { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; pointer-events: none; }
-.app.flight-mode .pov-panel { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
-.app.flight-mode .world-map-wrap {
-  inset: 18px auto auto 18px; width: clamp(170px, 19vw, 270px);
-  height: clamp(118px, 16vw, 190px); z-index: 8;
-  border: 2px solid rgba(255,255,255,.85); border-radius: 13px;
-  box-shadow: 0 8px 30px rgba(0,0,0,.48); overflow: hidden;
-}
-.app.flight-mode .world-map-label { display: block; }
-.app.flight-mode .map-caption { left: 8px; bottom: 7px; font-size: 10px; padding: 4px 6px; }
-.app.flight-mode #map { cursor: default; }
-.leaflet-container { background: #101820; }
-.leaflet-control-attribution { font-size: 9px !important; }
+/* AEROSTAR GAME_2 — fullscreen satellite flight view */
+:root{color-scheme:dark;--hud:rgba(7,17,27,.78);--line:rgba(255,255,255,.2);--text:#f5f8fb;--muted:rgba(245,248,251,.72)}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#071018;color:var(--text);font-family:Inter,"Segoe UI",system-ui,sans-serif}
+.seo-h1{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+#app{position:relative;width:100%;height:100vh;height:100dvh;min-height:360px;overflow:hidden;isolation:isolate;background:#071018}
+#map,#pov-map{position:absolute;inset:0;width:100%;height:100%;background:#111a22}
+.leaflet-container{background:#111a22}
+.leaflet-control-attribution{font-size:9px!important;background:rgba(0,0,0,.48)!important;color:rgba(255,255,255,.8)!important}
+.leaflet-control-attribution a{color:#9bd7ff!important}
 
-/* Basket foreground: a restrained physical frame, not a fake landscape. */
-.basket-overlay { display: none; position: absolute; inset: 0; z-index: 6; pointer-events: none; overflow: hidden; }
-.app.flight-mode .basket-overlay { display: block; }
-.basket-rope {
-  position: absolute; bottom: 42px; width: 5px; height: min(40vh, 310px);
-  background: linear-gradient(90deg,#21180f,#9b7950 45%,#24190f);
-  border-radius: 4px; box-shadow: 0 0 5px rgba(0,0,0,.65);
-}
-.rope-left { left: 12%; transform: rotate(8deg); transform-origin: bottom; }
-.rope-right { right: 12%; transform: rotate(-8deg); transform-origin: bottom; }
-.basket-rim {
-  position: absolute; left: 50%; bottom: -5.5vh; transform: translateX(-50%);
-  width: min(76vw, 920px); height: 18vh; min-height: 105px;
-  border: 12px solid #5b351d; border-bottom: 0;
-  border-radius: 50% 50% 0 0 / 38% 38% 0 0;
-  background: linear-gradient(180deg,rgba(184,132,77,.95),rgba(71,39,21,.98) 35%,#1b100b 100%);
-  box-shadow: 0 -9px 24px rgba(0,0,0,.5), inset 0 9px 12px rgba(255,220,170,.22);
-}
-.basket-wicker {
-  position: absolute; left: 50%; bottom: -12vh; transform: translateX(-50%);
-  width: min(72vw, 880px); height: 16vh; min-height: 95px;
-  border-radius: 48% 48% 0 0 / 30% 30% 0 0;
-  background: repeating-linear-gradient(0deg,rgba(30,16,8,.0) 0 8px,rgba(24,12,5,.5) 9px 11px),
-              repeating-linear-gradient(90deg,#6d4325 0 12px,#9b7043 13px 17px,#50301c 18px 21px);
-  border-top: 5px solid #c0915e; box-shadow: inset 0 10px 20px rgba(0,0,0,.45);
-}
-.view-label {
-  position: absolute; right: 18px; top: 18px; z-index: 7;
-  padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px;
-  background: rgba(4,12,20,.55); backdrop-filter: blur(8px);
-  color: rgba(255,255,255,.82); font-size: 10px; letter-spacing: .13em;
-}
-.app:not(.flight-mode) .view-label { display: none; }
+/* Launch/world map fills the screen until START. */
+.world-map-wrap{position:absolute;inset:0;z-index:1;overflow:hidden;background:#111a22;transition:inset .85s cubic-bezier(.2,.7,.2,1),width .85s cubic-bezier(.2,.7,.2,1),height .85s cubic-bezier(.2,.7,.2,1),border-radius .85s,box-shadow .85s}
+.world-map-label{display:none;position:absolute;top:8px;left:9px;z-index:600;padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:rgba(0,0,0,.68);color:#fff;font-size:9px;font-weight:700;letter-spacing:.12em;pointer-events:none}
+.map-caption{position:absolute;left:10px;bottom:10px;z-index:600;max-width:calc(100% - 20px);padding:5px 7px;border:1px solid var(--line);border-radius:6px;background:rgba(0,0,0,.68);color:rgba(255,255,255,.94);font:10px/1.3 ui-monospace,Consolas,monospace;pointer-events:none}
 
-.map-controls {
-  position: absolute; left: 18px; top: 18px; z-index: 20;
-  display: flex; flex-direction: column; gap: 9px;
-}
-.custom-button {
-   min-width: 128px; padding: 11px 17px; border: 1px solid var(--line);
-  border-radius: 24px; color: #fff; background: var(--hud);
-  backdrop-filter: blur(12px); font-size: 13px; font-weight: 700;
-  letter-spacing: .04em; cursor: pointer; box-shadow: 0 5px 18px rgba(0,0,0,.28);
-  transition: transform .18s, background .18s, opacity .18s;
-}
-.custom-button:hover:not(:disabled) { transform: translateY(-1px); background: rgba(28,48,66,.94); }
-.custom-button:disabled { opacity: .42; cursor: not-allowed; }
-.app.flight-mode .map-controls { left: auto; right: 18px; top: 18px; }
-.map-caption {
-  position: absolute; left: 12px; bottom: 12px; z-index: 500;
-  max-width: calc(100% - 24px); padding: 6px 9px;
-  border: 1px solid var(--line); border-radius: 8px;
-  color: rgba(255,255,255,.92); background: rgba(0,0,0,.62);
-  backdrop-filter: blur(8px); font: 11px/1.35 ui-monospace, monospace;
-  pointer-events: none;
-}
-.map-hint, .flight-status, .wind-status {
-  position: absolute; z-index: 20; padding: 8px 12px;
-  border: 1px solid var(--line); border-radius: 18px;
-  color: #fff; background: rgba(0,0,0,.62); backdrop-filter: blur(10px);
-  font-size: 12px; pointer-events: none;
-}
-.map-hint { right: 18px; bottom: 18px; max-width: min(430px, calc(100% - 36px)); transition: opacity .3s; }
-.flight-status { left: 18px; bottom: 18px; display: none; }
-.wind-status { right: 18px; top: 68px; display: none; }
-.app.flight-mode .flight-status, .app.flight-mode .wind-status { display: block; }
-.app.flight-mode .map-hint { display: none; }
+/* Close-up map is revealed behind the basket after launch. */
+.pov-panel{position:absolute;inset:0;z-index:2;overflow:hidden;background:#111a22;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .55s ease,visibility 0s linear .55s}
+#pov-map{z-index:1}
+.pov-vignette{position:absolute;inset:0;z-index:3;pointer-events:none;background:radial-gradient(ellipse at 50% 42%,transparent 48%,rgba(0,0,0,.08) 76%,rgba(0,0,0,.28) 100%)}
+#haze-canvas{position:absolute;inset:0;z-index:4;width:100%;height:100%;pointer-events:none}
+.app.flight-mode .pov-panel{opacity:1;visibility:visible;pointer-events:none;transition-delay:0s}
 
-/* Creature is intentionally above the satellite imagery, below controls. */
-.creature-overlay {
-  position: absolute; left: 50%; top: 46%; width: min(16vw, 220px);
-  transform: translate(-50%,-50%); opacity: 0; visibility: hidden;
-  pointer-events: none; z-index: 12;
-  transition: width 2s cubic-bezier(.22,.61,.36,1), left 2s, top 2s, opacity .6s, visibility 0s linear .6s;
-}
-.creature-overlay.is-appearing { opacity: 1; visibility: visible; transition-delay: 0s; }
-.creature-overlay img { display: block; width: 100%; max-height: 72vh; object-fit: contain; filter: drop-shadow(0 14px 26px rgba(0,0,0,.58)); }
-.creature-overlay.is-large { width: min(48vw, 680px); pointer-events: auto; }
-.creature-overlay.is-leaving { opacity: 0; width: min(9vw, 130px); left: 66%; top: 55%; }
-.release-btn {
-  display: none; position: absolute; top: -12px; right: -12px;
-  width: 34px; height: 34px; border: 1px solid rgba(255,255,255,.25);
-  border-radius: 50%; color: #fff; background: rgba(0,0,0,.75);
-  font-size: 22px; line-height: 1; cursor: pointer;
-}
-.creature-overlay.is-large .release-btn { display: grid; place-items: center; }
-.creature-name {
-  position: absolute; left: 50%; bottom: -28px; transform: translateX(-50%);
-  color: #fff; font-weight: 700; text-shadow: 0 2px 8px #000;
-  white-space: nowrap; opacity: 0; transition: opacity .3s;
-}
-.creature-overlay.is-large .creature-name { opacity: 1; }
+/* Overview becomes a true world locator. It is forced back to zoom 2 by main.js after resizing. */
+.app.flight-mode .world-map-wrap{inset:16px auto auto 16px;width:clamp(190px,20vw,280px);height:clamp(132px,17vw,190px);z-index:10;border:2px solid rgba(255,255,255,.9);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.5);overflow:hidden}
+.app.flight-mode .world-map-label{display:block}
+.app.flight-mode .map-caption{left:7px;bottom:6px;padding:3px 5px;font-size:9px}
+.app.flight-mode .world-map-wrap .leaflet-control-attribution{font-size:8px!important}
 
-.loading {
-  position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center;
-  background: #071018; transition: opacity .45s, visibility .45s;
-}
-.loading.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-.loading-card { display: grid; justify-items: center; gap: 12px; max-width: 360px; padding: 26px; text-align: center; }
-.loading-card p { color: var(--muted); margin: 0; font-size: 14px; line-height: 1.5; }
-.loading-status { font-size: 18px; font-weight: 700; }
-.loading-spinner { width: 30px; height: 30px; border: 3px solid rgba(255,255,255,.2); border-top-color: #8fd3ff; border-radius: 50%; animation: spin .8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* Basket ropes terminate behind the basket rim, making one coherent foreground object. */
+.basket-overlay{display:none;position:absolute;inset:0;z-index:6;overflow:hidden;pointer-events:none}
+.app.flight-mode .basket-overlay{display:block}
+.basket-rope{position:absolute;bottom:7vh;width:5px;height:min(39vh,330px);z-index:1;border-radius:5px;background:linear-gradient(90deg,#21150d 0%,#805a36 38%,#c09562 52%,#3a2415 100%);box-shadow:0 0 5px rgba(0,0,0,.72)}
+.rope-left{left:13%;transform:rotate(7deg);transform-origin:bottom center}
+.rope-right{right:13%;transform:rotate(-7deg);transform-origin:bottom center}
+.basket-rim{position:absolute;left:50%;bottom:-5.5vh;z-index:3;transform:translateX(-50%);width:min(76vw,940px);height:19vh;min-height:120px;border:11px solid #5a351d;border-bottom:0;border-radius:50% 50% 0 0/38% 38% 0 0;background:linear-gradient(180deg,#c18c55 0%,#85532d 15%,#4c2c19 48%,#1b100a 100%);box-shadow:0 -8px 24px rgba(0,0,0,.5),inset 0 8px 12px rgba(255,225,180,.25)}
+.basket-wicker{position:absolute;left:50%;bottom:-12vh;z-index:4;transform:translateX(-50%);width:min(72vw,900px);height:16vh;min-height:100px;border-radius:48% 48% 0 0/30% 30% 0 0;border-top:5px solid #c0915e;background:repeating-linear-gradient(0deg,transparent 0 8px,rgba(25,13,6,.48) 9px 11px),repeating-linear-gradient(90deg,#684022 0 12px,#a87948 13px 17px,#4b2c19 18px 21px);box-shadow:inset 0 10px 20px rgba(0,0,0,.48)}
+.view-label{display:none;position:absolute;right:18px;top:18px;z-index:7;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:rgba(4,12,20,.58);color:rgba(255,255,255,.86);font-size:9px;letter-spacing:.13em;backdrop-filter:blur(8px)}
+.app.flight-mode .view-label{display:block}
 
-@media (max-width: 700px) {
-  .map-controls { left: 10px; top: 10px; }
-  .custom-button { min-width: 112px; padding: 10px 13px; font-size: 12px; }
-  .app.flight-mode .world-map-wrap { inset: 10px auto auto 10px; width: 154px; height: 112px; }
-  .app.flight-mode .map-controls { right: 10px; top: 10px; }
-  .app.flight-mode .wind-status { top: 58px; right: 10px; max-width: 44vw; }
-  .view-label { right: 10px; top: auto; bottom: 20vh; font-size: 9px; }
-  .basket-rim { width: 92vw; height: 15vh; }
-  .basket-wicker { width: 88vw; }
-  .basket-rope { height: 28vh; }
-  .map-hint { right: 10px; bottom: 10px; }
+/* START is hidden in flight; RESET stays accessible. */
+.map-controls{position:absolute;left:18px;top:18px;z-index:30;display:flex;flex-direction:column;gap:9px}
+.custom-button{min-width:128px;padding:11px 17px;border:1px solid var(--line);border-radius:24px;color:#fff;background:var(--hud);backdrop-filter:blur(12px);font-size:13px;font-weight:700;letter-spacing:.04em;cursor:pointer;box-shadow:0 5px 18px rgba(0,0,0,.3);transition:transform .18s,background .18s,opacity .18s}
+.custom-button:hover:not(:disabled){transform:translateY(-1px);background:rgba(28,48,66,.94)}
+.custom-button:disabled{opacity:.42;cursor:not-allowed}
+.app.flight-mode .map-controls{left:auto;right:18px;top:18px}
+.app.flight-mode #startBtn{display:none}
+.map-hint,.flight-status,.wind-status{position:absolute;z-index:30;padding:8px 12px;border:1px solid var(--line);border-radius:18px;color:#fff;background:rgba(0,0,0,.65);backdrop-filter:blur(10px);font-size:11px;pointer-events:none}
+.map-hint{right:18px;bottom:18px;max-width:min(430px,calc(100% - 36px));transition:opacity .3s}
+.flight-status{left:18px;bottom:18px;display:none}
+.wind-status{right:18px;top:68px;display:none}
+.app.flight-mode .flight-status,.app.flight-mode .wind-status{display:block}
+.app.flight-mode .map-hint{display:none}
+
+/* Creature overlay remains above the POV map and below controls. */
+.creature-overlay{position:absolute;left:50%;top:46%;width:min(16vw,220px);transform:translate(-50%,-50%);opacity:0;visibility:hidden;pointer-events:none;z-index:15;transition:width 2s cubic-bezier(.22,.61,.36,1),left 2s,top 2s,opacity .6s,visibility 0s linear .6s}
+.creature-overlay.is-appearing{opacity:1;visibility:visible;transition-delay:0s}
+.creature-overlay img{display:block;width:100%;max-height:72vh;object-fit:contain;filter:drop-shadow(0 14px 26px rgba(0,0,0,.58))}
+.creature-overlay.is-large{width:min(48vw,680px);pointer-events:auto}
+.creature-overlay.is-leaving{opacity:0;width:min(9vw,130px);left:66%;top:55%}
+.release-btn{display:none;position:absolute;top:-12px;right:-12px;width:34px;height:34px;border:1px solid rgba(255,255,255,.25);border-radius:50%;color:#fff;background:rgba(0,0,0,.78);font-size:22px;line-height:1;cursor:pointer}
+.creature-overlay.is-large .release-btn{display:grid;place-items:center}
+.creature-name{position:absolute;left:50%;bottom:-28px;transform:translateX(-50%);color:#fff;font-weight:700;text-shadow:0 2px 8px #000;white-space:nowrap;opacity:0;transition:opacity .3s}
+.creature-overlay.is-large .creature-name{opacity:1}
+
+.loading{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#071018;transition:opacity .45s,visibility .45s}
+.loading.hidden{opacity:0;visibility:hidden;pointer-events:none}
+.loading-card{display:grid;justify-items:center;gap:12px;max-width:360px;padding:26px;text-align:center}
+.loading-status{font-size:18px;font-weight:700}
+.loading-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
+.loading-spinner{width:30px;height:30px;border:3px solid rgba(255,255,255,.2);border-top-color:#8fd3ff;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:700px){
+  .map-controls{left:10px;top:10px}.custom-button{min-width:110px;padding:10px 13px;font-size:12px}
+  .app.flight-mode .world-map-wrap{inset:10px auto auto 10px;width:158px;height:116px}
+  .app.flight-mode .map-controls{right:10px;top:10px}
+  .app.flight-mode .wind-status{top:58px;right:10px;max-width:44vw}
+  .view-label{right:10px;top:auto;bottom:20vh;font-size:8px}
+  .basket-rope{height:28vh;bottom:6vh}.basket-rim{width:92vw;height:15vh}.basket-wicker{width:88vw}
+  .map-hint{right:10px;bottom:10px}.flight-status{left:10px;bottom:10px}
 }
+@media(max-height:520px){.basket-rim{height:22vh;min-height:80px}.basket-wicker{height:18vh;min-height:70px}.basket-rope{height:32vh}}
