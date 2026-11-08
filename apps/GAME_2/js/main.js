@@ -195,7 +195,7 @@
     root.classList.add('flight-mode');
 
     // Запрещаем взаимодействие с обзорной картой.
-    setOverviewInteraction(false);
+   // setOverviewInteraction(false);
 
     // Ждём окончания CSS-анимации изменения размеров карты.
     clearTimeout(resizeTimer);
