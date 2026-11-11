@@ -321,12 +321,15 @@
         imgEl.alt = creature.name;
 
         imgEl.onerror = function () {
-            console.error(
-                '[creatures] Не удалось загрузить изображение:',
-                creature.img
-            );
-        };
+    console.error(
+        '[creatures] Не удалось загрузить изображение:',
+        creature.img
+    );
 
+    imgEl.style.display = 'none';
+};
+
+        imgEl.style.display = '';
         imgEl.src = creature.img;
         nameEl.textContent = creature.name;
 
