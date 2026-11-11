@@ -73,57 +73,29 @@
   <script src="js/zones.js"></script>
   <script src="js/balloon.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/zones.js"></script>
   <script src="js/creatures.js"></script>
 
     // Bridge for the creature module. The existing creatures.js file is kept separate.
-   <script>
-  let waitingForZones = false;
+  <script>
+window.checkNearbyPlace = function (lat, lon) {
+    const zone = window.MagicZones?.findByCoordinates(
+        Number(lat),
+        Number(lon)
+    );
 
-  window.checkNearbyPlace = function (lat, lon) {
-    const zones = window.MagicZones;
-
-    if (!zones) return;
-
-    // Если GeoJSON ещё загружается, ждём его.
-    if (!zones.isLoaded()) {
-      if (zones.getError() || waitingForZones) return;
-
-      waitingForZones = true;
-
-      zones.ready.then(() => {
-        waitingForZones = false;
-
-        const pos = window.App?.balloonPosition;
-
-        if (zones.isLoaded() && pos) {
-          window.checkNearbyPlace(pos.lat, pos.lng);
-        }
-      });
-
-      return;
+    if (zone) {
+        window.App.currentZone = zone;
     }
 
-    const zone = zones.findByCoordinates(lat, lon);
-
-    window.App = window.App || {};
-    window.App.currentZone = zone;
-
-    // Показываем название текущей зоны на карте.
-    const caption = document.getElementById('mapCaption');
-
-    if (caption) {
-      caption.textContent = zone
-        ? `${zone.name_ru} · ${Number(lat).toFixed(3)}°, ${Number(lon).toFixed(3)}°`
-        : `${Number(lat).toFixed(3)}°, ${Number(lon).toFixed(3)}°`;
+    if (window.AerostarCreatures?.update) {
+        window.AerostarCreatures.update(
+            Number(lat),
+            Number(lon),
+            zone
+        );
     }
-
-    // Передаём координаты и зону модулю существ.
-    const module = window.AerostarCreatures;
-
-    if (module && typeof module.update === 'function') {
-      module.update(Number(lat), Number(lon), zone);
-    }
-  };
+};
 </script>
   
 </body>
