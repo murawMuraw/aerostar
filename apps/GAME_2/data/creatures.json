@@ -1308,5 +1308,44 @@
     "radiusKm": 30,
     "rarity": "epic",
     "img": "images/creatures/liderc.webp"
+  },
+  {
+    "id": "astron",
+    "scope": "global",
+    "name": "Астрон",
+    "name_en": "Astron",
+    "description_ru": "Путешественник из далёкой звёздной системы. Он прилетел изучить Землю и очень хочет познакомиться с её обитателями!",
+    "description_en": "A traveller from a distant star system. He came to study Earth and is eager to meet its inhabitants!",
+    "culture": "Внеземная цивилизация",
+    "type": "alien",
+    "originType": "original_science_fiction",
+    "rarity": "legendary",
+    "img": "images/creatures/astron.webp"
+  },
+  {
+    "id": "lumi",
+    "scope": "global",
+    "name": "Люми",
+    "name_en": "Lumi",
+    "description_ru": "Сияющее существо, похожее на живое облако света. Люми любит играть с солнечными лучами и огнями земных городов.",
+    "description_en": "A glowing being that looks like a living cloud of light. Lumi loves playing with sunbeams and the lights of Earth's cities.",
+    "culture": "Внеземная цивилизация",
+    "type": "alien",
+    "originType": "original_science_fiction",
+    "rarity": "epic",
+    "img": "images/creatures/lumi.webp"
+  },
+  {
+    "id": "zet",
+    "scope": "global",
+    "name": "Зет",
+    "name_en": "Zet",
+    "description_ru": "Маленький робот-разведчик с одним большим глазом. Он собирает сведения о Земле и записывает всё в свою звёздную базу!",
+    "description_en": "A small scout robot with one big eye. It collects information about Earth and records everything in its star database!",
+    "culture": "Внеземная цивилизация",
+    "type": "robot",
+    "originType": "original_science_fiction",
+    "rarity": "rare",
+    "img": "images/creatures/zet.webp"
   }
 ]
