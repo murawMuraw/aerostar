@@ -1,7 +1,8 @@
 /*
  * js/creatures.js
  *
- * Magic — географические встречи с мифическими существами.
+ * Magic — географические встречи с мифическими существами
+ * и случайные глобальные встречи с инопланетянами.
  *
  * База существ загружается из ./data/creatures.json.
  * Существо появляется, если шар находится:
@@ -27,6 +28,7 @@
 
     // Массив заполняется после загрузки JSON.
     const creatures = [];
+    const alienCreatures = [];
 
     let creaturesLoaded = false;
     let creaturesLoadError = null;
@@ -61,6 +63,16 @@
     let isLeaving = false;
 
     const dismissedIds = new Set();
+
+    // Инопланетяне появляются случайно во время полёта, независимо от зоны.
+    let flightElapsedMs = 0;
+    let lastClockAt = null;
+    let nextAlienAtMs = null;
+
+    function randomAlienDelayMs() {
+        // Интервал между встречами: случайно от 15 до 45 минут полёта.
+        return (15 + Math.random() * 30) * 60 * 1000;
+    }
 
     // ------------------------------------------------------------
     // 4. ГЕОГРАФИЧЕСКИЕ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
@@ -141,6 +153,17 @@
     function normalizeCreature(raw) {
         if (!raw || !raw.id) return null;
 
+        // Глобальные существа не привязаны к координатам или географическим зонам.
+        if (raw.scope === 'global') {
+            return {
+                ...raw,
+                scope: 'global',
+                global: true,
+                name: raw.name || raw.name_en || raw.id,
+                img: raw.img || ''
+            };
+        }
+
         const lat = Number(raw.lat);
         const lon = Number(raw.lon);
         const radiusKm = Number(raw.radiusKm);
@@ -211,12 +234,17 @@
             }
 
             creatures.length = 0;
+            alienCreatures.length = 0;
 
             for (const raw of data) {
                 const creature = normalizeCreature(raw);
 
                 if (creature) {
-                    creatures.push(creature);
+                    if (creature.global) {
+                        alienCreatures.push(creature);
+                    } else {
+                        creatures.push(creature);
+                    }
                 }
             }
 
@@ -288,7 +316,50 @@
     }
 
     // ------------------------------------------------------------
-    // 7. УПРАВЛЕНИЕ ТАЙМЕРАМИ
+    // 7. ГЛОБАЛЬНЫЕ СЛУЧАЙНЫЕ ВСТРЕЧИ С ИНОПЛАНЕТЯНАМИ
+    // ------------------------------------------------------------
+
+    function processAlienEncounter(lat, lon) {
+        const flying = window.App?.isFlying === true;
+        const now = Date.now();
+
+        if (!flying) {
+            lastClockAt = null;
+            return false;
+        }
+
+        if (lastClockAt !== null) {
+            // Обновление позиции обычно приходит раз в секунду.
+            // Ограничение защищает от начисления долгого времени после паузы вкладки.
+            flightElapsedMs += Math.min(Math.max(0, now - lastClockAt), 5000);
+        }
+        lastClockAt = now;
+
+        if (!alienCreatures.length) return false;
+
+        if (nextAlienAtMs === null) {
+            nextAlienAtMs = flightElapsedMs + randomAlienDelayMs();
+        }
+
+        // Уже показанный инопланетянин остаётся до ручного отпускания.
+        if (activeCreature?.global) return true;
+
+        if (flightElapsedMs >= nextAlienAtMs && !activeCreature && !isLeaving) {
+            const alien = alienCreatures[Math.floor(Math.random() * alienCreatures.length)];
+            nextAlienAtMs = null;
+
+            // Встреча происходит в текущей точке маршрута, а не в постоянной локации.
+            showCreature(alien);
+            console.log('[creatures] Случайная внеземная встреча:', alien.name,
+                '| координаты:', lat.toFixed(3), lon.toFixed(3));
+            return true;
+        }
+
+        return false;
+    }
+
+    // ------------------------------------------------------------
+    // 8. УПРАВЛЕНИЕ ТАЙМЕРАМИ
     // ------------------------------------------------------------
 
     function clearTransitionTimer() {
@@ -426,7 +497,12 @@
     function releaseActiveCreature() {
         if (!activeCreature) return;
 
+        const wasAlien = activeCreature.global === true;
         dismissedIds.add(activeCreature.id);
+
+        if (wasAlien) {
+            nextAlienAtMs = flightElapsedMs + randomAlienDelayMs();
+        }
 
         console.log(
             '[creatures] Существо отпущено:',
@@ -459,7 +535,13 @@
                 ', долгота ' + lon.toFixed(3);
         }
 
-        // Если зона не определена, не показываем существ.
+        // Сначала проверяем случайную глобальную встречу: она возможна в любой точке Земли.
+        if (processAlienEncounter(lat, lon)) return;
+
+        // Пока показан инопланетянин, обычные существа не перекрывают его.
+        if (activeCreature?.global) return;
+
+        // Если зона не определена, не показываем обычных существ.
         if (!zoneId) {
             if (activeCreature) {
                 hideCreature();
@@ -580,7 +662,16 @@
 
         hide: function () {
             if (activeCreature) {
+                const wasAlien = activeCreature.global === true;
                 dismissedIds.add(activeCreature.id);
+                if (wasAlien) {
+                    nextAlienAtMs = flightElapsedMs + randomAlienDelayMs();
+                }
+            } else {
+                // Полный сброс при завершении/сбросе полёта.
+                flightElapsedMs = 0;
+                lastClockAt = null;
+                nextAlienAtMs = null;
             }
 
             hideCreature();
