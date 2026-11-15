@@ -662,17 +662,14 @@
 
         hide: function () {
             if (activeCreature) {
-                const wasAlien = activeCreature.global === true;
                 dismissedIds.add(activeCreature.id);
-                if (wasAlien) {
-                    nextAlienAtMs = flightElapsedMs + randomAlienDelayMs();
-                }
-            } else {
-                // Полный сброс при завершении/сбросе полёта.
-                flightElapsedMs = 0;
-                lastClockAt = null;
-                nextAlienAtMs = null;
             }
+
+            // Публичный hide вызывается при сбросе/завершении полёта.
+            // Новая сессия полёта начинает отсчёт встреч заново.
+            flightElapsedMs = 0;
+            lastClockAt = null;
+            nextAlienAtMs = null;
 
             hideCreature();
         },
