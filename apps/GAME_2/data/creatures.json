@@ -77,7 +77,7 @@
     "lon": 22.5,
     "radiusKm": 15,
     "rarity": "legendary",
-    "img": "images/creatures/python_delphi.webp"
+    "img": "images/creatures/python.webp"
   },
   {
     "id": "theban_sphinx",
