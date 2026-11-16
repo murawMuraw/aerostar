@@ -8,118 +8,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="css/styles.css?v=20261107-flightview">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- ===== Заметные информаторы поверх карты (добавлено) ===== -->
-  <style>
-    /* === HUD: поверх карты === */
-    .hud {
-      position: fixed;
-      inset: 0;
-      z-index: 9999; /* Максимально высокий приоритет */
-      pointer-events: none;
-      overflow: visible; /* Убираем обрезку краев */
-    }
-    .hud > * {
-      pointer-events: auto;
-    }
-
-    /* === Информационные плашки === */
-    #hint.map-hint,
-    #flight-status.flight-status,
-    #wind-status.wind-status {
-      position: fixed !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      gap: 8px !important;
-      padding: 8px 16px !important;
-      border-radius: 999px !important;
-      background: rgba(12, 18, 28, 0.85) !important;
-      color: #ffffff !important;
-      font: 600 14px/1.4 system-ui, -apple-system, sans-serif !important;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.15) inset !important;
-      backdrop-filter: blur(8px) !important;
-      -webkit-backdrop-filter: blur(8px) !important;
-      white-space: nowrap !important;
-      width: max-content !important; /* Не даем растянуться на всю ширину */
-      max-width: calc(100vw - 32px) !important;
-      margin: 0 !important;
-      transform: none !important; /* Сбрасываем возможные сдвиги */
-    }
-
-    /* Позиции */
-    #hint.map-hint {
-      top: max(16px, env(safe-area-inset-top)) !important;
-      left: 50% !important;
-      transform: translateX(-50%) !important;
-    }
-    
-    #flight-status.flight-status {
-      left: max(16px, env(safe-area-inset-left)) !important;
-      bottom: calc(72px + env(safe-area-inset-bottom)) !important;
-    }
-    
-    #wind-status.wind-status {
-      left: max(16px, env(safe-area-inset-left)) !important;
-      bottom: max(16px, env(safe-area-inset-bottom)) !important;
-    }
-
-    /* Точки-индикаторы */
-    #flight-status.flight-status::before,
-    #wind-status.wind-status::before {
-      content: "" !important;
-      width: 8px !important;
-      height: 8px !important;
-      border-radius: 50% !important;
-      flex: 0 0 auto !important;
-      background: #6ee7ff !important;
-      box-shadow: 0 0 10px rgba(110, 231, 255, 0.9) !important;
-    }
-    #wind-status.wind-status::before {
-      background: #ffd166 !important;
-      box-shadow: 0 0 10px rgba(255, 209, 102, 0.9) !important;
-    }
-
-    /* === Кнопки START / RESET === */
-    .map-controls {
-      position: fixed !important;
-      z-index: 10000 !important;
-      bottom: max(16px, env(safe-area-inset-bottom)) !important;
-      right: max(16px, env(safe-area-inset-right)) !important;
-      display: flex !important;
-      gap: 10px !important;
-      pointer-events: auto !important;
-      width: max-content !important;
-      margin: 0 !important;
-      padding: 0 !important;
-    }
-
-    .map-controls .custom-button {
-      width: auto !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      margin: 0 !important;
-    }
-
-    /* === Загрузочный экран === */
-    #loading {
-      position: fixed !important;
-      inset: 0 !important;
-      z-index: 10001 !important;
-      display: grid !important;
-      place-items: center !important;
-      background: rgba(4, 8, 14, 0.92) !important;
-    }
-    #loading .loading-card {
-      background: rgba(10, 16, 26, 0.88) !important;
-      color: #fff !important;
-      border-radius: 18px !important;
-      padding: 22px 26px !important;
-      text-align: center !important;
-      max-width: 420px !important;
-    }
-  </style>
 </head>
 <body>
   <h1 class="seo-h1">Aerostar — Real Wind Hot Air Balloon Journey</h1>
@@ -138,15 +26,16 @@
       <div class="pov-vignette" aria-hidden="true"></div>
       <canvas id="haze-canvas" aria-hidden="true"></canvas>
 
+      <!-- Stylised basket rim / ropes: stays in the foreground and does not cover the map centre. -->
       <!-- Realistic transparent basket and suspension ropes -->
-      <img
-        id="basket-overlay"
-        class="basket-overlay"
-        src="images/basket-overlay.png"
-        alt=""
-        aria-hidden="true"
-        draggable="false"
-      >
+<img
+  id="basket-overlay"
+  class="basket-overlay"
+  src="images/basket-overlay.png"
+  alt=""
+  aria-hidden="true"
+  draggable="false"
+>
 
       <div class="view-label">BALLOON · LOW-ALTITUDE VIEW</div>
     </section>
@@ -157,19 +46,16 @@
       <button class="release-btn" id="releaseBtn" type="button" title="Dismiss creature" aria-label="Dismiss creature">×</button>
       <div class="creature-name" id="creatureName"></div>
     </div>
-  </main>
-
-  <!-- ===== HUD: информаторы и кнопки (вынесено из #app) ===== -->
-  <div class="hud">
-    <div id="hint" class="map-hint">Click anywhere on the map to choose a launch point</div>
-    <div id="flight-status" class="flight-status" aria-live="polite">Choose your launch point</div>
-    <div id="wind-status" class="wind-status" aria-live="polite">Wind: waiting for location</div>
 
     <div class="map-controls">
       <button class="custom-button" id="startBtn" type="button" disabled>▶ START</button>
       <button class="custom-button" id="resetBtn" type="button">↺ RESET</button>
     </div>
-  </div>
+
+    <div id="hint" class="map-hint">Click anywhere on the map to choose a launch point</div>
+    <div id="flight-status" class="flight-status" aria-live="polite">Choose your launch point</div>
+    <div id="wind-status" class="wind-status" aria-live="polite">Wind: waiting for location</div>
+  </main>
 
   <div id="loading" class="loading">
     <div class="loading-card">
@@ -187,28 +73,30 @@
   <script src="js/zones.js"></script>
   <script src="js/balloon.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/zones.js"></script>
   <script src="js/creatures.js"></script>
 
-  <!-- Bridge for the creature module. -->
+    // Bridge for the creature module. The existing creatures.js file is kept separate.
   <script>
-    window.checkNearbyPlace = function (lat, lon) {
-      const zone = window.MagicZones?.findByCoordinates(
+window.checkNearbyPlace = function (lat, lon) {
+    const zone = window.MagicZones?.findByCoordinates(
         Number(lat),
         Number(lon)
-      );
+    );
 
-      if (zone) {
+    if (zone) {
         window.App.currentZone = zone;
-      }
+    }
 
-      if (window.AerostarCreatures?.update) {
+    if (window.AerostarCreatures?.update) {
         window.AerostarCreatures.update(
-          Number(lat),
-          Number(lon),
-          zone
+            Number(lat),
+            Number(lon),
+            zone
         );
-      }
-    };
-  </script>
+    }
+};
+</script>
+  
 </body>
 </html>
