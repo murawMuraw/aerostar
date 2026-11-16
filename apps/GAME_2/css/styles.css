@@ -125,23 +125,25 @@ html, body {
   pointer-events: none;
 }
 
+
 /* ========================================= */
 /* ИЗМЕНЕНО: Стили для информационных плашек */
 /* ========================================= */
 .map-hint, .flight-status, .wind-status {
   position: absolute; z-index: 20; 
-  padding: 10px 16px; /* Увеличены отступы */
-  border: 1px solid rgba(255, 255, 255, 0.35); /* Рамка заметнее */
+  padding: 10px 16px; 
+  border: 1px solid rgba(255, 255, 255, 0.35); 
   border-radius: 20px;
-  color: #e0f2fe; /* Яркий голубовато-белый цвет вместо тусклого */
-  background: rgba(6, 15, 26, 0.88); /* Темный и плотный фон */
+  color: #c0533a; /* Кирпичный цвет */
+  background: rgba(6, 15, 26, 0.88); 
   backdrop-filter: blur(12px);
-  font-size: 15px; /* Увеличен шрифт */
-  font-weight: 600; /* Сделали шрифт жирнее */
+  font-size: 15px; 
+  font-weight: 600; 
   letter-spacing: 0.02em;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8); /* Тень для контраста */
+  /* Легкая светлая тень, чтобы кирпичный текст не сливался с темным фоном карты */
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.4); 
   pointer-events: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); /* Тень под плашкой */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); 
 }
 
 .map-hint {
