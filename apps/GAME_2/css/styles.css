@@ -134,7 +134,7 @@ html, body {
   padding: 10px 16px; 
   border: 1px solid rgba(255, 255, 255, 0.35); 
   border-radius: 20px;
-  color: #c0533a; /* Кирпичный цвет */
+  color: #ff0000; /* Кирпичный цвет */
   background: rgba(6, 15, 26, 0.88); 
   backdrop-filter: blur(12px);
   font-size: 15px; 
