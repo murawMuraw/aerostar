@@ -10,17 +10,19 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <!-- ===== Заметные информаторы поверх карты (добавлено) ===== -->
-  <style>
-    /* Фиксированный HUD-слой выше Leaflet (400–1000) и оверлеев */
+   <style>
+    /* === HUD: поверх карты === */
     .hud {
       position: fixed;
       inset: 0;
       z-index: 1200;
-      pointer-events: none; /* не мешает кликам по карте */
+      pointer-events: none; /* Клики проходят сквозь пустую область */
     }
-    .hud > * { pointer-events: auto; }
+    .hud > * {
+      pointer-events: auto; /* Элементы внутри HUD кликабельны */
+    }
 
-    /* Общая плашка для hint / flight-status / wind-status */
+    /* === Информационные плашки === */
     #hint.map-hint,
     #flight-status.flight-status,
     #wind-status.wind-status {
@@ -32,38 +34,38 @@
       max-width: min(92vw, 520px);
       padding: 10px 16px;
       border-radius: 999px;
-      background: rgba(12, 18, 28, 0.82);
+      background: rgba(12, 18, 28, 0.85);
       color: #ffffff;
-      font: 600 15px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      letter-spacing: 0.2px;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+      font: 600 14px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      letter-spacing: 0.3px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
       box-shadow:
-        0 6px 22px rgba(0, 0, 0, 0.35),
-        0 0 0 1px rgba(255, 255, 255, 0.14) inset;
-      backdrop-filter: blur(6px) saturate(1.2);
-      -webkit-backdrop-filter: blur(6px) saturate(1.2);
+        0 6px 22px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+      backdrop-filter: blur(8px) saturate(1.2);
+      -webkit-backdrop-filter: blur(8px) saturate(1.2);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      min-width: 180px;
+      min-width: 0;
     }
 
-    /* Позиции: hint сверху по центру, статусы — снизу слева */
+    /* Позиции */
     #hint.map-hint {
-      top: max(14px, env(safe-area-inset-top));
+      top: max(16px, env(safe-area-inset-top));
       left: 50%;
       transform: translateX(-50%);
     }
     #flight-status.flight-status {
-      left: max(14px, env(safe-area-inset-left));
-      bottom: calc(72px + env(safe-area-inset-bottom));
+      left: max(16px, env(safe-area-inset-left));
+      bottom: calc(80px + env(safe-area-inset-bottom));
     }
     #wind-status.wind-status {
-      left: max(14px, env(safe-area-inset-left));
-      bottom: max(14px, env(safe-area-inset-bottom));
+      left: max(16px, env(safe-area-inset-left));
+      bottom: max(16px, env(safe-area-inset-bottom));
     }
 
-    /* Акцентные точки у статусов */
+    /* Точки-индикаторы */
     #flight-status.flight-status::before,
     #wind-status.wind-status::before {
       content: "";
@@ -79,37 +81,7 @@
       box-shadow: 0 0 10px rgba(255, 209, 102, 0.9);
     }
 
-    /* Компактный вариант на узких экранах */
-    @media (max-width: 520px) {
-      #hint.map-hint,
-      #flight-status.flight-status,
-      #wind-status.wind-status {
-        font-size: 13.5px;
-        padding: 8px 13px;
-        max-width: calc(100vw - 24px);
-        min-width: 0;
-      }
-      #flight-status.flight-status {
-        bottom: calc(64px + env(safe-area-inset-bottom));
-      }
-    }
-
-    /* Мягкая пульсация подсказки */
-    @media (prefers-reduced-motion: no-preference) {
-      #hint.map-hint {
-        animation: hintPulse 2.6s ease-in-out infinite;
-      }
-      @keyframes hintPulse {
-        0%, 100% {
-          box-shadow: 0 6px 22px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.14) inset;
-        }
-        50% {
-          box-shadow: 0 6px 26px rgba(110,231,255,.35), 0 0 0 1px rgba(110,231,255,.55) inset;
-        }
-      }
-    }
-
-    /* Управляющие кнопки поверх карты */
+    /* === Кнопки START / RESET === */
     .map-controls {
       position: fixed;
       z-index: 1210;
@@ -118,9 +90,20 @@
       display: flex;
       gap: 10px;
       pointer-events: auto;
+      /* Убедимся, что кнопки не растягиваются на весь экран */
+      width: auto;
+      max-width: max-content;
     }
 
-    /* Загрузочный экран — на весь экран и читаемо */
+    .map-controls .custom-button {
+      /* Защита от наследования width: 100% */
+      width: auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* === Загрузочный экран === */
     #loading {
       position: fixed;
       inset: 0;
@@ -129,6 +112,7 @@
       place-items: center;
       background: rgba(4, 8, 14, 0.92);
       backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
     }
     #loading .loading-card {
       background: rgba(10, 16, 26, 0.88);
@@ -138,10 +122,13 @@
       padding: 22px 26px;
       max-width: min(92vw, 420px);
       text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
     }
     #loading .loading-status {
       font: 700 17px/1.3 system-ui, sans-serif;
-      margin-bottom: 8px;
     }
     #loading .loading-card p {
       font: 400 14px/1.45 system-ui, sans-serif;
