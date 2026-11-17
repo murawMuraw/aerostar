@@ -126,39 +126,95 @@ html, body {
 }
 
 
+
 /* ========================================= */
-/* ИЗМЕНЕНО: Стили для информационных плашек */
+/* Информационные плашки Aerostar GAME_2     */
 /* ========================================= */
+
 .map-hint, .flight-status, .wind-status {
-  position: absolute; z-index: 20; 
-  padding: 10px 16px; 
-  border: 1px solid rgba(255, 255, 255, 0.35); 
-  border-radius: 20px;
-  color: #ff0000; /* Кирпичный цвет */
-  background: rgba(6, 15, 26, 0.88); 
-  backdrop-filter: blur(12px);
-  font-size: 15px; 
-  font-weight: 600; 
-  letter-spacing: 0.02em;
- 
+  position: absolute;
+  z-index: 20;
+  padding: 12px 18px;
+  border: 1px solid rgba(255,255,255,.35);
+  border-radius: 14px;
+  color: #ffffff;
+  background: rgba(5, 17, 30, .94);
+  backdrop-filter: blur(14px);
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: .025em;
   pointer-events: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); 
+  box-shadow: 0 5px 18px rgba(0,0,0,.65);
 }
+
+/* Главная подсказка выбора точки запуска */
 
 .map-hint {
-  right: 18px; bottom: 18px;
-  max-width: min(430px, calc(100% - 36px)); 
-  transition: opacity .3s;
+  right: 22px;
+  bottom: 22px;
+  max-width: min(460px, calc(100% - 44px));
+  padding: 15px 23px;
+
+  color: #17202a;
+  background: linear-gradient(
+    135deg,
+    #ffe58a,
+    #ffc83d
+  );
+
+  border: 2px solid #fff4c2;
+  border-radius: 16px;
+
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: .025em;
+  text-align: center;
+
+  box-shadow:
+    0 5px 18px rgba(0,0,0,.55),
+    0 0 18px rgba(255,205,65,.38);
+
+  transition: opacity .3s, box-shadow .3s;
+  animation: hint-glow 2.8s ease-in-out infinite;
 }
 
-.flight-status { left: 18px; bottom: 18px; display: none; }
+/* Мягкое привлечение внимания */
 
-.wind-status { right: 18px; top: 68px; display: none; }
+@keyframes hint-glow {
+  0%, 100% {
+    box-shadow:
+      0 5px 18px rgba(0,0,0,.55),
+      0 0 12px rgba(255,205,65,.25);
+  }
+  50% {
+    box-shadow:
+      0 5px 20px rgba(0,0,0,.65),
+      0 0 25px rgba(255,205,65,.65);
+  }
+}
+
+.flight-status {
+  left: 18px;
+  bottom: 18px;
+  display: none;
+}
+
+.wind-status {
+  right: 18px;
+  top: 68px;
+  display: none;
+}
 
 .app.flight-mode .flight-status,
-.app.flight-mode .wind-status { display: block; }
+.app.flight-mode .wind-status {
+  display: block;
+}
 
-.app.flight-mode .map-hint { display: none; }
+.app.flight-mode .map-hint {
+  display: none;
+}
+
+
 
 /* Keep the small-map zoom buttons and map-style switch usable during flight. */
 .app.flight-mode .world-map-wrap .leaflet-control-zoom,
