@@ -48,9 +48,25 @@
     </div>
 
     <div class="map-controls">
-      <button class="custom-button" id="startBtn" type="button" disabled>▶ START</button>
-      <button class="custom-button" id="resetBtn" type="button">↺ RESET</button>
-    </div>
+    <button class="custom-button" id="startBtn" type="button">
+        START
+    </button>
+
+    <button class="custom-button" id="resetBtn" type="button">
+        RESET
+    </button>
+
+    <button
+        class="custom-button turbo-button"
+        id="turboBtn"
+        type="button"
+        aria-pressed="false"
+        disabled
+        title="Increase balloon speed fivefold"
+    >
+        TURBO ×5
+    </button>
+</div>
 
     <div id="hint" class="map-hint">Click anywhere on the map to choose a launch point</div>
     <div id="flight-status" class="flight-status" aria-live="polite">Choose your launch point</div>
