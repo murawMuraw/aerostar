@@ -1017,9 +1017,9 @@
     "originType": "belarusian_folklore",
     "lat": 53.9,
     "lon": 27.56,
-    "radiusKm": 30,
+    "radiusKm": 75,
     "rarity": "rare",
-    "img": "images/creatures/vaukalak.webp"
+    "img": "images/creatures/vaukalk.gif"
   },
   {
     "id": "tsmok",
