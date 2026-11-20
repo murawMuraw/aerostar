@@ -346,8 +346,17 @@ html, body {
     top: 18px;
 }
 
-/* Индикатор ветра располагаем ниже RESET */
+/* Индикатор ветра располагаем ниже обеих кнопок */
 .app.flight-mode .wind-status {
-    top: 70px;
+    top: 125px;
     right: 18px;
+    z-index: 20;
+}
+
+/* Активная кнопка TURBO */
+.turbo-button.active {
+    background: rgba(190, 91, 24, .95);
+    border-color: rgba(255, 190, 90, .9);
+    color: #fff;
+    box-shadow: 0 0 16px rgba(255, 150, 50, .45);
 }
