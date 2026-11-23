@@ -1069,3 +1069,43 @@ body {
         top: 10px;
     }
 }
+
+/* GAME_2 — independent floating preview */
+#game2PreviewLink.game2-preview-link {
+    position: fixed !important;
+    left: 20px !important;
+    right: auto !important;
+    bottom: 20px !important;
+    top: auto !important;
+
+    z-index: 2000 !important;
+
+    display: block !important;
+    width: 230px !important;
+    height: 111px !important;
+
+    overflow: hidden;
+    border-radius: 12px;
+    border: 2px solid rgba(255,255,255,.8);
+    box-shadow: 0 5px 22px rgba(0,0,0,.5);
+}
+
+#game2PreviewLink img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+#game2PreviewLink:hover img {
+    transform: scale(1.04);
+}
+
+@media (max-width: 600px) {
+    #game2PreviewLink.game2-preview-link {
+        left: 10px !important;
+        bottom: 12px !important;
+        width: 145px !important;
+        height: 70px !important;
+    }
+}
