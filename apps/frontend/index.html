@@ -22,7 +22,8 @@
     <!-- Leaflet connection -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/styles.css?v=20261123-cabin" />
+    <link rel="stylesheet" href="css/cabin-view.css?v=20261123-cabin" />
     
     <!-- Canonical URL -->
     <link rel="canonical" href="https://aerost.art/">
@@ -705,15 +706,117 @@
     window.AerostarBalloons = { load: loadBalloons, hide: hideBalloons };
 })();
 </script>
-     <a
-  id="game2PreviewLink"
-  class="game2-preview-link"
-  href="http://91.149.179.79:3003/index.html"
-  target="_blank"
-  rel="noopener noreferrer"
->
-  <img src="images/game2-preview.jpg" alt="GAME_2">
-</a>
+    <!-- CABIN VIEW: the existing preview image is now the entry button -->
+    <button type="button" id="game2PreviewLink" class="game2-preview-link" aria-label="Enter cabin view">
+        <img src="images/game2-preview.jpg" alt="">
+    </button>
+
+    <!-- Fixed basket and ropes foreground. Copy basket-overlay.png from GAME_2/images to frontend/images. -->
+    <div id="cabinViewLayer" class="cabin-view-layer" aria-hidden="true">
+        <img class="cabin-basket-overlay" src="images/basket-overlay.png" alt="">
+        <button type="button" id="cabinHomeBtn" class="cabin-home-button">HOME</button>
+    </div>
+
+    <script>
+    // CABIN VIEW uses the existing Aerostar flight state; it does not create or move a second balloon.
+    (function () {
+        const enterButton = document.getElementById('game2PreviewLink');
+        const homeButton = document.getElementById('cabinHomeBtn');
+        const cabinLayer = document.getElementById('cabinViewLayer');
+        const CABIN_ZOOM = 16;
+        const FOLLOW_INTERVAL_MS = 1000;
+        let followTimer = null;
+        let savedView = null;
+        let lastFollowed = null;
+
+        function currentBalloonPosition() {
+            const position = window.App && window.App.balloonPosition;
+            if (!position) return null;
+            const lat = Number(position.lat);
+            const lng = Number(position.lng);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+            return L.latLng(lat, lng);
+        }
+
+        function setMapInteraction(enabled) {
+            const map = window.map;
+            if (!map) return;
+            ['dragging', 'touchZoom', 'doubleClickZoom', 'scrollWheelZoom', 'boxZoom', 'keyboard'].forEach(function (name) {
+                const handler = map[name];
+                if (!handler) return;
+                if (enabled && typeof handler.enable === 'function') handler.enable();
+                if (!enabled && typeof handler.disable === 'function') handler.disable();
+            });
+            if (map.zoomControl) {
+                if (enabled) map.zoomControl.addTo(map);
+                else map.removeControl(map.zoomControl);
+            }
+        }
+
+        function followBalloon(firstPosition) {
+            const map = window.map;
+            const position = currentBalloonPosition();
+            if (!map || !position) return;
+            if (firstPosition) {
+                map.setView(position, CABIN_ZOOM, { animate: false });
+            } else {
+                map.panTo(position, { animate: true, duration: 0.85, noMoveStart: true });
+            }
+            lastFollowed = position;
+        }
+
+        function enterCabinView() {
+            const map = window.map;
+            const app = window.App;
+            const position = currentBalloonPosition();
+            if (!map || !app || !app.isFlying || !position) {
+                if (typeof showError === 'function') showError('Start the balloon flight before entering cabin view.');
+                else window.alert('Start the balloon flight before entering cabin view.');
+                return;
+            }
+
+            savedView = { center: map.getCenter(), zoom: map.getZoom() };
+            document.body.classList.add('cabin-mode');
+            cabinLayer.setAttribute('aria-hidden', 'false');
+            setMapInteraction(false);
+            map.invalidateSize({ pan: false });
+            followBalloon(true);
+
+            if (followTimer) clearInterval(followTimer);
+            followTimer = setInterval(function () {
+                const next = currentBalloonPosition();
+                if (!next || !lastFollowed) return;
+                // Recenter only when the balloon has actually moved; keep the camera locked to it.
+                if (map.distance(lastFollowed, next) > 1) followBalloon(false);
+            }, FOLLOW_INTERVAL_MS);
+        }
+
+        function leaveCabinView() {
+            const map = window.map;
+            if (followTimer) {
+                clearInterval(followTimer);
+                followTimer = null;
+            }
+            document.body.classList.remove('cabin-mode');
+            cabinLayer.setAttribute('aria-hidden', 'true');
+            if (map) {
+                setMapInteraction(true);
+                if (savedView) map.setView(savedView.center, savedView.zoom, { animate: false });
+                map.invalidateSize({ pan: false });
+            }
+            savedView = null;
+            lastFollowed = null;
+        }
+
+        enterButton.addEventListener('click', enterCabinView);
+        homeButton.addEventListener('click', leaveCabinView);
+        window.addEventListener('resize', function () {
+            if (document.body.classList.contains('cabin-mode') && window.map) {
+                window.map.invalidateSize({ pan: false });
+            }
+        });
+    })();
+    </script>
 
 </body>
 </html>
