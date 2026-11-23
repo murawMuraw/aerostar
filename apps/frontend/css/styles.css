@@ -1031,3 +1031,41 @@ body {
         right: 15px;
     }
 }
+
+/* HOME — return to Aerostar */
+.home-button {
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 1000;
+
+    padding: 12px 22px;
+    border-radius: 30px;
+
+    background: rgba(8, 18, 29, .88);
+    border: 1px solid rgba(255,255,255,.25);
+
+    color: white;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .08em;
+
+    box-shadow: 0 4px 16px rgba(0,0,0,.4);
+    backdrop-filter: blur(8px);
+}
+
+.home-button:hover {
+    background: rgba(35, 75, 100, .95);
+}
+
+.app.flight-mode .home-button {
+    left: clamp(200px, calc(20vw + 34px), 330px);
+}
+
+@media (max-width: 700px) {
+    .app.flight-mode .home-button {
+        left: 200px;
+        top: 10px;
+    }
+}
