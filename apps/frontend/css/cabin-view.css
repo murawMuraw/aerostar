@@ -108,3 +108,8 @@ body.cabin-mode #map {
         padding: 9px 16px;
     }
 }
+
+/* Hide right-side navigation in CABIN VIEW */
+body.cabin-mode #cabinSideActions {
+    display: none !important;
+}
