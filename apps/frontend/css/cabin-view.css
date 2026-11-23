@@ -1,0 +1,110 @@
+/* =========================================================
+   AEROSTAR — CABIN VIEW
+   Add this file as apps/frontend/css/cabin-view.css.
+   The existing css/styles.css remains intact.
+   ========================================================= */
+
+/* The preview image is a button that opens the cabin view. */
+#game2PreviewLink.game2-preview-link {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0;
+    background: transparent;
+    border: 2px solid rgba(255,255,255,.82);
+    cursor: pointer;
+}
+
+#game2PreviewLink.game2-preview-link img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .25s ease;
+}
+
+#game2PreviewLink.game2-preview-link:hover img {
+    transform: scale(1.04);
+}
+
+/* Full-screen fixed foreground layer. */
+.cabin-view-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: none;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+body.cabin-mode .cabin-view-layer {
+    display: block;
+}
+
+.cabin-basket-overlay {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    object-position: center bottom;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Only HOME remains visible in cabin mode. */
+.cabin-home-button {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+    z-index: 2;
+    pointer-events: auto;
+    padding: 11px 21px;
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 999px;
+    background: rgba(8,18,29,.84);
+    color: #fff;
+    font: 700 13px/1.2 Inter, "Segoe UI", sans-serif;
+    letter-spacing: .08em;
+    box-shadow: 0 4px 18px rgba(0,0,0,.42);
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+}
+
+.cabin-home-button:hover {
+    background: rgba(35,75,100,.96);
+}
+
+/* Lock the map to the balloon and remove every other control from view. */
+body.cabin-mode #map {
+    cursor: default !important;
+}
+
+body.cabin-mode #map,
+body.cabin-mode #map * {
+    touch-action: none;
+}
+
+body.cabin-mode .leaflet-control-container,
+body.cabin-mode .leaflet-marker-pane,
+body.cabin-mode #haze-canvas,
+body.cabin-mode #support-banner,
+body.cabin-mode #profileButton,
+body.cabin-mode .left-controls,
+body.cabin-mode .info-panel,
+body.cabin-mode .hint,
+body.cabin-mode #game2PreviewLink {
+    display: none !important;
+}
+
+body.cabin-mode #map {
+    z-index: 1;
+}
+
+@media (max-width: 700px) {
+    .cabin-home-button {
+        top: 10px;
+        left: 10px;
+        padding: 9px 16px;
+    }
+}
