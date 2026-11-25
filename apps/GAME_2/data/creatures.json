@@ -1946,7 +1946,88 @@
     "img": "images/creatures/guru_rinpoche.webp"
   },
   
+ [
+  {
+    "id": "hanuman",
+    "zone_id": "zone_13",
+    "name": "Хануман",
+    "name_en": "Hanuman",
+    "description_ru": "Могучий обезьяний бог, преданный Раме. Он может летать, менять размер и обладает невероятной силой.",
+    "description_en": "The mighty monkey god devoted to Rama. He can fly, change size, and has incredible strength.",
+    "culture": "Индийская мифология",
+    "type": "deity",
+    "originType": "indian_mythology",
+    "lat": 20.0,
+    "lon": 77.0,
+    "radiusKm": 50,
+    "rarity": "legendary",
+    "img": "images/creatures/hanuman.webp"
+  },
+  {
+    "id": "ganesha",
+    "zone_id": "zone_13",
+    "name": "Ганеша",
+    "name_en": "Ganesha",
+    "description_ru": "Бог мудрости с головой слона. Он устраняет препятствия и помогает начинаниям.",
+    "description_en": "The elephant-headed god of wisdom. He removes obstacles and helps new beginnings.",
+    "culture": "Индийская мифология",
+    "type": "deity",
+    "originType": "indian_mythology",
+    "lat": 19.0,
+    "lon": 74.0,
+    "radiusKm": 50,
+    "rarity": "legendary",
+    "img": "images/creatures/ganesha.webp"
+  },
+  {
+    "id": "krishna",
+    "zone_id": "zone_13",
+    "name": "Кришна",
+    "name_en": "Krishna",
+    "description_ru": "Воплощение Вишну, божественный пастух и герой. Его игры и подвиги описаны в древних эпосах.",
+    "description_en": "An incarnation of Vishnu, divine cowherd and hero. His plays and feats are described in ancient epics.",
+    "culture": "Индийская мифология",
+    "type": "deity",
+    "originType": "indian_mythology",
+    "lat": 27.5,
+    "lon": 77.5,
+    "radiusKm": 50,
+    "rarity": "legendary",
+    "img": "images/creatures/krishna.webp"
+  },
  
+  {
+    "id": "naga_pk",
+    "zone_id": "zone_13",
+    "name": "Наг",
+    "name_en": "Nag",
+    "description_ru": "Змей-хранитель из пакистанских преданий. Он может принести дождь или наслать засуху.",
+    "description_en": "A guardian serpent from Pakistani legends. He can bring rain or cause drought.",
+    "culture": "Пакистанский фольклор",
+    "type": "mythical_creature",
+    "originType": "pakistani_folklore",
+    "lat": 33.0,
+    "lon": 74.0,
+    "radiusKm": 40,
+    "rarity": "epic",
+    "img": "images/creatures/nag_pk.webp"
+  },
+  {
+    "id": "chudail",
+    "zone_id": "zone_13",
+    "name": "Чудаил",
+    "name_en": "Chudail",
+    "description_ru": "Женский дух из индийских и пакистанских преданий. Она может заманить путника, но её можно отпугнуть зеркалом.",
+    "description_en": "A female spirit from Indian and Pakistani legends. She may lure travelers but can be repelled with a mirror.",
+    "culture": "Южноазиатский фольклор",
+    "type": "spirit",
+    "originType": "indian_mythology",
+    "lat": 28.0,
+    "lon": 72.0,
+    "radiusKm": 40,
+    "rarity": "epic",
+    "img": "images/creatures/chudail.webp"
+  },
  
  
 
