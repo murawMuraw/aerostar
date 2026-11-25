@@ -297,28 +297,6 @@
     "culture": "Древняя Греция",
     "type": "group",
     "originType": "greek_mythology",
-    "members": [
-      "Каллиопа",
-      "Клио",
-      "Эрато",
-      "Эвтерпа",
-      "Мельпомена",
-      "Полигимния",
-      "Терпсихора",
-      "Талия",
-      "Урания"
-    ],
-    "members_en": [
-      "Calliope",
-      "Clio",
-      "Erato",
-      "Euterpe",
-      "Melpomene",
-      "Polyhymnia",
-      "Terpsichore",
-      "Thalia",
-      "Urania"
-    ],
     "lat": 38.20923,
     "lon": 22.78703,
     "radiusKm": 20,
@@ -335,14 +313,6 @@
     "culture": "Древняя Греция",
     "type": "group",
     "originType": "greek_mythology",
-    "members": [
-      "Кастор",
-      "Поллукс"
-    ],
-    "members_en": [
-      "Castor",
-      "Pollux"
-    ],
     "lat": 37.07,
     "lon": 22.43,
     "radiusKm": 20,
