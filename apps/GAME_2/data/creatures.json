@@ -319,22 +319,7 @@
     "rarity": "epic",
     "img": "images/creatures/dioscuri.webp"
   },
-  {
-    "id": "tarantasio",
-    "zone_id": "zone_02",
-    "name": "Тарантазио",
-    "name_en": "Tarantasio",
-    "description_ru": "В болотах Ломбардии жил огромный дракон по имени Тарантазио. Его страшная тень скользила над водой, а из тумана порой доносился таинственный рёв. Сможешь отыскать его следы?",
-    "description_en": "A huge dragon named Tarantasio once haunted the marshes of Lombardy. Its frightening shadow glided over the water, and a mysterious roar sometimes came from the mist. Can you find its tracks?",
-    "culture": "Фольклор Ломбардии",
-    "type": "monster",
-    "originType": "italian_folklore",
-    "lat": 45.36,
-    "lon": 9.68,
-    "radiusKm": 20,
-    "rarity": "legendary",
-    "img": "images/creatures/tarantasio.webp"
-  },
+  
   {
     "id": "badalisc",
     "zone_id": "zone_02",
@@ -479,22 +464,7 @@
     "rarity": "epic",
     "img": "images/creatures/faunus.webp"
   },
-  {
-    "id": "silvanus",
-    "zone_id": "zone_02",
-    "name": "Сильван",
-    "name_en": "Silvanus",
-    "description_ru": "Могучий хранитель лесов, полей и границ владений. Он охраняет деревья и зверей от тех, кто приходит с дурными намерениями. В его лесу лучше вести себя с уважением!",
-    "description_en": "A mighty guardian of forests, fields, and boundaries. He protects trees and wild animals from those who come with bad intentions. You had better show respect in his woods!",
-    "culture": "Древнеримская и древнеиталийская мифология",
-    "type": "guardian",
-    "originType": "roman_italic_mythology",
-    "lat": 41.89,
-    "lon": 12.5,
-    "radiusKm": 15,
-    "rarity": "rare",
-    "img": "images/creatures/silvanus.webp"
-  },
+ 
   {
     "id": "picus",
     "zone_id": "zone_02",
@@ -511,22 +481,7 @@
     "rarity": "epic",
     "img": "images/creatures/picus.webp"
   },
-  {
-    "id": "lares",
-    "zone_id": "zone_02",
-    "name": "Лары",
-    "name_en": "Lares",
-    "description_ru": "Духи-хранители римского дома и семьи. Они присматривают за жилищем и его обитателями, а иногда охраняют целые дороги и перекрёстки. Даже у самого маленького дома есть свои невидимые защитники!",
-    "description_en": "Guardian spirits of the Roman home and family. They watch over the house and its people, and some protect roads and crossroads. Even the smallest home has its own invisible guardians!",
-    "culture": "Древнеримская мифология",
-    "type": "group",
-    "originType": "roman_italic_mythology",
-    "lat": 41.891,
-    "lon": 12.486,
-    "radiusKm": 15,
-    "rarity": "rare",
-    "img": "images/creatures/lares.webp"
-  },
+ 
   {
     "id": "penates",
     "zone_id": "zone_02",
@@ -543,134 +498,9 @@
     "rarity": "rare",
     "img": "images/creatures/penates.webp"
   },
-  {
-    "id": "lemures",
-    "zone_id": "zone_02",
-    "name": "Лемуры",
-    "name_en": "Lemures",
-    "description_ru": "Беспокойные тени умерших, которые, по поверьям римлян, могли возвращаться в мир живых. Во время особого обряда люди старались умиротворить их и прогнать прочь. Не всякая тень безобидна!",
-    "description_en": "Restless shades of the dead who, Romans believed, could return to the world of the living. During a special ritual, people tried to calm them and send them away. Not every shadow is harmless!",
-    "culture": "Древнеримская мифология",
-    "type": "mythical_creature",
-    "originType": "roman_italic_mythology",
-    "lat": 41.895,
-    "lon": 12.5,
-    "radiusKm": 15,
-    "rarity": "epic",
-    "img": "images/creatures/lemures.webp"
-  },
-  {
-    "id": "manes",
-    "zone_id": "zone_02",
-    "name": "Маны",
-    "name_en": "Manes",
-    "description_ru": "Духи умерших предков, которых римляне почитали и вспоминали с уважением. Семьи приносили им дары и заботились о могилах. Говорят, память о близких никогда не исчезает бесследно!",
-    "description_en": "Spirits of the departed ancestors whom Romans honoured and remembered with respect. Families made offerings to them and cared for their graves. They say the memory of loved ones never truly disappears!",
-    "culture": "Древнеримская мифология",
-    "type": "group",
-    "originType": "roman_italic_mythology",
-    "lat": 41.85,
-    "lon": 12.51,
-    "radiusKm": 15,
-    "rarity": "rare",
-    "img": "images/creatures/manes.webp"
-  },
-  {
-    "id": "genius_loci",
-    "zone_id": "zone_02",
-    "name": "Гений места",
-    "name_en": "Genius Loci",
-    "description_ru": "Невидимый дух-хранитель определённого места. Он может обитать у древнего дерева, у источника или среди руин. У каждого уголка земли, верили римляне, есть свой характер и свой защитник!",
-    "description_en": "An invisible spirit guarding a particular place. It may dwell beside an ancient tree, a spring, or old ruins. Romans believed every corner of the land had its own character and protector!",
-    "culture": "Древнеримская мифология",
-    "type": "guardian",
-    "originType": "roman_italic_mythology",
-    "lat": 41.9,
-    "lon": 12.48,
-    "radiusKm": 15,
-    "rarity": "rare",
-    "img": "images/creatures/genius_loci.webp"
-  },
-  {
-    "id": "camenae",
-    "zone_id": "zone_02",
-    "name": "Камены",
-    "name_en": "Camenae",
-    "description_ru": "Древние духи источников, которые могли открывать людям тайны будущего. Их священный родник находился у ворот Рима. Позже римляне стали связывать Камен с музами и вдохновением!",
-    "description_en": "Ancient spirits of springs who could reveal secrets of the future. Their sacred spring lay near the gates of Rome. Later, Romans connected the Camenae with the Muses and inspiration!",
-    "culture": "Древнеиталийская мифология",
-    "type": "group",
-    "originType": "roman_italic_mythology",
-    "lat": 41.879,
-    "lon": 12.495,
-    "radiusKm": 15,
-    "rarity": "epic",
-    "img": "images/creatures/camenae.webp"
-  },
-  {
-    "id": "juturna",
-    "zone_id": "zone_02",
-    "name": "Ютурна",
-    "name_en": "Juturna",
-    "description_ru": "Богиня источников и чистой воды. В самом сердце Рима бил посвящённый ей родник. Люди приходили к Ютурне за водой и просили её о здоровье и исцелении!",
-    "description_en": "Goddess of springs and clear water. A fountain dedicated to her flowed in the heart of Rome. People came to Juturna for water and asked her for health and healing!",
-    "culture": "Древнеиталийская мифология",
-    "type": "deity",
-    "originType": "roman_italic_mythology",
-    "lat": 41.892,
-    "lon": 12.485,
-    "radiusKm": 15,
-    "rarity": "rare",
-    "img": "images/creatures/juturna.webp"
-  },
-  {
-    "id": "vertumnus",
-    "zone_id": "zone_02",
-    "name": "Вертумн",
-    "name_en": "Vertumnus",
-    "description_ru": "Бог превращений, садов и смены времён года. Он мог менять облик и помогал природе переходить от весны к лету, а от лета — к осени. Увидишь незнакомца в саду — присмотрись внимательнее!",
-    "description_en": "God of transformations, gardens, and the changing seasons. He could change his appearance and helped nature turn from spring to summer, and summer to autumn. If you see a stranger in a garden, take a closer look!",
-    "culture": "Этрусско-римская мифология",
-    "type": "deity",
-    "originType": "roman_italic_mythology",
-    "lat": 41.891,
-    "lon": 12.48,
-    "radiusKm": 15,
-    "rarity": "epic",
-    "img": "images/creatures/vertumnus.webp"
-  },
-  {
-    "id": "tarasque",
-    "zone_id": "zone_03",
-    "name": "Тараск",
-    "name_en": "Tarasque",
-    "description_ru": "Страшный дракон с панцирем, шипами и мощным хвостом жил у реки Роны. По легенде, святая Марта смогла его укротить!",
-    "description_en": "A fearsome dragon with a shell, spikes, and a mighty tail once lived by the River Rhône. Legend says Saint Martha managed to tame it!",
-    "culture": "Фольклор Прованса, Франция",
-    "type": "monster",
-    "originType": "french_folklore",
-    "lat": 43.805,
-    "lon": 4.66,
-    "radiusKm": 20,
-    "rarity": "legendary",
-    "img": "images/creatures/tarasque.webp"
-  },
-  {
-    "id": "melusine",
-    "zone_id": "zone_03",
-    "name": "Мелюзина",
-    "name_en": "Melusine",
-    "description_ru": "Волшебная фея, которая по определённым дням превращалась в женщину-змею. Она связана с древним замком и родом Лузиньянов.",
-    "description_en": "An enchanted fairy who changed into a serpent-woman on certain days. Her legend is linked to an old castle and the Lusignan family.",
-    "culture": "Средневековые предания Пуату, Франция",
-    "type": "mythical_creature",
-    "originType": "french_folklore",
-    "lat": 46.435,
-    "lon": -0.12,
-    "radiusKm": 20,
-    "rarity": "epic",
-    "img": "images/creatures/melusine.webp"
-  },
+ 
+    
+ 
   {
     "id": "ankou",
     "zone_id": "zone_03",
@@ -687,22 +517,7 @@
     "rarity": "epic",
     "img": "images/creatures/ankou.webp"
   },
-  {
-    "id": "vouivre",
-    "zone_id": "zone_03",
-    "name": "Вуивр",
-    "name_en": "Vouivre",
-    "description_ru": "Крылатая змея из преданий Юры охраняет сокровища и источники. На её голове сияет драгоценный камень, который она бережёт от похитителей.",
-    "description_en": "A winged serpent from Jura legends guards treasures and springs. A precious jewel shines on its head, and it fiercely protects it from thieves.",
-    "culture": "Фольклор Франш-Конте и Юры, Франция",
-    "type": "monster",
-    "originType": "french_folklore",
-    "lat": 46.8,
-    "lon": 5.75,
-    "radiusKm": 25,
-    "rarity": "legendary",
-    "img": "images/creatures/vouivre.webp"
-  },
+
   {
     "id": "black_shuck",
     "zone_id": "zone_03",
@@ -735,22 +550,7 @@
     "rarity": "epic",
     "img": "images/creatures/kelpie.webp"
   },
-  {
-    "id": "selkie",
-    "zone_id": "zone_03",
-    "name": "Селки",
-    "name_en": "Selkie",
-    "description_ru": "Морские тюлени, которые умеют снимать шкуру и превращаться в людей. Но без своей тюленьей шкуры они не могут вернуться в океан.",
-    "description_en": "Seal folk can shed their skins and become human. But without their seal skin, they cannot return to the ocean.",
-    "culture": "Фольклор Оркнейских и Шетландских островов, Шотландия",
-    "type": "mythical_creature",
-    "originType": "scottish_folklore",
-    "lat": 58.55,
-    "lon": -3.5,
-    "radiusKm": 60,
-    "rarity": "rare",
-    "img": "images/creatures/selkie.webp"
-  },
+  
   {
     "id": "cwn_annwn",
     "zone_id": "zone_03",
@@ -783,22 +583,7 @@
     "rarity": "epic",
     "img": "images/creatures/banshee.webp"
   },
-  {
-    "id": "puca",
-    "zone_id": "zone_03",
-    "name": "Пука",
-    "name_en": "Púca",
-    "description_ru": "Хитрый ирландский дух умеет принимать облик коня, козла или другого зверя. Он любит сбивать путников с дороги и устраивать неожиданные проделки.",
-    "description_en": "A mischievous Irish spirit can take the shape of a horse, goat, or other animal. It loves to lead travellers astray and play unexpected tricks.",
-    "culture": "Ирландский фольклор",
-    "type": "shapeshifter",
-    "originType": "irish_folklore",
-    "lat": 53.58,
-    "lon": -6.61,
-    "radiusKm": 25,
-    "rarity": "rare",
-    "img": "images/creatures/puca.webp"
-  },
+ 
   {
     "id": "klabautermann",
     "zone_id": "zone_03",
@@ -831,38 +616,8 @@
     "rarity": "epic",
     "img": "images/creatures/frau_holle.webp"
   },
-  {
-    "id": "perchta",
-    "zone_id": "zone_03",
-    "name": "Перхта",
-    "name_en": "Perchta",
-    "description_ru": "Зимний дух альпийских преданий появляется в праздничные ночи. Она следит, чтобы люди завершили свои дела, и может наградить за старание или наказать за лень.",
-    "description_en": "A winter spirit from Alpine legends appears during the festive nights. She checks that people have finished their work and may reward diligence or punish laziness.",
-    "culture": "Альпийский фольклор Баварии и Австрии",
-    "type": "spirit",
-    "originType": "alpine_folklore",
-    "lat": 47.8,
-    "lon": 12.98,
-    "radiusKm": 25,
-    "rarity": "epic",
-    "img": "images/creatures/perchta.webp"
-  },
-  {
-    "id": "krampus",
-    "zone_id": "zone_03",
-    "name": "Крампус",
-    "name_en": "Krampus",
-    "description_ru": "Рогатый и мохнатый спутник Святого Николая гремит цепями во время зимних праздников. Он пугает непослушных детей и напоминает им о хороших поступках.",
-    "description_en": "The horned, shaggy companion of Saint Nicholas rattles his chains during winter festivities. He frightens naughty children and reminds them to behave well.",
-    "culture": "Альпийская традиция Австрии и Баварии",
-    "type": "monster",
-    "originType": "alpine_folklore",
-    "lat": 47.8,
-    "lon": 13.04,
-    "radiusKm": 25,
-    "rarity": "epic",
-    "img": "images/creatures/krampus.webp"
-  },
+  
+ 
   {
     "id": "kludde",
     "zone_id": "zone_03",
@@ -895,22 +650,7 @@
     "rarity": "rare",
     "img": "images/creatures/witte_wieven.webp"
   },
-  {
-    "id": "basajaun",
-    "zone_id": "zone_03",
-    "name": "Басахаун",
-    "name_en": "Basajaun",
-    "description_ru": "Могучий волосатый хранитель баскских лесов и гор. Он охраняет стада и предупреждает пастухов о приближении опасности.",
-    "description_en": "A mighty, hairy guardian of the Basque forests and mountains. He protects flocks and warns shepherds when danger approaches.",
-    "culture": "Баскская мифология, Испания и Франция",
-    "type": "guardian",
-    "originType": "basque_folklore",
-    "lat": 43,
-    "lon": -1,
-    "radiusKm": 25,
-    "rarity": "epic",
-    "img": "images/creatures/basajaun.webp"
-  },
+ 
   {
     "id": "tartalo",
     "zone_id": "zone_03",
@@ -943,22 +683,7 @@
     "rarity": "epic",
     "img": "images/creatures/moura_encantada.webp"
   },
-  {
-    "id": "coca",
-    "zone_id": "zone_03",
-    "name": "Кока",
-    "name_en": "Coca",
-    "description_ru": "Зелёный дракон из португальского города Монсан выходит на праздник Тела Христова. По традиции он вступает в поединок со святым Георгием.",
-    "description_en": "A green dragon from the Portuguese town of Monção appears during the Feast of Corpus Christi. By tradition, it faces Saint George in a contest.",
-    "culture": "Праздничный фольклор Монсана, Португалия",
-    "type": "monster",
-    "originType": "portuguese_folklore",
-    "lat": 42.08,
-    "lon": -8.48,
-    "radiusKm": 15,
-    "rarity": "epic",
-    "img": "images/creatures/coca.webp"
-  },
+  
   {
     "id": "perun",
     "zone_id": "zone_04",
@@ -1039,22 +764,7 @@
     "rarity": "epic",
     "img": "images/creatures/mavka.webp"
   },
-  {
-    "id": "chugaister",
-    "zone_id": "zone_04",
-    "name": "Чугайстер",
-    "name_en": "Chugaister",
-    "description_ru": "Добродушный великан из карпатских лесов! Он любит танцевать и охотится на опасных лесных духов. Если услышишь в чаще странную песню — возможно, это Чугайстер!",
-    "description_en": "A good-natured giant from the Carpathian forests! He loves dancing and hunts dangerous forest spirits. Hear a strange song in the woods? It might be the Chugaister!",
-    "culture": "Украинский карпатский фольклор",
-    "type": "guardian",
-    "originType": "carpathian_folklore",
-    "lat": 48.3,
-    "lon": 24.6,
-    "radiusKm": 30,
-    "rarity": "rare",
-    "img": "images/creatures/chugaister.webp"
-  },
+ 
   {
     "id": "smok_wawelski",
     "zone_id": "zone_04",
@@ -1119,22 +829,7 @@
     "rarity": "rare",
     "img": "images/creatures/vodnik.webp"
   },
-  {
-    "id": "iele",
-    "zone_id": "zone_04",
-    "name": "Еле",
-    "name_en": "Iele",
-    "description_ru": "Загадочные девушки, танцующие в ночных хороводах. Их танец оставляет на земле выжженные круги. Увидеть их можно, но приближаться к их волшебному кругу опасно!",
-    "description_en": "Mysterious maidens who dance in circles at night. Their dancing leaves scorched rings on the ground. You may see them, but entering their magical circle is dangerous!",
-    "culture": "Румынский фольклор",
-    "type": "spirit",
-    "originType": "romanian_folklore",
-    "lat": 44.43,
-    "lon": 26.1,
-    "radiusKm": 30,
-    "rarity": "epic",
-    "img": "images/creatures/iele.webp"
-  },
+ 
   {
     "id": "strigoi",
     "zone_id": "zone_04",
@@ -1151,38 +846,8 @@
     "rarity": "legendary",
     "img": "images/creatures/strigoi.webp"
   },
-  {
-    "id": "moroi",
-    "zone_id": "zone_04",
-    "name": "Морой",
-    "name_en": "Moroi",
-    "description_ru": "Таинственный дух из румынских преданий, связанный с миром мёртвых. В одних историях он похож на призрака, в других — на опасного ночного вампира. Никогда не зови его по имени после заката!",
-    "description_en": "A mysterious spirit from Romanian legends, connected to the world of the dead. In some tales it is like a ghost, in others a dangerous night vampire. Never call its name after sunset!",
-    "culture": "Румынский фольклор",
-    "type": "undead",
-    "originType": "romanian_folklore",
-    "lat": 47.65,
-    "lon": 26.25,
-    "radiusKm": 30,
-    "rarity": "epic",
-    "img": "images/creatures/moroi.webp"
-  },
-  {
-    "id": "balaur",
-    "zone_id": "zone_04",
-    "name": "Балаур",
-    "name_en": "Balaur",
-    "description_ru": "Страшный многоголовый дракон из румынских сказок! Он охраняет сокровища и может жить в горах или глубоких пещерах. Чем больше у него голов, тем опаснее он становится!",
-    "description_en": "A terrifying many-headed dragon from Romanian tales! It guards treasures and may live in mountains or deep caves. The more heads it has, the more dangerous it becomes!",
-    "culture": "Румынский фольклор",
-    "type": "dragon",
-    "originType": "romanian_folklore",
-    "lat": 45.65,
-    "lon": 25.6,
-    "radiusKm": 30,
-    "rarity": "legendary",
-    "img": "images/creatures/balaur.webp"
-  },
+ 
+ 
   {
     "id": "samodiva",
     "zone_id": "zone_04",
@@ -1199,22 +864,7 @@
     "rarity": "epic",
     "img": "images/creatures/samodiva.webp"
   },
-  {
-    "id": "lamia",
-    "zone_id": "zone_04",
-    "name": "Ламия",
-    "name_en": "Lamia",
-    "description_ru": "Чудовище из болгарских сказаний, похожее на огромного змея с несколькими головами. Она может преграждать реки и требовать жертву. Но смелый герой всегда может найти способ её победить!",
-    "description_en": "A monster from Bulgarian tales, like a huge serpent with several heads. It can block rivers and demand a sacrifice. But a brave hero can always find a way to defeat it!",
-    "culture": "Болгарский фольклор",
-    "type": "monster",
-    "originType": "bulgarian_folklore",
-    "lat": 41.6,
-    "lon": 24.7,
-    "radiusKm": 30,
-    "rarity": "legendary",
-    "img": "images/creatures/lamia.webp"
-  },
+ 
   {
     "id": "karakondjul",
     "zone_id": "zone_04",
@@ -1350,54 +1000,9 @@
     "rarity": "epic",
     "img": "images/creatures/fossegrim.webp"
   },
-  {
-    "id": "vittra",
-    "zone_id": "zone_05",
-    "name": "Виттра",
-    "name_en": "Vittra",
-    "description_ru": "Под землёй живёт невидимый народ виттра. У них есть собственные дома, дороги и стада, а иногда они помогают людям и их животным!",
-    "description_en": "An invisible people called the vittra live beneath the ground. They have their own homes, paths, and herds, and sometimes help people and their animals!",
-    "culture": "Северошведский фольклор, Норрланд",
-    "type": "folk_being",
-    "originType": "swedish_folklore",
-    "lat": 64.25,
-    "lon": 19.0,
-    "radiusKm": 40,
-    "rarity": "rare",
-    "img": "images/creatures/vittra.webp"
-  },
-  {
-    "id": "gruvra",
-    "zone_id": "zone_05",
-    "name": "Грувро",
-    "name_en": "Gruvrå",
-    "description_ru": "В старых шведских шахтах живёт хранительница подземных богатств. Она может появиться как знатная дама с ключами или загадочный зверь!",
-    "description_en": "A guardian of underground riches lives in old Swedish mines. She may appear as a noblewoman with keys or as a mysterious animal!",
-    "culture": "Шведский горняцкий фольклор, Бергслаген",
-    "type": "guardian",
-    "originType": "swedish_mining_folklore",
-    "lat": 60.603,
-    "lon": 15.63,
-    "radiusKm": 25,
-    "rarity": "rare",
-    "img": "images/creatures/gruvra.webp"
-  },
-  {
-    "id": "storsjoodjuret",
-    "zone_id": "zone_05",
-    "name": "Чудовище озера Сторшён",
-    "name_en": "Storsjöodjuret",
-    "description_ru": "В глубоком шведском озере Сторшён прячется длинный водяной змей. По легенде, древняя надпись на камне удерживает его под водой!",
-    "description_en": "A long water serpent hides in Sweden's deep Lake Storsjön. Legend says an ancient inscription on a stone keeps it beneath the water!",
-    "culture": "Фольклор Емтланда, Швеция",
-    "type": "lake_monster",
-    "originType": "swedish_folklore",
-    "lat": 63.18,
-    "lon": 14.64,
-    "radiusKm": 35,
-    "rarity": "legendary",
-    "img": "images/creatures/storsjoodjuret.webp"
-  },
+  
+ 
+ 
   {
     "id": "helhest",
     "zone_id": "zone_05",
@@ -1494,22 +1099,7 @@
     "rarity": "legendary",
     "img": "images/creatures/snow_queen.webp"
   },
-  {
-    "id": "pippi_longstocking",
-    "zone_id": "zone_05",
-    "name": "Пеппи Длинныйчулок",
-    "name_en": "Pippi Longstocking",
-    "description_ru": "Пеппи — самая сильная девочка на свете! У неё рыжие косички, весёлые веснушки и удивительная способность превращать обычный день в приключение.",
-    "description_en": "Pippi is the strongest girl in the world! She has red braids, cheerful freckles, and an amazing talent for turning an ordinary day into an adventure.",
-    "culture": "Шведская детская литература: Астрид Линдгрен (1945)",
-    "type": "literary_character",
-    "originType": "swedish_literature",
-    "lat": 57.665,
-    "lon": 15.855,
-    "radiusKm": 25,
-    "rarity": "rare",
-    "img": "images/creatures/pippi_longstocking.webp"
-  },
+  
   {
     "id": "karlsson",
     "zone_id": "zone_05",
@@ -1526,54 +1116,9 @@
     "rarity": "rare",
     "img": "images/creatures/karlsson.webp"
   },
-  {
-    "id": "fenrir",
-    "zone_id": "zone_05",
-    "name": "Фенрир",
-    "name_en": "Fenrir",
-    "description_ru": "Фенрир — огромный волк, которого боялись даже боги. Его удалось удержать только волшебной цепью Глейпнир. Но однажды он должен освободиться!",
-    "description_en": "Fenrir is a gigantic wolf feared even by the gods. Only the magical chain Gleipnir could hold him. But one day, he is destined to break free!",
-    "culture": "Древнескандинавская мифология",
-    "type": "monster",
-    "originType": "old_norse_mythology",
-    "lat": 60.0,
-    "lon": 10.0,
-    "radiusKm": 45,
-    "rarity": "legendary",
-    "img": "images/creatures/fenrir.webp"
-  },
-  {
-    "id": "jormungandr",
-    "zone_id": "zone_05",
-    "name": "Ёрмунганд",
-    "name_en": "Jörmungandr",
-    "description_ru": "В северных морях живёт мировой змей Ёрмунганд. Он настолько огромен, что обвил весь мир и кусает собственный хвост!",
-    "description_en": "The world serpent Jörmungandr lives in the northern seas. He is so enormous that he encircles the world and bites his own tail!",
-    "culture": "Древнескандинавская мифология",
-    "type": "sea_monster",
-    "originType": "old_norse_mythology",
-    "lat": 64.0,
-    "lon": -5.0,
-    "radiusKm": 60,
-    "rarity": "legendary",
-    "img": "images/creatures/jormungandr.webp"
-  },
-  {
-    "id": "nidhogg",
-    "zone_id": "zone_05",
-    "name": "Нидхёгг",
-    "name_en": "Níðhöggr",
-    "description_ru": "Глубоко под мировым деревом Иггдрасиль живёт дракон Нидхёгг. Он грызёт его корни — те самые, на которых держится целый мир!",
-    "description_en": "Deep beneath the world tree Yggdrasil lives the dragon Níðhöggr. He gnaws at its roots — the very roots that support the worlds!",
-    "culture": "Древнескандинавская мифология",
-    "type": "dragon",
-    "originType": "old_norse_mythology",
-    "lat": 61.5,
-    "lon": 8.5,
-    "radiusKm": 45,
-    "rarity": "legendary",
-    "img": "images/creatures/nidhogg.webp"
-  },
+  
+ 
+ 
   {
     "id": "sleipnir",
     "zone_id": "zone_05",
@@ -1606,22 +1151,7 @@
     "rarity": "epic",
     "img": "images/creatures/valkyries.webp"
   },
-  {
-    "id": "dvergar",
-    "zone_id": "zone_05",
-    "name": "Дверги",
-    "name_en": "Dvergar (Norse Dwarves)",
-    "description_ru": "Под горами живут искусные мастера-дверги. Они умеют создавать волшебные вещи — даже молот Тора Мьёльнир был выкован их руками!",
-    "description_en": "Skilled Dvergar smiths live beneath the mountains. They can craft magical objects — even Thor's hammer Mjölnir was made by their hands!",
-    "culture": "Древнескандинавская мифология",
-    "type": "group",
-    "originType": "old_norse_mythology",
-    "lat": 62.0,
-    "lon": 7.0,
-    "radiusKm": 45,
-    "rarity": "rare",
-    "img": "images/creatures/dvergar.webp"
-  },
+  
   {
     "id": "ratatoskr",
     "zone_id": "zone_05",
@@ -1639,22 +1169,7 @@
     "img": "images/creatures/ratatoskr.webp"
   },
 
-  {
-    "id": "dali",
-    "zone_id": "zone_06",
-    "name": "Дали",
-    "name_en": "Dali",
-    "description_ru": "В высоких горах живёт Дали — хозяйка горных животных. Её золотые волосы светятся в темноте. Иногда она превращается в белую серну!",
-    "description_en": "Dali lives high in the mountains and protects wild animals. Her golden hair shines in the darkness. Sometimes she transforms into a white chamois!",
-    "culture": "Сванская мифология, Грузия",
-    "type": "deity",
-    "originType": "svan_mythology",
-    "lat": 43.045,
-    "lon": 42.72,
-    "radiusKm": 20,
-    "rarity": "legendary",
-    "img": "images/creatures/dali.webp"
-  },
+ 
   {
     "id": "ochokochi",
     "zone_id": "zone_06",
@@ -1671,22 +1186,7 @@
     "rarity": "epic",
     "img": "images/creatures/ochokochi.webp"
   },
-  {
-    "id": "paskunji",
-    "zone_id": "zone_06",
-    "name": "Паскунжи",
-    "name_en": "Paskunji",
-    "description_ru": "Паскунжи — чудесная птица из грузинских сказок. Она помогает героям выбраться из подземного мира и вернуться домой. Её полёт открывает дорогу к приключениям!",
-    "description_en": "Paskunji is a magical bird from Georgian fairy tales. It helps heroes escape the underworld and return home. Its flight opens the way to adventure!",
-    "culture": "Грузинский фольклор",
-    "type": "mythical_creature",
-    "originType": "georgian_folklore",
-    "lat": 41.7151,
-    "lon": 44.8271,
-    "radiusKm": 20,
-    "rarity": "legendary",
-    "img": "images/creatures/paskunji.webp"
-  },
+ 
   {
     "id": "aralez",
     "zone_id": "zone_06",
@@ -1703,22 +1203,7 @@
     "rarity": "epic",
     "img": "images/creatures/aralez.webp"
   },
-  {
-    "id": "vishap",
-    "zone_id": "zone_06",
-    "name": "Вишап",
-    "name_en": "Vishap",
-    "description_ru": "Вишап — загадочный дракон армянских горных преданий. Его связывают с водой, источниками и высокими озёрами. Может быть, он до сих пор прячется под холодной водой?",
-    "description_en": "Vishap is a mysterious dragon from Armenian mountain legends. It is connected with water, springs, and high mountain lakes. Could it still be hiding beneath the cold water?",
-    "culture": "Армянская мифология",
-    "type": "monster",
-    "originType": "armenian_mythology",
-    "lat": 40.2,
-    "lon": 45.0,
-    "radiusKm": 20,
-    "rarity": "legendary",
-    "img": "images/creatures/vishap.webp"
-  },
+ 
   {
     "id": "afsati",
     "zone_id": "zone_06",
@@ -1735,22 +1220,7 @@
     "rarity": "rare",
     "img": "images/creatures/afsati.webp"
   },
-  {
-    "id": "donbettir",
-    "zone_id": "zone_06",
-    "name": "Донбеттыр",
-    "name_en": "Donbettir",
-    "description_ru": "В глубине водного царства властвует Донбеттыр. Он охраняет рыб и подводные владения. Его дочери следят за чистотой воды, а у него есть волшебная цепь!",
-    "description_en": "Donbettir rules the underwater kingdom. He protects fish and the creatures of the deep. His daughters keep the waters clean, and he carries a magical chain!",
-    "culture": "Осетинская мифология",
-    "type": "deity",
-    "originType": "ossetian_mythology",
-    "lat": 43.024,
-    "lon": 44.681,
-    "radiusKm": 20,
-    "rarity": "epic",
-    "img": "images/creatures/donbettir.webp"
-  },
+ 
   {
     "id": "atsans",
     "zone_id": "zone_06",
@@ -1784,22 +1254,7 @@
     "img": "images/creatures/tepegoz.webp"
   },
 
-  {
-    "id": "kadzhi",
-    "zone_id": "zone_06",
-    "name": "Каджи",
-    "name_en": "Kadzhi",
-    "description_ru": "Злые духи из армянских преданий, которые насылают бури и болезни. Они живут в горах и пещерах и не любят, когда люди нарушают их покой.",
-    "description_en": "Evil spirits from Armenian legends who bring storms and illness. They live in mountains and caves and dislike anyone disturbing their peace.",
-    "culture": "Армянская мифология",
-    "type": "spirit",
-    "originType": "armenian_mythology",
-    "lat": 40.18,
-    "lon": 44.51,
-    "radiusKm": 20,
-    "rarity": "epic",
-    "img": "images/creatures/kadzhi.webp"
-  },
+ 
   {
     "id": "shahmaran",
     "zone_id": "zone_06",
@@ -1865,40 +1320,8 @@
     "rarity": "rare",
     "img": "images/creatures/gulyabani.webp"
   },
-  {
-    "id": "narts",
-    "zone_id": "zone_06",
-    "name": "Нарты",
-    "name_en": "Narts",
-    "description_ru": "Легендарные богатыри кавказского эпоса. Они совершали подвиги, сражались с чудовищами и защищали свой народ.",
-    "description_en": "Legendary heroes of the Caucasian epic. They performed feats, fought monsters, and protected their people.",
-    "culture": "Нартский эпос",
-    "type": "group",
-    "originType": "caucasian_folklore",
-    "lat": 43.0,
-    "lon": 44.0,
-    "radiusKm": 40,
-    "rarity": "epic",
-    "img": "images/creatures/narts.webp"
-  },
-  {
-    "id": "shatana",
-    "zone_id": "zone_06",
-    "name": "Шатана",
-    "name_en": "Shatana",
-    "description_ru": "Мудрая женщина-советчица из нартского эпоса. Она знает все тайны и всегда помогает героям найти выход из трудной ситуации.",
-    "description_en": "A wise woman and advisor from the Nart epic. She knows all secrets and always helps heroes find a way out of trouble.",
-    "culture": "Осетинский нартский эпос",
-    "type": "hero",
-    "originType": "ossetian_mythology",
-    "lat": 42.9,
-    "lon": 44.1,
-    "radiusKm": 25,
-    "rarity": "rare",
-    "img": "images/creatures/shatana.webp"
-  },
-  [
-  {
+ 
+   {
     "id": "leshy",
     "zone_id": "zone_07",
     "name": "Леший",
@@ -1946,54 +1369,7 @@
     "rarity": "rare",
     "img": "images/creatures/kikimora.webp"
   },
-  {
-    "id": "domovoy",
-    "zone_id": "zone_07",
-    "name": "Домовой",
-    "name_en": "Domovoy",
-    "description_ru": "Дух-хранитель дома и семьи. Он любит порядок и может предупредить о беде. Оставь ему угощение — и он станет верным защитником!",
-    "description_en": "The guardian spirit of home and family. He loves order and may warn of trouble. Leave him a treat, and he becomes a loyal protector!",
-    "culture": "Русский фольклор",
-    "type": "guardian",
-    "originType": "slavic_mythology",
-    "lat": 56.5,
-    "lon": 39.0,
-    "radiusKm": 35,
-    "rarity": "rare",
-    "img": "images/creatures/domovoy.webp"
-  },
-  {
-    "id": "vodyanoy",
-    "zone_id": "zone_07",
-    "name": "Водяной",
-    "name_en": "Vodyanoy",
-    "description_ru": "Хозяин рек и озёр. Он может утащить неосторожного купальщика на дно. Но если его уважать — он не тронет!",
-    "description_en": "The master of rivers and lakes. He may drag a careless swimmer to the bottom. But if respected, he will not harm!",
-    "culture": "Русский фольклор",
-    "type": "spirit",
-    "originType": "slavic_mythology",
-    "lat": 54.0,
-    "lon": 42.0,
-    "radiusKm": 40,
-    "rarity": "epic",
-    "img": "images/creatures/vodyanoy.webp"
-  },
-  {
-    "id": "rusalka",
-    "zone_id": "zone_07",
-    "name": "Русалка",
-    "name_en": "Rusalka",
-    "description_ru": "Загадочная дева вод из русских преданий. Она может заманить путника красивой песней. Но не всякая встреча с ней заканчивается добром!",
-    "description_en": "A mysterious water maiden from Russian legends. She may lure a traveler with a beautiful song. But not every meeting with her ends well!",
-    "culture": "Русский фольклор",
-    "type": "spirit",
-    "originType": "slavic_mythology",
-    "lat": 53.0,
-    "lon": 40.0,
-    "radiusKm": 35,
-    "rarity": "epic",
-    "img": "images/creatures/rusalka.webp"
-  },
+ 
   {
     "id": "zmey_gorynych",
     "zone_id": "zone_07",
@@ -2026,138 +1402,9 @@
     "rarity": "legendary",
     "img": "images/creatures/koschei.webp"
   },
-  {
-    "id": "firebird",
-    "zone_id": "zone_07",
-    "name": "Жар-птица",
-    "name_en": "Firebird",
-    "description_ru": "Волшебная птица, чьи перья светятся как огонь. Поймать её почти невозможно, но одно перо может принести удачу на всю жизнь!",
-    "description_en": "A magical bird whose feathers glow like fire. Catching her is nearly impossible, but one feather can bring luck for a lifetime!",
-    "culture": "Русский фольклор",
-    "type": "mythical_creature",
-    "originType": "slavic_mythology",
-    "lat": 58.0,
-    "lon": 36.0,
-    "radiusKm": 40,
-    "rarity": "legendary",
-    "img": "images/creatures/firebird.webp"
-  },
  
  
-  {
-    "id": "gamayun",
-    "zone_id": "zone_07",
-    "name": "Гамаюн",
-    "name_en": "Gamayun",
-    "description_ru": "Птица-пророк из русских преданий. Она знает будущее и может открыть тайны тем, кто сумеет её понять.",
-    "description_en": "A prophetic bird from Russian legends. She knows the future and can reveal secrets to those who understand her.",
-    "culture": "Русский фольклор",
-    "type": "mythical_creature",
-    "originType": "slavic_mythology",
-    "lat": 54.5,
-    "lon": 38.5,
-    "radiusKm": 35,
-    "rarity": "epic",
-    "img": "images/creatures/gamayun.webp"
-  },
-  {
-    "id": "bolotnik",
-    "zone_id": "zone_07",
-    "name": "Болотник",
-    "name_en": "Bolotnik",
-    "description_ru": "Дух болота, который может заманить путника в трясину. Он не любит незваных гостей и охраняет свои владения.",
-    "description_en": "A swamp spirit who may lure a traveler into the mire. He dislikes uninvited guests and guards his domain.",
-    "culture": "Русский фольклор",
-    "type": "spirit",
-    "originType": "slavic_mythology",
-    "lat": 53.5,
-    "lon": 36.0,
-    "radiusKm": 35,
-    "rarity": "rare",
-    "img": "images/creatures/bolotnik.webp"
-  },
   
-  {
-    "id": "chudo_yudo",
-    "zone_id": "zone_07",
-    "name": "Чудо-Юдо",
-    "name_en": "Chudo-Yudo",
-    "description_ru": "Морское чудовище из русских сказок. Оно живёт в глубинах и может преградить путь герою. Но смелость и ум всегда побеждают!",
-    "description_en": "A sea monster from Russian tales. It lives in the depths and may block a hero's path. But courage and wits always win!",
-    "culture": "Русский фольклор",
-    "type": "monster",
-    "originType": "slavic_mythology",
-    "lat": 57.0,
-    "lon": 39.5,
-    "radiusKm": 40,
-    "rarity": "epic",
-    "img": "images/creatures/chudo_yudo.webp"
-  },
-  {
-    "id": "finist",
-    "zone_id": "zone_07",
-    "name": "Финист — Ясный Сокол",
-    "name_en": "Finist the Bright Falcon",
-    "description_ru": "Волшебный сокол, который может превращаться в прекрасного юношу. Его история — о верности и любви, побеждающей все преграды.",
-    "description_en": "A magical falcon who can transform into a handsome youth. His story is about loyalty and love overcoming all obstacles.",
-    "culture": "Русский фольклор",
-    "type": "mythical_creature",
-    "originType": "slavic_mythology",
-    "lat": 55.5,
-    "lon": 40.5,
-    "radiusKm": 35,
-    "rarity": "rare",
-    "img": "images/creatures/finist.webp"
-  },
-  {
-    "id": "marya_morevna",
-    "zone_id": "zone_07",
-    "name": "Марья Моревна",
-    "name_en": "Marya Morevna",
-    "description_ru": "Могучая воительница и волшебница из русских сказок. Она способна победить самого Кощея и освободить пленников.",
-    "description_en": "A mighty warrior and sorceress from Russian tales. She can defeat Koschei himself and free captives.",
-    "culture": "Русский фольклор",
-    "type": "hero",
-    "originType": "slavic_mythology",
-    "lat": 54.0,
-    "lon": 39.0,
-    "radiusKm": 30,
-    "rarity": "epic",
-    "img": "images/creatures/marya_morevna.webp"
-  },
-  {
-    "id": "ivan_tsarevich",
-    "zone_id": "zone_07",
-    "name": "Иван-царевич",
-    "name_en": "Ivan Tsarevich",
-    "description_ru": "Герой русских сказок, который проходит через множество испытаний. Ему помогают волшебные помощники и собственная смекалка.",
-    "description_en": "A hero of Russian tales who faces many trials. Magical helpers and his own cleverness aid him.",
-    "culture": "Русский фольклор",
-    "type": "hero",
-    "originType": "slavic_mythology",
-    "lat": 56.0,
-    "lon": 37.5,
-    "radiusKm": 30,
-    "rarity": "rare",
-    "img": "images/creatures/ivan_tsarevich.webp"
-  },
-  {
-    "id": "vasilisa",
-    "zone_id": "zone_07",
-    "name": "Василиса Премудрая",
-    "name_en": "Vasilisa the Wise",
-    "description_ru": "Мудрая и добрая героиня русских сказок. Она может решить любую загадку и найти выход из самого трудного положения.",
-    "description_en": "A wise and kind heroine of Russian tales. She can solve any riddle and find a way out of the hardest situation.",
-    "culture": "Русский фольклор",
-    "type": "hero",
-    "originType": "slavic_mythology",
-    "lat": 55.0,
-    "lon": 41.5,
-    "radiusKm": 30,
-    "rarity": "rare",
-    "img": "images/creatures/vasilisa.webp"
-  },
-   
   {
     "id": "kutkh",
     "zone_id": "zone_08",
@@ -2191,55 +1438,8 @@
     "rarity": "epic",
     "img": "images/creatures/abasy.webp"
   },
-  {
-    "id": "aiy",
-    "zone_id": "zone_08",
-    "name": "Айыы",
-    "name_en": "Aiyy",
-    "description_ru": "Добрые божества якутской мифологии. Они покровительствуют людям, скоту и природе.",
-    "description_en": "Benevolent deities of Yakut mythology. They patronize people, livestock, and nature.",
-    "culture": "Якутская мифология",
-    "type": "group",
-    "originType": "siberian_mythology",
-    "lat": 63.0,
-    "lon": 129.0,
-    "radiusKm": 50,
-    "rarity": "epic",
-    "img": "images/creatures/aiyy.webp"
-  },
-  {
-    "id": "bai_baianai",
-    "zone_id": "zone_08",
-    "name": "Бай Баянай",
-    "name_en": "Bai Baianai",
-    "description_ru": "Хозяин тайги из якутских преданий. Он охраняет лесных зверей и помогает охотникам, если они соблюдают правила.",
-    "description_en": "The master of the taiga from Yakut legends. He protects forest animals and helps hunters who follow the rules.",
-    "culture": "Якутский фольклор",
-    "type": "guardian",
-    "originType": "siberian_mythology",
-    "lat": 62.5,
-    "lon": 128.0,
-    "radiusKm": 50,
-    "rarity": "rare",
-    "img": "images/creatures/bai_baianai.webp"
-  },
+
  
-  {
-    "id": "khan_altai",
-    "zone_id": "zone_08",
-    "name": "Хан-Алтай",
-    "name_en": "Khan Altai",
-    "description_ru": "Великий дух Алтайских гор. Он покровительствует всему живому в горах и может явиться как старец в белых одеждах.",
-    "description_en": "The great spirit of the Altai Mountains. He protects all living things in the mountains and may appear as an elder in white robes.",
-    "culture": "Алтайская мифология",
-    "type": "deity",
-    "originType": "siberian_mythology",
-    "lat": 50.0,
-    "lon": 87.0,
-    "radiusKm": 60,
-    "rarity": "legendary",
-    "img": "images/creatures/khan_altai.webp"
-  },
   {
     "id": "ulgen",
     "zone_id": "zone_08",
@@ -2256,22 +1456,7 @@
     "rarity": "legendary",
     "img": "images/creatures/ulgen.webp"
   },
-  {
-    "id": "erlik",
-    "zone_id": "zone_08",
-    "name": "Эрлик",
-    "name_en": "Erlik",
-    "description_ru": "Владыка подземного мира в алтайской мифологии. Он могущественен, но не всегда злобен — иногда помогает героям.",
-    "description_en": "The ruler of the underworld in Altai mythology. He is powerful but not always evil — sometimes he helps heroes.",
-    "culture": "Алтайская мифология",
-    "type": "deity",
-    "originType": "siberian_mythology",
-    "lat": 50.5,
-    "lon": 88.0,
-    "radiusKm": 50,
-    "rarity": "legendary",
-    "img": "images/creatures/erlik.webp"
-  },
+
   {
     "id": "shurale",
     "zone_id": "zone_08",
@@ -2288,40 +1473,9 @@
     "rarity": "epic",
     "img": "images/creatures/shurale.webp"
   },
-  {
-    "id": "su_anasy",
-    "zone_id": "zone_08",
-    "name": "Су Анасы",
-    "name_en": "Su Anasy",
-    "description_ru": "Водяная мать из татарских преданий. Она может заманить путника к воде и потребовать выкуп за проход.",
-    "description_en": "The water mother from Tatar legends. She may lure a traveler to the water and demand a ransom for passage.",
-    "culture": "Татарский фольклор",
-    "type": "spirit",
-    "originType": "siberian_mythology",
-    "lat": 54.5,
-    "lon": 53.0,
-    "radiusKm": 35,
-    "rarity": "epic",
-    "img": "images/creatures/su_anasy.webp"
-  },
+
  
-  {
-    "id": "khoziaika_mednoi_gory",
-    "zone_id": "zone_08",
-    "name": "Хозяйка Медной горы",
-    "name_en": "Mistress of the Copper Mountain",
-    "description_ru": "Волшебная хозяйка уральских самоцветов. Она может показать несметные богатства, но просто так их не отдаст!",
-    "description_en": "The magical mistress of Ural gemstones. She can reveal untold riches but won't give them away for nothing!",
-    "culture": "Уральский фольклор (сказы Бажова)",
-    "type": "spirit",
-    "originType": "siberian_folklore",
-    "lat": 57.0,
-    "lon": 60.0,
-    "radiusKm": 40,
-    "rarity": "legendary",
-    "img": "images/creatures/khoziaika_mednoi_gory.webp"
-  },
-  {
+  
     "id": "ognevushka",
     "zone_id": "zone_08",
     "name": "Огневушка-Поскакушка",
@@ -2353,55 +1507,7 @@
     "rarity": "epic",
     "img": "images/creatures/poloz.webp"
   },
-  {
-    "id": "sineglazka",
-    "zone_id": "zone_08",
-    "name": "Синюшка",
-    "name_en": "Sineglazka",
-    "description_ru": "Волшебная девушка с синими глазами из уральских сказов. Она может одарить богатством или наказать за жадность.",
-    "description_en": "A magical blue-eyed girl from Ural tales. She may grant wealth or punish greed.",
-    "culture": "Уральский фольклор",
-    "type": "spirit",
-    "originType": "siberian_folklore",
-    "lat": 56.5,
-    "lon": 60.2,
-    "radiusKm": 30,
-    "rarity": "rare",
-    "img": "images/creatures/sineglazka.webp"
-  },
-  {
-    "id": "baikal",
-    "zone_id": "zone_08",
-    "name": "Байкал",
-    "name_en": "Baikal",
-    "description_ru": "Могучий дух озера Байкал. Его гнев проявляется в штормах, а милость — в богатом улове и ясной погоде.",
-    "description_en": "The mighty spirit of Lake Baikal. His anger shows in storms, his favor in rich catches and clear weather.",
-    "culture": "Бурятский фольклор",
-    "type": "deity",
-    "originType": "siberian_mythology",
-    "lat": 53.5,
-    "lon": 108.0,
-    "radiusKm": 50,
-    "rarity": "legendary",
-    "img": "images/creatures/baikal.webp"
-  },
-  {
-    "id": "angara",
-    "zone_id": "zone_08",
-    "name": "Ангара",
-    "name_en": "Angara",
-    "description_ru": "Красавица-дочь Байкала, ставшая рекой. Её история — о любви и свободе.",
-    "description_en": "The beautiful daughter of Baikal who became a river. Her story is about love and freedom.",
-    "culture": "Бурятский фольклор",
-    "type": "spirit",
-    "originType": "siberian_mythology",
-    "lat": 52.5,
-    "lon": 104.0,
-    "radiusKm": 45,
-    "rarity": "epic",
-    "img": "images/creatures/angara.webp"
-  },
-  
+ 
   {
     "id": "mamut",
     "zone_id": "zone_08",
@@ -2435,54 +1541,7 @@
     "rarity": "legendary",
     "img": "images/creatures/ifrit.webp"
   },
-  {
-    "id": "marid",
-    "zone_id": "zone_09",
-    "name": "Марид",
-    "name_en": "Marid",
-    "description_ru": "Самый могущественный из джиннов, связанный с водой и морем. Он может исполнить желание, но требует уважения.",
-    "description_en": "The most powerful jinn, associated with water and the sea. He can grant a wish but demands respect.",
-    "culture": "Арабский фольклор",
-    "type": "spirit",
-    "originType": "arabian_mythology",
-    "lat": 23.0,
-    "lon": 48.0,
-    "radiusKm": 50,
-    "rarity": "legendary",
-    "img": "images/creatures/marid.webp"
-  },
-  {
-    "id": "ghoul",
-    "zone_id": "zone_09",
-    "name": "Гуль",
-    "name_en": "Ghoul",
-    "description_ru": "Злой дух пустыни, который может принимать облик животного. Он подстерегает путников в безлюдных местах.",
-    "description_en": "An evil desert spirit who can take animal form. He lurks in desolate places for travelers.",
-    "culture": "Арабский фольклор",
-    "type": "monster",
-    "originType": "arabian_mythology",
-    "lat": 24.5,
-    "lon": 46.0,
-    "radiusKm": 40,
-    "rarity": "epic",
-    "img": "images/creatures/ghoul.webp"
-  },
-  {
-    "id": "roc",
-    "zone_id": "zone_09",
-    "name": "Птица Рух",
-    "name_en": "Roc",
-    "description_ru": "Гигантская птица из арабских сказок. Её крылья закрывают солнце, а сила позволяет поднять слона.",
-    "description_en": "A gigantic bird from Arabian tales. Her wings block the sun, and she is strong enough to lift an elephant.",
-    "culture": "Арабский фольклор",
-    "type": "mythical_creature",
-    "originType": "arabian_mythology",
-    "lat": 20.0,
-    "lon": 45.0,
-    "radiusKm": 50,
-    "rarity": "legendary",
-    "img": "images/creatures/roc.webp"
-  },
+  
   {
     "id": "simurgh_me",
     "zone_id": "zone_09",
@@ -2499,38 +1558,8 @@
     "rarity": "legendary",
     "img": "images/creatures/simurgh_me.webp"
   },
-  {
-    "id": "div",
-    "zone_id": "zone_09",
-    "name": "Див",
-    "name_en": "Div",
-    "description_ru": "Злой демон из персидской мифологии. Он может выглядеть как чудовище с рогами и когтями, но его можно победить хитростью.",
-    "description_en": "An evil demon from Persian mythology. He may look like a horned, clawed monster, but can be defeated with cunning.",
-    "culture": "Персидский фольклор",
-    "type": "monster",
-    "originType": "persian_mythology",
-    "lat": 33.0,
-    "lon": 52.0,
-    "radiusKm": 45,
-    "rarity": "epic",
-    "img": "images/creatures/div.webp"
-  },
-  {
-    "id": "peri",
-    "zone_id": "zone_09",
-    "name": "Пери",
-    "name_en": "Peri",
-    "description_ru": "Прекрасные крылатые существа из персидских преданий. Они могут помогать людям, но иногда и мешают.",
-    "description_en": "Beautiful winged beings from Persian legends. They can help people but sometimes hinder them.",
-    "culture": "Персидский фольклор",
-    "type": "spirit",
-    "originType": "persian_mythology",
-    "lat": 34.0,
-    "lon": 51.0,
-    "radiusKm": 40,
-    "rarity": "rare",
-    "img": "images/creatures/peri.webp"
-  },
+ 
+
   {
     "id": "manticore",
     "zone_id": "zone_09",
@@ -2627,22 +1656,7 @@
     "rarity": "rare",
     "img": "images/creatures/sinbad.webp"
   },
-  {
-    "id": "nasnas",
-    "zone_id": "zone_09",
-    "name": "Наснас",
-    "name_en": "Nasnas",
-    "description_ru": "Странное существо из арабских преданий — наполовину человек, наполовину... что-то ещё. Встретить его — большая редкость.",
-    "description_en": "A strange creature from Arabian legends — half human, half something else. Meeting it is a great rarity.",
-    "culture": "Арабский фольклор",
-    "type": "mythical_creature",
-    "originType": "arabian_mythology",
-    "lat": 22.0,
-    "lon": 48.0,
-    "radiusKm": 40,
-    "rarity": "epic",
-    "img": "images/creatures/nasnas.webp"
-  },
+
   {
     "id": "shaitan",
     "zone_id": "zone_09",
@@ -2660,22 +1674,7 @@
     "img": "images/creatures/shaitan.webp"
   },
  
-  {
-    "id": "zahhak",
-    "zone_id": "zone_09",
-    "name": "Заххак",
-    "name_en": "Zahhak",
-    "description_ru": "Змей-царь из персидского эпоса. У него на плечах растут две змеи, и он приносит беды своей стране.",
-    "description_en": "The serpent-king from Persian epic. Two snakes grow from his shoulders, and he brings misfortune to his land.",
-    "culture": "Персидский эпос",
-    "type": "monster",
-    "originType": "persian_mythology",
-    "lat": 33.5,
-    "lon": 52.5,
-    "radiusKm": 45,
-    "rarity": "legendary",
-    "img": "images/creatures/zahhak.webp"
-  },
+
  
   {
     "id": "houris",
@@ -2707,7 +1706,7 @@
     "rarity": "epic",
     "img": "images/creatures/buraq.webp"
   },
-      [
+     
   {
     "id": "amaterasu",
     "zone_id": "zone_10",
@@ -2740,86 +1739,9 @@
     "rarity": "legendary",
     "img": "images/creatures/susanoo.webp"
   },
-  {
-    "id": "kitsune",
-    "zone_id": "zone_10",
-    "name": "Кицунэ",
-    "name_en": "Kitsune",
-    "description_ru": "Хитрая лиса-оборотень из японского фольклора. Она может принимать человеческий облик и любит подшучивать над людьми.",
-    "description_en": "A cunning fox shapeshifter from Japanese folklore. She can take human form and loves to play tricks on people.",
-    "culture": "Японский фольклор",
-    "type": "shapeshifter",
-    "originType": "japanese_mythology",
-    "lat": 35.5,
-    "lon": 139.0,
-    "radiusKm": 40,
-    "rarity": "epic",
-    "img": "images/creatures/kitsune.webp"
-  },
-  {
-    "id": "tanuki",
-    "zone_id": "zone_10",
-    "name": "Тануки",
-    "name_en": "Tanuki",
-    "description_ru": "Весёлый енотовидный дух-оборотень. Он любит устраивать шумные праздники и превращаться в разные предметы.",
-    "description_en": "A cheerful raccoon dog shapeshifter. He loves throwing noisy parties and transforming into various objects.",
-    "culture": "Японский фольклор",
-    "type": "shapeshifter",
-    "originType": "japanese_mythology",
-    "lat": 35.2,
-    "lon": 138.0,
-    "radiusKm": 40,
-    "rarity": "rare",
-    "img": "images/creatures/tanuki.webp"
-  },
-  {
-    "id": "tengu",
-    "zone_id": "zone_10",
-    "name": "Тэнгу",
-    "name_en": "Tengu",
-    "description_ru": "Горный дух с крыльями и длинным носом. Он может быть грозным воином или мудрым наставником.",
-    "description_en": "A mountain spirit with wings and a long nose. He can be a fearsome warrior or a wise mentor.",
-    "culture": "Японский фольклор",
-    "type": "spirit",
-    "originType": "japanese_mythology",
-    "lat": 36.0,
-    "lon": 138.0,
-    "radiusKm": 45,
-    "rarity": "epic",
-    "img": "images/creatures/tengu.webp"
-  },
-  {
-    "id": "oni",
-    "zone_id": "zone_10",
-    "name": "Они",
-    "name_en": "Oni",
-    "description_ru": "Свирепый рогатый демон с дубиной. Он может быть опасен, но иногда герои побеждают его хитростью.",
-    "description_en": "A fierce horned demon with a club. He can be dangerous, but heroes sometimes defeat him with cunning.",
-    "culture": "Японский фольклор",
-    "type": "monster",
-    "originType": "japanese_mythology",
-    "lat": 34.8,
-    "lon": 135.5,
-    "radiusKm": 40,
-    "rarity": "epic",
-    "img": "images/creatures/oni.webp"
-  },
-  {
-    "id": "kappa",
-    "zone_id": "zone_10",
-    "name": "Каппа",
-    "name_en": "Kappa",
-    "description_ru": "Водяной дух с панцирем и блюдцем на голове. Он обожает огурцы и любит состязаться в силе.",
-    "description_en": "A water spirit with a shell and a plate on his head. He loves cucumbers and enjoys contests of strength.",
-    "culture": "Японский фольклор",
-    "type": "spirit",
-    "originType": "japanese_mythology",
-    "lat": 35.5,
-    "lon": 136.0,
-    "radiusKm": 40,
-    "rarity": "rare",
-    "img": "images/creatures/kappa.webp"
-  },
+  
+ 
+
   {
     "id": "yuki_onna",
     "zone_id": "zone_10",
@@ -2836,22 +1758,7 @@
     "rarity": "epic",
     "img": "images/creatures/yuki_onna.webp"
   },
-  {
-    "id": "ryujin",
-    "zone_id": "zone_10",
-    "name": "Рюдзин",
-    "name_en": "Ryūjin",
-    "description_ru": "Царь драконов и повелитель моря. Его дворец скрыт в глубинах, и он может даровать богатство.",
-    "description_en": "The dragon king and lord of the sea. His palace is hidden in the depths, and he can grant wealth.",
-    "culture": "Японская мифология",
-    "type": "dragon",
-    "originType": "japanese_mythology",
-    "lat": 34.0,
-    "lon": 137.0,
-    "radiusKm": 50,
-    "rarity": "legendary",
-    "img": "images/creatures/ryujin.webp"
-  },
+ 
   {
     "id": "amabie",
     "zone_id": "zone_10",
@@ -2868,22 +1775,7 @@
     "rarity": "epic",
     "img": "images/creatures/amabie.webp"
   },
-  {
-    "id": "tsukumogami",
-    "zone_id": "zone_10",
-    "name": "Цукумогами",
-    "name_en": "Tsukumogami",
-    "description_ru": "Предметы, которые обрели душу после долгого использования. Они могут быть добрыми или злыми.",
-    "description_en": "Objects that have gained a soul after long use. They can be kind or mischievous.",
-    "culture": "Японский фольклор",
-    "type": "group",
-    "originType": "japanese_mythology",
-    "lat": 35.0,
-    "lon": 135.0,
-    "radiusKm": 40,
-    "rarity": "rare",
-    "img": "images/creatures/tsukumogami.webp"
-  },
+
   {
     "id": "jorogumo",
     "zone_id": "zone_10",
@@ -2900,134 +1792,9 @@
     "rarity": "epic",
     "img": "images/creatures/jorogumo.webp"
   },
-  {
-    "id": "nurarihyon",
-    "zone_id": "zone_10",
-    "name": "Нурарихён",
-    "name_en": "Nurarihyon",
-    "description_ru": "Загадочный дух-старец с длинной головой. Он может проникать в дома незаметно и проверять порядок.",
-    "description_en": "A mysterious old spirit with a long head. He can slip into houses unnoticed and check on order.",
-    "culture": "Японский фольклор",
-    "type": "spirit",
-    "originType": "japanese_mythology",
-    "lat": 34.5,
-    "lon": 133.0,
-    "radiusKm": 35,
-    "rarity": "rare",
-    "img": "images/creatures/nurarihyon.webp"
-  },
-  {
-    "id": "shachihoko",
-    "zone_id": "zone_10",
-    "name": "Сятихоко",
-    "name_en": "Shachihoko",
-    "description_ru": "Мифическое существо с головой тигра и телом рыбы. Оно охраняет храмы от пожаров.",
-    "description_en": "A mythical creature with a tiger's head and a fish's body. It guards temples from fire.",
-    "culture": "Японский фольклор",
-    "type": "mythical_creature",
-    "originType": "japanese_mythology",
-    "lat": 35.0,
-    "lon": 136.5,
-    "radiusKm": 35,
-    "rarity": "rare",
-    "img": "images/creatures/shachihoko.webp"
-  },
-  {
-    "id": "baku",
-    "zone_id": "zone_10",
-    "name": "Баку",
-    "name_en": "Baku",
-    "description_ru": "Дух-пожиратель снов. Если тебе снится кошмар, позови Баку — и он съест его!",
-    "description_en": "A dream-eating spirit. If you have a nightmare, call Baku, and he will eat it!",
-    "culture": "Японский фольклор",
-    "type": "spirit",
-    "originType": "japanese_mythology",
-    "lat": 34.0,
-    "lon": 135.0,
-    "radiusKm": 40,
-    "rarity": "rare",
-    "img": "images/creatures/baku.webp"
-  },
-  {
-    "id": "kirin",
-    "zone_id": "zone_10",
-    "name": "Кирин",
-    "name_en": "Kirin",
-    "description_ru": "Священное существо с телом оленя, хвостом быка и рогами. Оно появляется только в мирные времена.",
-    "description_en": "A sacred creature with a deer's body, an ox's tail, and horns. It appears only in peaceful times.",
-    "culture": "Японский фольклор",
-    "type": "mythical_creature",
-    "originType": "japanese_mythology",
-    "lat": 36.0,
-    "lon": 135.0,
-    "radiusKm": 45,
-    "rarity": "legendary",
-    "img": "images/creatures/kirin.webp"
-  },
-  {
-    "id": "momotaro",
-    "zone_id": "zone_10",
-    "name": "Момотаро",
-    "name_en": "Momotarō",
-    "description_ru": "Мальчик, рождённый из персика. Вместе с собакой, обезьяной и фазаном он победил демонов на острове Онигасима.",
-    "description_en": "A boy born from a peach. With a dog, a monkey, and a pheasant, he defeated demons on Onigashima island.",
-    "culture": "Японский фольклор",
-    "type": "hero",
-    "originType": "japanese_mythology",
-    "lat": 34.6,
-    "lon": 133.8,
-    "radiusKm": 30,
-    "rarity": "rare",
-    "img": "images/creatures/momotaro.webp"
-  },
-  {
-    "id": "urashima_taro",
-    "zone_id": "zone_10",
-    "name": "Урасима Таро",
-    "name_en": "Urashima Tarō",
-    "description_ru": "Рыбак, который спас черепаху и попал в подводный дворец. Его история — о времени и утраченных возможностях.",
-    "description_en": "A fisherman who saved a turtle and visited an undersea palace. His story is about time and lost opportunities.",
-    "culture": "Японский фольклор",
-    "type": "hero",
-    "originType": "japanese_mythology",
-    "lat": 33.5,
-    "lon": 130.5,
-    "radiusKm": 30,
-    "rarity": "rare",
-    "img": "images/creatures/urashima_taro.webp"
-  },
-  {
-    "id": "kintaro",
-    "zone_id": "zone_10",
-    "name": "Кинтаро",
-    "name_en": "Kintarō",
-    "description_ru": "Мальчик-богатырь с невероятной силой. Он дружит с лесными зверями и борется со злом.",
-    "description_en": "A boy hero with incredible strength. He befriends forest animals and fights evil.",
-    "culture": "Японский фольклор",
-    "type": "hero",
-    "originType": "japanese_mythology",
-    "lat": 35.4,
-    "lon": 139.0,
-    "radiusKm": 30,
-    "rarity": "rare",
-    "img": "images/creatures/kintaro.webp"
-  },
-  {
-    "id": "hitotsume_kozo",
-    "zone_id": "zone_10",
-    "name": "Хитоцумэ-кодзо",
-    "name_en": "Hitotsume-kozō",
-    "description_ru": "Одноглазый мальчик-ёкай. Обычно он не опасен, но может напугать неожиданным появлением.",
-    "description_en": "A one-eyed boy yōkai. He is usually harmless but can frighten with a sudden appearance.",
-    "culture": "Японский фольклор",
-    "type": "spirit",
-    "originType": "japanese_mythology",
-    "lat": 35.7,
-    "lon": 139.7,
-    "radiusKm": 30,
-    "rarity": "rare",
-    "img": "images/creatures/hitotsume_kozo.webp"
-  }
+ 
+
+
 
 
 ]
