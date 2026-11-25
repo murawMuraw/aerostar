@@ -1893,6 +1893,59 @@
     "rarity": "rare",
     "img": "images/creatures/zhubajie.webp"
   },
+  
+   {
+    "id": "yeti",
+    "zone_id": "zone_12",
+    "name": "Йети",
+    "name_en": "Yeti",
+    "description_ru": "Снежный человек, обитающий в высоких Гималаях. Его следы находят в самых труднодоступных местах.",
+    "description_en": "The snowman dwelling in the high Himalayas. His tracks are found in the most inaccessible places.",
+    "culture": "Гималайский фольклор",
+    "type": "monster",
+    "originType": "himalayan_folklore",
+    "lat": 28.0,
+    "lon": 86.0,
+    "radiusKm": 50,
+    "rarity": "legendary",
+    "img": "images/creatures/yeti.webp"
+  },
+ 
+
+  {
+    "id": "snow_lion",
+    "zone_id": "zone_12",
+    "name": "Снежный лев",
+    "name_en": "Snow Lion",
+    "description_ru": "Мифический лев с бирюзовой гривой, символ Тибета. Он олицетворяет смелость и радость.",
+    "description_en": "A mythical lion with a turquoise mane, symbol of Tibet. It embodies courage and joy.",
+    "culture": "Тибетская традиция",
+    "type": "mythical_creature",
+    "originType": "himalayan_mythology",
+    "lat": 29.0,
+    "lon": 87.0,
+    "radiusKm": 45,
+    "rarity": "epic",
+    "img": "images/creatures/snow_lion.webp"
+  },
+
+  {
+    "id": "guru_rinpoche",
+    "zone_id": "zone_12",
+    "name": "Гуру Ринпоче",
+    "name_en": "Guru Rinpoche",
+    "description_ru": "Великий учитель, принёсший буддизм в Тибет. Он укротил множество демонов и духов.",
+    "description_en": "The great teacher who brought Buddhism to Tibet. He subdued many demons and spirits.",
+    "culture": "Тибетский буддизм",
+    "type": "hero",
+    "originType": "himalayan_mythology",
+    "lat": 27.5,
+    "lon": 85.8,
+    "radiusKm": 40,
+    "rarity": "legendary",
+    "img": "images/creatures/guru_rinpoche.webp"
+  },
+  
  
  
  
