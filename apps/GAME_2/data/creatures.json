@@ -1792,10 +1792,110 @@
     "rarity": "epic",
     "img": "images/creatures/jorogumo.webp"
   },
+ [
+  {
+    "id": "sun_wukong",
+    "zone_id": "zone_11",
+    "name": "Сунь Укун",
+    "name_en": "Sun Wukong",
+    "description_ru": "Царь обезьян из китайской классики. Он владеет волшебным посохом и может превращаться в кого угодно.",
+    "description_en": "The Monkey King from Chinese classics. He wields a magic staff and can transform into anyone.",
+    "culture": "Китайская литература и мифология",
+    "type": "hero",
+    "originType": "chinese_mythology",
+    "lat": 34.0,
+    "lon": 108.0,
+    "radiusKm": 50,
+    "rarity": "legendary",
+    "img": "images/creatures/sun_wukong.webp"
+  },
+  {
+    "id": "dragon_king",
+    "zone_id": "zone_11",
+    "name": "Лун-ван",
+    "name_en": "Dragon King",
+    "description_ru": "Царь драконов, повелевающий дождями и водными потоками. Крестьяне молились ему о дожде.",
+    "description_en": "The Dragon King who commands rains and water flows. Farmers prayed to him for rain.",
+    "culture": "Китайская мифология",
+    "type": "deity",
+    "originType": "chinese_mythology",
+    "lat": 35.0,
+    "lon": 110.0,
+    "radiusKm": 50,
+    "rarity": "legendary",
+    "img": "images/creatures/dragon_king.webp"
+  },
+  {
+    "id": "qilin",
+    "zone_id": "zone_11",
+    "name": "Цилинь",
+    "name_en": "Qilin",
+    "description_ru": "Волшебное существо с телом оленя, чешуёй дракона и рогами. Появляется там, где царит справедливость.",
+    "description_en": "A magical creature with a deer's body, dragon scales, and horns. It appears where justice prevails.",
+    "culture": "Китайская мифология",
+    "type": "mythical_creature",
+    "originType": "chinese_mythology",
+    "lat": 32.0,
+    "lon": 112.0,
+    "radiusKm": 45,
+    "rarity": "legendary",
+    "img": "images/creatures/qilin.webp"
+  },
+  {
+    "id": "fenghuang",
+    "zone_id": "zone_11",
+    "name": "Фэнхуан",
+    "name_en": "Fenghuang",
+    "description_ru": "Священная птица феникс, символ возрождения и гармонии. Её появление предвещает мир и процветание.",
+    "description_en": "The sacred phoenix, symbol of rebirth and harmony. Her appearance foretells peace and prosperity.",
+    "culture": "Китайская мифология",
+    "type": "mythical_creature",
+    "originType": "chinese_mythology",
+    "lat": 33.0,
+    "lon": 111.0,
+    "radiusKm": 45,
+    "rarity": "legendary",
+    "img": "images/creatures/fenghuang.webp"
+  },
+   
+  {
+    "id": "houyi",
+    "zone_id": "zone_11",
+    "name": "Хоу И",
+    "name_en": "Houyi",
+    "description_ru": "Легендарный лучник, сбивший девять солнц с неба, чтобы спасти землю от засухи.",
+    "description_en": "A legendary archer who shot down nine suns from the sky to save the earth from drought.",
+    "culture": "Китайская мифология",
+    "type": "hero",
+    "originType": "chinese_mythology",
+    "lat": 34.0,
+    "lon": 109.0,
+    "radiusKm": 35,
+    "rarity": "rare",
+    "img": "images/creatures/houyi.webp"
+  },
  
-
-
-
+ 
+ 
+  {
+    "id": "zhubajie",
+    "zone_id": "zone_11",
+    "name": "Чжу Бацзе",
+    "name_en": "Zhu Bajie",
+    "description_ru": "Свинья-воин из «Путешествия на Запад». Он силён, но любит поесть и поспать.",
+    "description_en": "A pig warrior from Journey to the West. He is strong but loves to eat and sleep.",
+    "culture": "Китайская литература",
+    "type": "hero",
+    "originType": "chinese_mythology",
+    "lat": 33.0,
+    "lon": 109.0,
+    "radiusKm": 35,
+    "rarity": "rare",
+    "img": "images/creatures/zhubajie.webp"
+  },
+ 
+ 
+ 
 
 ]
 
