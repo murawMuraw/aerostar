@@ -2028,6 +2028,125 @@
     "rarity": "epic",
     "img": "images/creatures/chudail.webp"
   },
+
+  {
+    "id": "garuda_sea",
+    "zone_id": "zone_14",
+    "name": "Гаруда",
+    "name_en": "Garuda",
+    "description_ru": "Великая птица, враг змей. Её изображение защищает храмы и дворцы.",
+    "description_en": "The great bird, enemy of serpents. Its image protects temples and palaces.",
+    "culture": "Юго-восточноазиатский фольклор",
+    "type": "mythical_creature",
+    "originType": "southeast_asian_mythology",
+    "lat": 13.0,
+    "lon": 100.0,
+    "radiusKm": 50,
+    "rarity": "epic",
+    "img": "images/creatures/garuda_sea.webp"
+  },
+ 
+  {
+    "id": "krasue",
+    "zone_id": "zone_14",
+    "name": "Красуэ",
+    "name_en": "Krasue",
+    "description_ru": "Женская голова с внутренними органами, летающая по ночам. Она ищет пищу и может напугать до смерти.",
+    "description_en": "A female head with internal organs flying at night. She seeks food and can frighten people to death.",
+    "culture": "Тайский фольклор",
+    "type": "undead",
+    "originType": "thai_folklore",
+    "lat": 16.0,
+    "lon": 102.0,
+    "radiusKm": 40,
+    "rarity": "epic",
+    "img": "images/creatures/krasue.webp"
+  },
+ 
+  {
+    "id": "garuda_id",
+    "zone_id": "zone_14",
+    "name": "Гаруда",
+    "name_en": "Garuda",
+    "description_ru": "Орёл-защитник из индонезийских преданий. Он символизирует свободу и силу.",
+    "description_en": "The eagle protector from Indonesian legends. He symbolizes freedom and strength.",
+    "culture": "Индонезийский фольклор",
+    "type": "mythical_creature",
+    "originType": "indonesian_mythology",
+    "lat": -2.0,
+    "lon": 118.0,
+    "radiusKm": 50,
+    "rarity": "legendary",
+    "img": "images/creatures/garuda_id.webp"
+  },
+   
+ 
+  {
+    "id": "thao",
+    "zone_id": "zone_14",
+    "name": "Тхао",
+    "name_en": "Thao",
+    "description_ru": "Дух-хранитель рисовых полей из лаосских преданий. Он обеспечивает урожай и благополучие деревни.",
+    "description_en": "A guardian spirit of rice fields from Lao legends. He ensures harvest and village well-being.",
+    "culture": "Лаосский фольклор",
+    "type": "guardian",
+    "originType": "southeast_asian_mythology",
+    "lat": 18.5,
+    "lon": 104.0,
+    "radiusKm": 35,
+    "rarity": "rare",
+    "img": "images/creatures/thao.webp"
+  },
+ 
+  {
+    "id": "mae_nak",
+    "zone_id": "zone_14",
+    "name": "Мэ Нак",
+    "name_en": "Mae Nak",
+    "description_ru": "Знаменитый женский призрак из тайского фольклора. Её история — о вечной любви и трагедии.",
+    "culture": "Тайский фольклор",
+    "type": "undead",
+    "originType": "thai_folklore",
+    "lat": 13.7,
+    "lon": 100.5,
+    "radiusKm": 30,
+    "rarity": "legendary",
+    "img": "images/creatures/mae_nak.webp"
+  },
+ 
+ 
+  {
+    "id": "tien",
+    "zone_id": "zone_14",
+    "name": "Тьен",
+    "name_en": "Tien",
+    "description_ru": "Небесные девы из вьетнамских легенд. Они могут спускаться на землю и помогать людям.",
+    "culture": "Вьетнамский фольклор",
+    "type": "group",
+    "originType": "vietnamese_folklore",
+    "lat": 20.0,
+    "lon": 106.0,
+    "radiusKm": 40,
+    "rarity": "rare",
+    "img": "images/creatures/tien.webp"
+  },
+ 
+  {
+    "id": "pontianak",
+    "zone_id": "zone_14",
+    "name": "Понтианак",
+    "name_en": "Pontianak",
+    "description_ru": "Женский вампир из малайзийского и индонезийского фольклора. Она появляется по ночам и пугает людей.",
+    "culture": "Малайзийский фольклор",
+    "type": "undead",
+    "originType": "malaysian_folklore",
+    "lat": 2.0,
+    "lon": 103.0,
+    "radiusKm": 40,
+    "rarity": "epic",
+    "img": "images/creatures/pontianak.webp"
+  },
+  
  
  
 
