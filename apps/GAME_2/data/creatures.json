@@ -2520,7 +2520,70 @@
     "rarity": "epic",
     "img": "images/creatures/inkanyamba.webp"
   },
-
+{
+    "id": "ra",
+    "zone_id": "zone_21",
+    "name": "Ра",
+    "name_en": "Ra",
+    "description_ru": "Бог солнца и верховный бог Египта. Он плывёт по небу в своей ладье, освещая мир.",
+    "description_en": "The sun god and supreme deity of Egypt. He sails across the sky in his barque, lighting the world.",
+    "culture": "Древнеегипетская мифология",
+    "type": "deity",
+    "originType": "egyptian_mythology",
+    "lat": 30.0,
+    "lon": 31.2,
+    "radiusKm": 60,
+    "rarity": "legendary",
+    "img": "images/creatures/ra.webp"
+  },
+  {
+    "id": "osiris",
+    "zone_id": "zone_21",
+    "name": "Осирис",
+    "name_en": "Osiris",
+    "description_ru": "Бог загробного мира и возрождения. Он был убит братом, но вернулся к жизни.",
+    "description_en": "The god of the afterlife and rebirth. He was killed by his brother but returned to life.",
+    "culture": "Древнеегипетская мифология",
+    "type": "deity",
+    "originType": "egyptian_mythology",
+    "lat": 29.5,
+    "lon": 31.0,
+    "radiusKm": 55,
+    "rarity": "legendary",
+    "img": "images/creatures/osiris.webp"
+  },
+  {
+    "id": "isis",
+    "zone_id": "zone_21",
+    "name": "Исида",
+    "name_en": "Isis",
+    "description_ru": "Богиня магии и материнства. Она вернула Осириса к жизни и защищает своего сына Хора.",
+    "description_en": "The goddess of magic and motherhood. She restored Osiris to life and protects her son Horus.",
+    "culture": "Древнеегипетская мифология",
+    "type": "deity",
+    "originType": "egyptian_mythology",
+    "lat": 30.5,
+    "lon": 31.5,
+    "radiusKm": 55,
+    "rarity": "legendary",
+    "img": "images/creatures/isis.webp"
+  },
+  {
+    "id": "anubis",
+    "zone_id": "zone_21",
+    "name": "Анубис",
+    "name_en": "Anubis",
+    "description_ru": "Бог бальзамирования с головой шакала. Он сопровождает души в загробный мир.",
+    "description_en": "The jackal-headed god of embalming. He guides souls to the afterlife.",
+    "culture": "Древнеегипетская мифология",
+    "type": "deity",
+    "originType": "egyptian_mythology",
+    "lat": 29.0,
+    "lon": 30.5,
+    "radiusKm": 50,
+    "rarity": "legendary",
+    "img": "images/creatures/anubis.webp"
+  }
 
 
 
