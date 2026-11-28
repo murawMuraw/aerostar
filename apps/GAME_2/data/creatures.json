@@ -2429,7 +2429,97 @@
     "img": "images/creatures/nagual.webp"
   },
    
-   
+     {
+    "id": "anansi",
+    "zone_id": "zone_19",
+    "name": "Ананси",
+    "name_en": "Anansi",
+    "description_ru": "Хитрый паук-трикстер из западноафриканских сказок. Он обманывает сильных и помогает слабым.",
+    "description_en": "The cunning spider trickster from West African tales. He outwits the strong and helps the weak.",
+    "culture": "Западноафриканский фольклор",
+    "type": "spirit",
+    "originType": "african_mythology",
+    "lat": 7.0,
+    "lon": -2.0,
+    "radiusKm": 60,
+    "rarity": "legendary",
+    "img": "images/creatures/anansi.webp"
+  },
+  {
+    "id": "crocotta",
+    "zone_id": "zone_19",
+    "name": "Крокотта",
+    "name_en": "Crocotta",
+    "description_ru": "Странное существо из африканских преданий, похожее на гиену. Оно умеет подражать голосам людей.",
+    "culture": "Африканский фольклор",
+    "type": "monster",
+    "originType": "african_mythology",
+    "lat": 5.0,
+    "lon": 20.0,
+    "radiusKm": 50,
+    "rarity": "epic",
+    "img": "images/creatures/crocotta.webp"
+  },
+  {
+    "id": "simbi",
+    "zone_id": "zone_19",
+    "name": "Симби",
+    "name_en": "Simbi",
+    "description_ru": "Духи воды из центральноафриканских преданий. Они могут быть добрыми или злыми в зависимости от отношения к ним.",
+    "culture": "Центральноафриканский фольклор",
+    "type": "group",
+    "originType": "african_mythology",
+    "lat": -3.0,
+    "lon": 23.0,
+    "radiusKm": 55,
+    "rarity": "epic",
+    "img": "images/creatures/simbi.webp"
+  },
+  {
+    "id": "mpungu",
+    "zone_id": "zone_19",
+    "name": "Мпунгу",
+    "name_en": "Mpungu",
+    "description_ru": "Верховный бог в мифологии некоторых африканских народов. Он создал мир и наблюдает за ним.",
+    "culture": "Африканская мифология",
+    "type": "deity",
+    "originType": "african_mythology",
+    "lat": -1.0,
+    "lon": 28.0,
+    "radiusKm": 60,
+    "rarity": "legendary",
+    "img": "images/creatures/mpungu.webp"
+  },
+  {
+    "id": "nyaminyami",
+    "zone_id": "zone_19",
+    "name": "Няминями",
+    "name_en": "Nyaminyami",
+    "description_ru": "Змеиный бог реки Замбези. Он управляет водой и может вызвать наводнение.",
+    "culture": "Африканский фольклор",
+    "type": "dragon",
+    "originType": "african_mythology",
+    "lat": -16.0,
+    "lon": 28.0,
+    "radiusKm": 55,
+    "rarity": "legendary",
+    "img": "images/creatures/nyaminyami.webp"
+  },
+  {
+    "id": "inkanyamba",
+    "zone_id": "zone_19",
+    "name": "Инканъямба",
+    "name_en": "Inkanyamba",
+    "description_ru": "Огромный угорь из южноафриканских преданий. Он управляет погодой и живёт в водопадах.",
+    "culture": "Южноафриканский фольклор",
+    "type": "monster",
+    "originType": "african_mythology",
+    "lat": -29.0,
+    "lon": 29.0,
+    "radiusKm": 50,
+    "rarity": "epic",
+    "img": "images/creatures/inkanyamba.webp"
+  },
 
 
 
