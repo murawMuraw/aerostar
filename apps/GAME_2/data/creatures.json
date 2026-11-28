@@ -2146,8 +2146,57 @@
     "rarity": "epic",
     "img": "images/creatures/pontianak.webp"
   },
-  
- 
+   {
+    "id": "tiddalik",
+    "zone_id": "zone_15",
+    "name": "Тиддалик",
+    "name_en": "Tiddalik",
+    "description_ru": "Гигантская лягушка, выпившая всю воду. Её история учит делиться.",
+    "description_en": "A giant frog who drank all the water. Her story teaches sharing.",
+    "culture": "Мифология австралийских аборигенов",
+    "type": "mythical_creature",
+    "originType": "australian_mythology",
+    "lat": -26.0,
+    "lon": 135.0,
+    "radiusKm": 50,
+    "rarity": "epic",
+    "img": "images/creatures/tiddalik.webp"
+  },
+   
+  {
+    "id": "baiame",
+    "zone_id": "zone_15",
+    "name": "Байаме",
+    "name_en": "Baiame",
+    "description_ru": "Небесный отец из мифологии аборигенов. Он создал законы и научил людей жить.",
+    "description_en": "The sky father from Aboriginal mythology. He created laws and taught people how to live.",
+    "culture": "Мифология австралийских аборигенов",
+    "type": "deity",
+    "originType": "australian_mythology",
+    "lat": -31.0,
+    "lon": 146.0,
+    "radiusKm": 50,
+    "rarity": "legendary",
+    "img": "images/creatures/baiame.webp"
+  },
+
+   {
+    "id": "taniwha",
+    "zone_id": "zone_15",
+    "name": "Танива",
+    "name_en": "Taniwha",
+    "description_ru": "Водное чудовище из мифологии маори. Оно живёт в реках и морях и может быть как защитником, так и угрозой.",
+    "description_en": "A water monster from Māori mythology. It lives in rivers and seas and can be a protector or a threat.",
+    "culture": "Мифология маори",
+    "type": "monster",
+    "originType": "maori_mythology",
+    "lat": -38.0,
+    "lon": 176.0,
+    "radiusKm": 50,
+    "rarity": "legendary",
+    "img": "images/creatures/taniwha.webp"
+  },
+   
  
 
 ]
