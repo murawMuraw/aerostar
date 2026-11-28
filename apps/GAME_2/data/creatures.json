@@ -2196,7 +2196,70 @@
     "rarity": "legendary",
     "img": "images/creatures/taniwha.webp"
   },
-   
+   {
+    "id": "wendigo",
+    "zone_id": "zone_16",
+    "name": "Вендиго",
+    "name_en": "Wendigo",
+    "description_ru": "Злой дух зимних лесов из алгонкинской мифологии. Он огромен, худ и всегда голоден.",
+    "description_en": "An evil winter forest spirit from Algonquian mythology. He is huge, gaunt, and always hungry.",
+    "culture": "Алгонкинская мифология",
+    "type": "monster",
+    "originType": "native_american_mythology",
+    "lat": 48.0,
+    "lon": -85.0,
+    "radiusKm": 60,
+    "rarity": "legendary",
+    "img": "images/creatures/wendigo.webp"
+  },
+  {
+    "id": "bigfoot",
+    "zone_id": "zone_16",
+    "name": "Бигфут",
+    "name_en": "Bigfoot",
+    "description_ru": "Огромное волосатое существо, обитающее в лесах Северной Америки. Его следы находят в самых глухих местах.",
+    "description_en": "A huge hairy creature inhabiting North American forests. His tracks are found in the most remote places.",
+    "culture": "Североамериканский фольклор",
+    "type": "monster",
+    "originType": "north_american_folklore",
+    "lat": 45.0,
+    "lon": -120.0,
+    "radiusKm": 60,
+    "rarity": "legendary",
+    "img": "images/creatures/bigfoot.webp"
+  },
+  {
+    "id": "thunderbird",
+    "zone_id": "zone_16",
+    "name": "Громовая птица",
+    "name_en": "Thunderbird",
+    "description_ru": "Гигантская птица, вызывающая гром и молнии. Она символизирует силу и защиту.",
+    "description_en": "A giant bird who causes thunder and lightning. She symbolizes power and protection.",
+    "culture": "Мифология коренных народов Северной Америки",
+    "type": "mythical_creature",
+    "originType": "native_american_mythology",
+    "lat": 40.0,
+    "lon": -100.0,
+    "radiusKm": 60,
+    "rarity": "legendary",
+    "img": "images/creatures/thunderbird.webp"
+  },
+  {
+    "id": "coyote",
+    "zone_id": "zone_16",
+    "name": "Койот",
+    "name_en": "Coyote",
+    "description_ru": "Хитрый трикстер из мифологии коренных народов. Он может быть глупым или мудрым, но всегда интересным.",
+    "description_en": "A cunning trickster from Native American mythology. He can be foolish or wise but always interesting.",
+    "culture": "Мифология коренных народов Северной Америки",
+    "type": "spirit",
+    "originType": "native_american_mythology",
+    "lat": 38.0,
+    "lon": -110.0,
+    "radiusKm": 50,
+    "rarity": "epic",
+    "img": "images/creatures/coyote.webp"
+  },
  
 
 ]
