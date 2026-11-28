@@ -1475,7 +1475,7 @@
   },
 
  
-  
+  {
     "id": "ognevushka",
     "zone_id": "zone_08",
     "name": "Огневушка-Поскакушка",
@@ -1524,7 +1524,7 @@
     "rarity": "epic",
     "img": "images/creatures/mamut.webp"
   },
-    [
+   
   {
     "id": "ifrit",
     "zone_id": "zone_09",
@@ -1792,7 +1792,7 @@
     "rarity": "epic",
     "img": "images/creatures/jorogumo.webp"
   },
- [
+
   {
     "id": "sun_wukong",
     "zone_id": "zone_11",
@@ -1946,7 +1946,7 @@
     "img": "images/creatures/guru_rinpoche.webp"
   },
   
- [
+
   {
     "id": "hanuman",
     "zone_id": "zone_13",
@@ -2367,7 +2367,74 @@
     "rarity": "legendary",
     "img": "images/creatures/inti.webp"
   },
+ {
+    "id": "quetzalcoatl",
+    "zone_id": "zone_18",
+    "name": "Кетцалькоатль",
+    "name_en": "Quetzalcoatl",
+    "description_ru": "Пернатый змей, бог ветра и знания. Он принёс людям мудрость и культуру.",
+    "description_en": "The feathered serpent, god of wind and knowledge. He brought wisdom and culture to people.",
+    "culture": "Ацтекская мифология",
+    "type": "deity",
+    "originType": "aztec_mythology",
+    "lat": 19.4,
+    "lon": -99.1,
+    "radiusKm": 60,
+    "rarity": "legendary",
+    "img": "images/creatures/quetzalcoatl.webp"
+  },
+   {
+    "id": "kukulkan",
+    "zone_id": "zone_18",
+    "name": "Кукулькан",
+    "name_en": "Kukulkan",
+    "description_ru": "Пернатый змей майя, аналог Кетцалькоатля. Он принёс знания и справедливость.",
+    "culture": "Мифология майя",
+    "type": "deity",
+    "originType": "maya_mythology",
+    "lat": 20.0,
+    "lon": -88.0,
+    "radiusKm": 55,
+    "rarity": "legendary",
+    "img": "images/creatures/kukulkan.webp"
+  },
+{
+    "id": "cadejo",
+    "zone_id": "zone_18",
+    "name": "Кадехо",
+    "name_en": "Cadejo",
+    "description_ru": "Собака-дух из центральноамериканского фольклора. Белая защищает, чёрная предупреждает об опасности.",
+    "culture": "Центральноамериканский фольклор",
+    "type": "spirit",
+    "originType": "central_american_folklore",
+    "lat": 14.0,
+    "lon": -90.0,
+    "radiusKm": 45,
+    "rarity": "epic",
+    "img": "images/creatures/cadejo.webp"
+  },
+   {
+    "id": "nagual",
+    "zone_id": "zone_18",
+    "name": "Нагваль",
+    "name_en": "Nagual",
+    "description_ru": "Оборотень из мезоамериканских преданий. Он может принимать облик животного и защищать или вредить.",
+    "culture": "Мезоамериканский фольклор",
+    "type": "shapeshifter",
+    "originType": "central_american_folklore",
+    "lat": 15.0,
+    "lon": -92.0,
+    "radiusKm": 45,
+    "rarity": "epic",
+    "img": "images/creatures/nagual.webp"
+  },
+   
+   
 
+
+
+
+   
 ]
 
   
